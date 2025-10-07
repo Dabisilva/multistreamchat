@@ -42,7 +42,7 @@ body {
 
 /* Additional styling for better message display */
 .message-row {
-  margin: 8px 0;
+  margin: 4px 0;
   padding: 0;
   border-radius: 0;
   max-width: 90%;

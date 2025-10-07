@@ -14,7 +14,68 @@ export function generateColor(username: string): string {
     hash = username.charCodeAt(i) + ((hash << 5) - hash);
   }
   const color = Math.abs(hash).toString(16).substring(0, 6);
-  return "#" + color.padEnd(6, '0');
+  let hexColor = "#" + color.padEnd(6, '0');
+  
+  // Ensure good contrast with dark header background #30034d
+  return ensureContrastWithHeader(hexColor);
+}
+
+// Ensure color has good contrast with the dark header background
+function ensureContrastWithHeader(color: string): string {
+  const headerColor = '#30034d';
+  
+  // Convert hex to RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+  
+  // Convert RGB to hex
+  const rgbToHex = (r: number, g: number, b: number) => {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  };
+  
+  // Calculate luminance
+  const getLuminance = (r: number, g: number, b: number) => {
+    const [rs, gs, bs] = [r, g, b].map(c => {
+      c = c / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  };
+  
+  const colorRgb = hexToRgb(color);
+  const headerRgb = hexToRgb(headerColor);
+  
+  if (!colorRgb || !headerRgb) return color;
+  
+  const colorLuminance = getLuminance(colorRgb.r, colorRgb.g, colorRgb.b);
+  const headerLuminance = getLuminance(headerRgb.r, headerRgb.g, headerRgb.b);
+  
+  // Calculate contrast ratio
+  const contrastRatio = (Math.max(colorLuminance, headerLuminance) + 0.05) / 
+                       (Math.min(colorLuminance, headerLuminance) + 0.05);
+  
+  // If contrast is too low (less than 3:1), brighten the color
+  if (contrastRatio < 3) {
+    // Increase brightness by at least 40%
+    const brightness = Math.max(colorRgb.r, colorRgb.g, colorRgb.b);
+    const targetBrightness = Math.max(180, brightness * 1.4);
+    
+    const factor = targetBrightness / brightness;
+    
+    const newR = Math.min(255, Math.round(colorRgb.r * factor));
+    const newG = Math.min(255, Math.round(colorRgb.g * factor));
+    const newB = Math.min(255, Math.round(colorRgb.b * factor));
+    
+    return rgbToHex(newR, newG, newB);
+  }
+  
+  return color;
 }
 
 // Attach emotes to message text
