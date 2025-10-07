@@ -22,6 +22,7 @@ const App: React.FC = () => {
 
   const [twitchChannel, setTwitchChannel] = useState<string>('');
   const [kickChannel, setKickChannel] = useState<string>('');
+  const [twitchOauthToken, setTwitchOauthToken] = useState<string>('');
   const [twitchService, setTwitchService] = useState<TwitchChatService | null>(null);
   const [kickService, setKickService] = useState<KickChatService | null>(null);
 
@@ -30,12 +31,16 @@ const App: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const twitchParam = urlParams.get('twitchChannel');
     const kickParam = urlParams.get('kickChannel');
+    const twitchTokenParam = urlParams.get('twitchToken');
 
     if (twitchParam) {
       setTwitchChannel(twitchParam);
     }
     if (kickParam) {
       setKickChannel(kickParam);
+    }
+    if (twitchTokenParam) {
+      setTwitchOauthToken(twitchTokenParam);
     }
   }, []);
 
@@ -86,11 +91,15 @@ const App: React.FC = () => {
   // Auto-connect when channels are available
   useEffect(() => {
     if (twitchChannel && !twitchService) {
-      const service = new TwitchChatService(twitchChannel, handleNewMessage);
+      const service = new TwitchChatService(
+        twitchChannel,
+        handleNewMessage,
+        twitchOauthToken ? { oauthToken: twitchOauthToken } : undefined
+      );
       service.connect();
       setTwitchService(service);
     }
-  }, [twitchChannel, twitchService, handleNewMessage]);
+  }, [twitchChannel, twitchService, twitchOauthToken, handleNewMessage]);
 
   useEffect(() => {
     if (kickChannel && !kickService) {
@@ -116,7 +125,7 @@ const App: React.FC = () => {
     <div className="chat-container">
       <div className="chat-box">
         {/* Status Display */}
-        <div style={{
+        {/* <div style={{
           position: 'fixed',
           top: '10px',
           left: '10px',
@@ -143,7 +152,7 @@ const App: React.FC = () => {
               <span style={{ color: '#ff0000', marginLeft: '5px' }}>● Disconnected</span>
             )}
           </div>
-        </div>
+        </div> */}
 
         {/* Chat Messages */}
         <div className={`main-container ${config.alignMessages === 'block' ? 'block-align' : 'bottom-align'}`}>

@@ -1,276 +1,10 @@
 body {
   margin: 0;
-  background: transparent; /* deixa fundo transparente pro OBS */
+  background: transparent;
+  background-size: 20px 20px; /* Dot pattern */
   font-family: Arial, sans-serif;
-  font-size: 18px;
-  color: rgb(27, 20, 58);
-}
-
-.chat-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.chat-box {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: 100vh;
-  padding: 10px;
-  overflow: hidden;
-}
-
-.main-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: 100vh;
-  padding: 10px;
-  overflow: hidden;
-}
-
-.msg {
-  margin: 3px 0;
-  padding: 4px 0;
-  border-radius: 8px;
-  max-width: 90%;
-  word-wrap: break-word;
-  animation: fadeIn 0.3s ease;
-}
-
-.chat-message {
-  margin: 3px 0;
-  padding: 4px 0;
-  border-radius: 8px;
-  max-width: 90%;
-  word-wrap: break-word;
-  animation: fadeIn 0.3s ease;
-}
-
-.message-header {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 2px;
-}
-
-.message-content {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 2px;
-}
-
-/* Badge styles moved to later in the file */
-
-.username {
-  font-weight: bold;
-  margin-right: 6px;
-}
-
-.message-text {
-  color: white;
-}
-
-.emote {
-  width: 28px;
-  height: 28px;
-  vertical-align: middle;
-  margin: 0 1px;
-  object-fit: contain;
-}
-
-/* StreamElements-style message rows */
-.message-row {
-  margin: 3px 0;
-  padding: 4px 0;
-  border-radius: 8px;
-  max-width: 90%;
-  word-wrap: break-word;
-}
-
-.user-box {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 2px;
-}
-
-.user-message {
-  color: white;
-  margin-left: 4px;
-}
-
-.user-box.action,
-.user-message.action {
-  font-style: italic;
-  color: #ffd700;
-}
-
-/* Animation classes */
-.animated {
-  animation-duration: 1s;
-  animation-fill-mode: both;
-}
-
-.bounceIn {
-  animation-name: bounceIn;
-}
-
-.bounceOut {
-  animation-name: bounceOut;
-}
-
-.fadeIn {
-  animation-name: fadeIn;
-}
-
-.fadeOut {
-  animation-name: fadeOut;
-}
-
-.slideInLeft {
-  animation-name: slideInLeft;
-}
-
-.slideOutLeft {
-  animation-name: slideOutLeft;
-}
-
-.slideInRight {
-  animation-name: slideInRight;
-}
-
-.slideOutRight {
-  animation-name: slideOutRight;
-}
-
-.zoomIn {
-  animation-name: zoomIn;
-}
-
-.zoomOut {
-  animation-name: zoomOut;
-}
-
-/* Keyframe animations */
-@keyframes bounceIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes bounceOut {
-  0% {
-    transform: scale(1);
-  }
-  25% {
-    transform: scale(0.95);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    transform: translate3d(-100%, 0, 0);
-    visibility: visible;
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes slideOutLeft {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    visibility: hidden;
-    transform: translate3d(-100%, 0, 0);
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translate3d(100%, 0, 0);
-    visibility: visible;
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes slideOutRight {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    visibility: hidden;
-    transform: translate3d(100%, 0, 0);
-  }
-}
-
-@keyframes zoomIn {
-  from {
-    opacity: 0;
-    transform: scale3d(0.3, 0.3, 0.3);
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes zoomOut {
-  from {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-    transform: scale3d(0.3, 0.3, 0.3);
-  }
-  to {
-    opacity: 0;
-  }
+  font-size: 16px;
+  color: #333;
 }
 
 /* Alignment classes */
@@ -284,28 +18,35 @@ body {
 
 /* Additional styling for better message display */
 .message-row {
-  margin: 3px 0;
-  padding: 4px 8px;
-  border-radius: 8px;
+  margin: 8px 0;
+  padding: 0;
+  border-radius: 0;
   max-width: 90%;
   word-wrap: break-word;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  border: none;
 }
 
 .user-box {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 2px;
+  gap: 6px;
   font-weight: bold;
+  background: #30034d;
+  padding: 4px 8px;
+  border-radius: 6px;
+  max-width: fit-content;
 }
 
 .user-message {
   color: white;
-  margin-left: 4px;
+  background: #8b5cf6;
+  padding: 8px 12px;
+  border-radius: 10px;
   line-height: 1.4;
+  margin: 0 0 0 6px;
+  max-width: fit-content;
+  display: inline-block;
 }
 
 /* Badge styling improvements */
@@ -313,31 +54,19 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-right: 4px;
   flex-wrap: wrap;
 }
 
 .badge {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
   vertical-align: middle;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: none;
   border-radius: 2px;
   margin-right: 2px;
   display: inline-block;
   transition: all 0.2s ease-in-out;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-}
-
-.badge:hover {
-  transform: scale(1.1);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
-}
-
-/* Badge loading state */
-.badge[style*="opacity: 0"] {
-  animation: badgePulse 1s ease-in-out infinite;
 }
 
 @keyframes badgePulse {

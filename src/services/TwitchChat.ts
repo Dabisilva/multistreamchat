@@ -8,17 +8,41 @@ interface BttvEmote {
   animated: boolean;
 }
 
+interface TwitchBadgeVersion {
+  id: string;
+  image_url_1x: string;
+  image_url_2x: string;
+  image_url_4x: string;
+  title: string;
+  description: string;
+}
+
+interface TwitchBadgeSet {
+  set_id: string;
+  versions: TwitchBadgeVersion[];
+}
+
 export class TwitchChatService implements ChatProvider {
   private client: tmi.Client | null = null;
   private channel: string;
   private onMessage: (message: ChatMessage) => void;
   private connected: boolean = false;
-  private badgeCache: Record<string, string> = {};
+  private globalBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
+  private channelBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
   private bttvEmotes: BttvEmote[] = [];
+  private clientId: string = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // Public Twitch client ID
+  private oauthToken: string = ''; // OAuth token for authenticated requests
+  private broadcasterId: string = '';
 
-  constructor(channel: string, onMessage: (message: ChatMessage) => void) {
+  constructor(
+    channel: string, 
+    onMessage: (message: ChatMessage) => void,
+    options?: { clientId?: string; oauthToken?: string }
+  ) {
     this.channel = channel;
     this.onMessage = onMessage;
+    if (options?.clientId) this.clientId = options.clientId;
+    if (options?.oauthToken) this.oauthToken = options.oauthToken;
   }
 
   async connect(): Promise<void> {
@@ -26,10 +50,14 @@ export class TwitchChatService implements ChatProvider {
       this.disconnect();
     }
 
-    // Fetch correct badge UUIDs from Twitch API
-    await this.fetchBadgeUuids();
+    // Fetch broadcaster ID first (needed for channel badges and BTTV)
+    await this.fetchBroadcasterId();
     
-    // Fetch channel ID and BTTV emotes
+    // Fetch global and channel badges from Twitch Helix API
+    await this.fetchGlobalBadges();
+    await this.fetchChannelBadges();
+    
+    // Fetch BTTV emotes
     await this.fetchChannelIdAndBttv();
 
     this.client = new tmi.Client({
@@ -92,12 +120,35 @@ export class TwitchChatService implements ChatProvider {
       return [];
     }
 
-    return Object.entries(badges).map(([type, version]) => ({
-      type,
-      version,
-      url: this.getBadgeUrl(type, version),
-      description: this.getBadgeDescription(type)
-    }));
+    return Object.entries(badges).map(([type, version]) => {
+      // Try to get description from API data (check channel badges first)
+      let description = this.getBadgeDescription(type);
+      
+      // Check channel badges first
+      const channelBadgeSet = this.channelBadges.get(type);
+      if (channelBadgeSet) {
+        const badgeVersion = channelBadgeSet.get(version);
+        if (badgeVersion && badgeVersion.title) {
+          description = badgeVersion.title;
+        }
+      } else {
+        // Fall back to global badges
+        const globalBadgeSet = this.globalBadges.get(type);
+        if (globalBadgeSet) {
+          const badgeVersion = globalBadgeSet.get(version);
+          if (badgeVersion && badgeVersion.title) {
+            description = badgeVersion.title;
+          }
+        }
+      }
+
+      return {
+        type,
+        version,
+        url: this.getBadgeUrl(type, version),
+        description
+      };
+    }).filter(badge => badge.url); // Only return badges with valid URLs
   }
 
   private parseEmotes(emotes: Record<string, string[]> | undefined, message: string): any[] {
@@ -158,32 +209,89 @@ export class TwitchChatService implements ChatProvider {
     return emoteList;
   }
 
-  private async fetchBadgeUuids(): Promise<void> {
+  private getTwitchHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      'Client-Id': this.clientId
+    };
+    
+    if (this.oauthToken) {
+      headers['Authorization'] = `Bearer ${this.oauthToken}`;
+    }
+    
+    return headers;
+  }
+
+  private async fetchBroadcasterId(): Promise<void> {
     try {
-      const response = await fetch('https://badges.twitch.tv/v1/badges/global/display?language=en');
+      const response = await fetch(`https://api.twitch.tv/helix/users?login=${this.channel}`, {
+        headers: this.getTwitchHeaders()
+      });
+
       if (response.ok) {
-        const data = await response.json();
+        const result = await response.json();
+        if (result.data && result.data.length > 0) {
+          this.broadcasterId = result.data[0].id;
+        }
+      }
+    } catch (error) {
+      // Error fetching broadcaster ID
+    }
+  }
+
+  private async fetchGlobalBadges(): Promise<void> {
+    try {
+      // Use Twitch Helix API to get global badges
+      const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
+        headers: this.getTwitchHeaders()
+      });
+
+      if (response.ok) {
+        const result = await response.json();
         
-        // Parse the badge data and cache UUIDs
-        if (data.badge_sets) {
-          Object.entries(data.badge_sets).forEach(([setId, setData]: [string, any]) => {
-            if (setData.versions) {
-              Object.entries(setData.versions).forEach(([_version, versionData]: [string, any]) => {
-                if (versionData.image_url_1x) {
-                  // Extract UUID from the image URL
-                  const url = versionData.image_url_1x;
-                  const uuidMatch = url.match(/\/badges\/v1\/([^\/]+)\/1/);
-                  if (uuidMatch) {
-                    this.badgeCache[setId] = uuidMatch[1];
-                  }
-                }
-              });
-            }
+        if (result.data && Array.isArray(result.data)) {
+          // Store badges in a nested map: set_id -> version_id -> badge data
+          result.data.forEach((badgeSet: TwitchBadgeSet) => {
+            const versionMap = new Map<string, TwitchBadgeVersion>();
+            badgeSet.versions.forEach((version: TwitchBadgeVersion) => {
+              versionMap.set(version.id, version);
+            });
+            this.globalBadges.set(badgeSet.set_id, versionMap);
           });
         }
       }
     } catch (error) {
-      // Error fetching badge UUIDs, will use fallback values
+      // Error fetching badges, will use fallback
+    }
+  }
+
+  private async fetchChannelBadges(): Promise<void> {
+    if (!this.broadcasterId) return;
+
+    try {
+      // Fetch channel-specific badges (requires OAuth token)
+      // Note: This endpoint REQUIRES Authorization header with OAuth token
+      const response = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${this.broadcasterId}`, {
+        headers: this.getTwitchHeaders()
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.data && Array.isArray(result.data)) {
+          // Store channel badges in a separate map
+          result.data.forEach((badgeSet: TwitchBadgeSet) => {
+            const versionMap = new Map<string, TwitchBadgeVersion>();
+            badgeSet.versions.forEach((version: TwitchBadgeVersion) => {
+              versionMap.set(version.id, version);
+            });
+            this.channelBadges.set(badgeSet.set_id, versionMap);
+          });
+        }
+      } else if (!this.oauthToken) {
+        // Channel badges require OAuth token - this is expected
+      }
+    } catch (error) {
+      // Error fetching channel badges
     }
   }
 
@@ -232,25 +340,42 @@ export class TwitchChatService implements ChatProvider {
   }
 
   private getBadgeUrl(type: string, version: string): string {
-    // Use cached UUIDs from API, fallback to hardcoded values
-    const cachedUuid = this.badgeCache[type];
-    if (cachedUuid) {
-      return `https://static-cdn.jtvnw.net/badges/v1/${cachedUuid}/${version}`;
+    // Try to get badge from channel badges first (custom subscriber badges, etc.)
+    const channelBadgeSet = this.channelBadges.get(type);
+    if (channelBadgeSet) {
+      const badgeVersion = channelBadgeSet.get(version);
+      if (badgeVersion) {
+        return badgeVersion.image_url_2x || badgeVersion.image_url_1x;
+      }
+    }
+
+    // Try to get badge from the global badges map
+    const globalBadgeSet = this.globalBadges.get(type);
+    if (globalBadgeSet) {
+      const badgeVersion = globalBadgeSet.get(version);
+      if (badgeVersion) {
+        return badgeVersion.image_url_2x || badgeVersion.image_url_1x;
+      }
     }
     
-    // Fallback to hardcoded UUIDs
+    // Fallback to hardcoded UUIDs if API fetch failed
     const badgeUuids: Record<string, string> = {
-      'moderator': '39e717a8-00bc-49cc-b6d4-3ea91ee1be25',
-      'subscriber': '3267646d-33f0-4b83-b647-fea1c131b58d',
+      'moderator': '3267646d-33f0-4b17-b3df-f923a41db1d0',
+      'subscriber': '5d9f2208-5dd8-11e7-8513-2ff4adfae661',
       'broadcaster': '5527c58c-fb7d-422d-b31b-5fbe9c224b8d',
-      'vip': '1eb73a56-aa74-4c23-a76d-f8a4c22e13a8',
-      'partner': 'd12a2e27-af92-4d2e-aa09-8a8e9a96d2f0',
-      'premium': 'bbce0ecc-5c30-4c7a-ba29-1e6f3449e5bd',
-      'bits': 'ce6ed45c-30c1-4b7e-8153-8e93b80d1b09'
+      'vip': 'b817aba4-fad8-49e2-b88a-7cc744dfa6ec',
+      'partner': 'd12a2e27-16f6-41d0-ab77-b780518f00a3',
+      'premium': 'bbbe0f0f-e328-4877-a9a5-dfa608cabf6b',
+      'bits': '73b5c3fb-24f9-4a82-a852-2f5d2d94d635'
     };
     
-    const uuid = badgeUuids[type] || 'a5962c22-8b92-4b2b-9c4e-5f1f8e9d7c6b';
-    return `https://static-cdn.jtvnw.net/badges/v1/${uuid}/${version}`;
+    const uuid = badgeUuids[type];
+    if (uuid) {
+      return `https://static-cdn.jtvnw.net/badges/v1/${uuid}/${version}`;
+    }
+    
+    // Final fallback - empty badge
+    return '';
   }
 
   private getBadgeDescription(type: string): string {
