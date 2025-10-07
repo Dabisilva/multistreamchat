@@ -15,8 +15,8 @@ const App: React.FC = () => {
     messagesLimit: 50,
     nickColor: 'user',
     customNickColor: '#ffffff',
-    hideCommands: false,
-    ignoredUsers: ['streamelements'],
+    hideCommands: true,
+    ignoredUsers: ['streamelements', '@streamelements'],
     alignMessages: 'bottom'
   });
 
@@ -25,6 +25,8 @@ const App: React.FC = () => {
   const [twitchOauthToken, setTwitchOauthToken] = useState<string>('');
   const [twitchService, setTwitchService] = useState<TwitchChatService | null>(null);
   const [kickService, setKickService] = useState<KickChatService | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
+  const chatContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Parse URL parameters for channel names and auto-connect
   useEffect(() => {
@@ -88,6 +90,47 @@ const App: React.FC = () => {
     );
   }, []);
 
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
+  // Handle scroll events to show/hide scroll button
+  const handleScroll = useCallback(() => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom);
+    }
+  }, []);
+
+  // Auto-scroll to bottom when new messages arrive (only if already near bottom)
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+
+      if (isNearBottom) {
+        // Use setTimeout to ensure DOM has updated
+        setTimeout(() => {
+          scrollToBottom();
+        }, 0);
+      }
+    }
+  }, [messages, scrollToBottom]);
+
+  // Initial scroll to bottom on mount
+  useEffect(() => {
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }, [scrollToBottom]);
+
   // Auto-connect when channels are available
   useEffect(() => {
     if (twitchChannel && !twitchService) {
@@ -123,7 +166,11 @@ const App: React.FC = () => {
 
   return (
     <div className="chat-container">
-      <div className="chat-box">
+      <div
+        className="chat-box"
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+      >
         {/* Status Display */}
         {/* <div style={{
           position: 'fixed',
@@ -167,6 +214,17 @@ const App: React.FC = () => {
             />
           ))}
         </div>
+
+        {/* Scroll to Bottom Button */}
+        {showScrollButton && (
+          <button
+            className="scroll-to-bottom-btn"
+            onClick={scrollToBottom}
+            title="Scroll to bottom"
+          >
+            ↓
+          </button>
+        )}
       </div>
     </div>
   );
