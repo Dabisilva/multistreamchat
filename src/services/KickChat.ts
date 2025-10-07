@@ -151,7 +151,7 @@ export class KickChatService implements ChatProvider {
       displayColor: data.sender.identity?.color || '',
       text: data.content,
       badges: this.parseKickBadges(data.sender.identity?.badges || []),
-      emotes: [], // Kick doesn't have the same emote system as Twitch
+      emotes: this.parseKickEmotes(data.content),
       isAction: false,
       timestamp: Date.now(),
       provider: 'kick',
@@ -162,12 +162,74 @@ export class KickChatService implements ChatProvider {
     this.onMessage(chatMessage);
   }
 
+  private parseKickEmotes(message: string): any[] {
+    const emotes: any[] = [];
+    // Kick emote format: [emote:ID:NAME]
+    const emoteRegex = /\[emote:(\d+):([^\]]+)\]/g;
+    let match;
+
+    while ((match = emoteRegex.exec(message)) !== null) {
+      const [, id, name] = match;
+      
+      emotes.push({
+        type: 'kick',
+        name: name,
+        id: id,
+        gif: false, // Kick emotes can be animated but we'll treat them all the same
+        urls: {
+          '1': `https://files.kick.com/emotes/${id}/fullsize`,
+          '2': `https://files.kick.com/emotes/${id}/fullsize`,
+          '4': `https://files.kick.com/emotes/${id}/fullsize`
+        }
+        // No start/end positions - will be matched by the emote tag using regex
+      });
+    }
+
+    return emotes;
+  }
+
   private parseKickBadges(badges: any[]): any[] {
-    return badges.map(badge => ({
-      type: badge.type || 'custom',
-      version: '1',
-      url: badge.image || '',
-      description: badge.name || 'Custom Badge'
-    }));
+    if (!badges || !Array.isArray(badges)) {
+      return [];
+    }
+
+    return badges.map(badge => {
+      // Kick badge structure can vary
+      let badgeUrl = '';
+      
+      if (badge.image) {
+        badgeUrl = badge.image;
+      } else if (badge.badge_image) {
+        // Some badges use badge_image field
+        badgeUrl = badge.badge_image.srcset || badge.badge_image.src || '';
+      } else if (badge.id) {
+        // Fallback: construct URL from badge ID
+        badgeUrl = `https://files.kick.com/badges/${badge.id}/medium`;
+      }
+
+      return {
+        type: badge.type || badge.slug || 'custom',
+        version: badge.count?.toString() || '1',
+        url: badgeUrl,
+        description: badge.text || badge.name || this.getKickBadgeDescription(badge.type || badge.slug)
+      };
+    }).filter(badge => badge.url); // Only return badges with valid URLs
+  }
+
+  private getKickBadgeDescription(type: string): string {
+    const descriptions: Record<string, string> = {
+      'subscriber': 'Subscriber',
+      'sub_gifter': 'Sub Gifter',
+      'moderator': 'Moderator',
+      'vip': 'VIP',
+      'og': 'OG',
+      'verified': 'Verified',
+      'founder': 'Founder',
+      'broadcaster': 'Broadcaster',
+      'staff': 'Staff',
+      'super_admin': 'Super Admin'
+    };
+
+    return descriptions[type] || 'Badge';
   }
 }

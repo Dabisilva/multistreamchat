@@ -53,11 +53,27 @@ export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' =
     return htmlEncode(textContent || match); // Encode text content
   });
 
-  // Finally, use regex to replace third-party emotes (BTTV, FFZ, etc.) by name
-  if (thirdPartyEmotes.length > 0) {
-    processedText = processedText.replace(/([^\s<]+)/g, function(word) {
+  // Handle Kick emotes (format: [emote:ID:NAME])
+  if (provider === 'kick') {
+    const kickEmotes = thirdPartyEmotes.filter(e => e.type === 'kick');
+    if (kickEmotes.length > 0) {
+      // Match Kick's emote format in the encoded text
+      processedText = processedText.replace(/\[emote:(\d+):([^\]]+)\]/g, function(fullMatch, id, name) {
+        const emote = kickEmotes.find(e => e.id === id && e.name === name);
+        if (emote) {
+          return createEmoteHtml(emote, provider);
+        }
+        return fullMatch;
+      });
+    }
+  }
+
+  // Finally, use regex to replace other third-party emotes (BTTV, FFZ, etc.) by name
+  const nonKickThirdPartyEmotes = thirdPartyEmotes.filter(e => e.type !== 'kick');
+  if (nonKickThirdPartyEmotes.length > 0) {
+    processedText = processedText.replace(/([^\s<\[]+)/g, function(word) {
       // Find if this word matches any third-party emote
-      const emote = thirdPartyEmotes.find(e => htmlEncode(e.name) === word || e.name === word);
+      const emote = nonKickThirdPartyEmotes.find(e => htmlEncode(e.name) === word || e.name === word);
       if (emote) {
         return createEmoteHtml(emote, provider);
       }
@@ -72,11 +88,11 @@ export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' =
 function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick'): string {
   const url = emote.urls['2'] || emote.urls['1'] || Object.values(emote.urls)[0]; // Prefer 2x for better quality
   
-  if (provider === 'twitch' || emote.type === 'bttv') {
-    // Both native Twitch and BTTV emotes use simple img tags
+  if (provider === 'twitch' || emote.type === 'bttv' || emote.type === 'kick') {
+    // Twitch, BTTV, and Kick emotes use simple img tags
     return `<img class="emote" src="${url}" alt="${emote.name}" title="${emote.name}"/>`;
   } else {
-    // Kick/Mixer style emote with background positioning
+    // Mixer style emote with background positioning (legacy support)
     const coords = emote.coords || { x: 0, y: 0 };
     const width = emote.coords?.width ? `${emote.coords.width}px` : '28px';
     const height = emote.coords?.height ? `${emote.coords.height}px` : '28px';
