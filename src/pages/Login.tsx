@@ -14,20 +14,6 @@ const Login: React.FC<LoginProps> = () => {
   const [authenticatedPlatform, setAuthenticatedPlatform] = useState<'twitch' | 'kick' | null>(null);
   const [widgetUrl, setWidgetUrl] = useState('');
 
-  // Determine which platform based on OAuth state
-  const determinePlatform = useCallback((state: string): 'twitch' | 'kick' | null => {
-    const twitchState = localStorage.getItem('twitch_oauth_state');
-    const kickState = localStorage.getItem('kick_oauth_state');
-
-    if (state === twitchState) {
-      return 'twitch';
-    } else if (state === kickState) {
-      return 'kick';
-    }
-
-    return null;
-  }, []);
-
   // Process OAuth callback
   const processOAuthCallback = useCallback(async (code: string, state: string, platform: 'twitch' | 'kick') => {
     try {
@@ -68,82 +54,74 @@ const Login: React.FC<LoginProps> = () => {
     }
   }, []);
 
-  // Check for existing authentication in localStorage
-  const checkExistingAuth = useCallback(() => {
-    const twitchToken = localStorage.getItem('twitchToken');
-    const kickToken = localStorage.getItem('kickToken');
-    const twitchUser = localStorage.getItem('twitchUserInfo');
-    const kickUser = localStorage.getItem('kickUserInfo');
+  // Initialize on component mount
+  useEffect(() => {
+    const init = async () => {
+      // Check for existing auth first
+      const twitchToken = localStorage.getItem('twitchToken');
+      const kickToken = localStorage.getItem('kickToken');
+      const twitchUser = localStorage.getItem('twitchUserInfo');
+      const kickUser = localStorage.getItem('kickUserInfo');
 
-    if (twitchToken && twitchUser) {
-      const userData = JSON.parse(twitchUser);
-      const widget = `${window.location.origin}/?twitchChannel=${userData.username}&twitchToken=${twitchToken}`;
-
-      setAuthenticatedPlatform('twitch');
-      setWidgetUrl(widget);
-      setIsAuthenticated(true);
-      return true;
-    }
-
-    if (kickToken && kickUser) {
-      const userData = JSON.parse(kickUser);
-      const widget = `${window.location.origin}/?kickChannel=${userData.username}&kickToken=${kickToken}`;
-
-      setAuthenticatedPlatform('kick');
-      setWidgetUrl(widget);
-      setIsAuthenticated(true);
-      return true;
-    }
-
-    return false;
-  }, []);
-
-  // Handle OAuth callback from URL
-  const handleOAuthCallback = useCallback(async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    const error = urlParams.get('error');
-
-    if (error) {
-      setError(`Erro de autenticação: ${error}`);
-      return;
-    }
-
-    if (code && state) {
-      const platform = determinePlatform(state);
-
-      if (!platform) {
-        setError('Estado de autenticação inválido. Por favor, tente novamente.');
+      if (twitchToken && twitchUser) {
+        const userData = JSON.parse(twitchUser);
+        const widget = `${window.location.origin}/?twitchChannel=${userData.username}&twitchToken=${twitchToken}`;
+        setAuthenticatedPlatform('twitch');
+        setWidgetUrl(widget);
+        setIsAuthenticated(true);
         return;
       }
 
-      // Set loading state
-      if (platform === 'twitch') {
-        setIsLoadingTwitch(true);
-      } else {
-        setIsLoadingKick(true);
+      if (kickToken && kickUser) {
+        const userData = JSON.parse(kickUser);
+        const widget = `${window.location.origin}/?kickChannel=${userData.username}&kickToken=${kickToken}`;
+        setAuthenticatedPlatform('kick');
+        setWidgetUrl(widget);
+        setIsAuthenticated(true);
+        return;
       }
 
-      try {
-        await processOAuthCallback(code, state, platform);
-      } finally {
-        setIsLoadingTwitch(false);
-        setIsLoadingKick(false);
+      // Check for OAuth callback
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const urlError = urlParams.get('error');
+
+      if (urlError) {
+        setError(`Erro de autenticação: ${urlError}`);
+        return;
       }
-    }
-  }, [determinePlatform, processOAuthCallback]);
 
-  // Initialize on component mount
-  useEffect(() => {
-    // ALWAYS check for existing auth first
-    const hasExistingAuth = checkExistingAuth();
+      if (code && state) {
+        const twitchState = localStorage.getItem('twitch_oauth_state');
+        const kickState = localStorage.getItem('kick_oauth_state');
 
-    // If no existing auth, check for OAuth callback
-    if (!hasExistingAuth) {
-      handleOAuthCallback();
-    }
-  }, [checkExistingAuth, handleOAuthCallback]);
+        let platform: 'twitch' | 'kick' | null = null;
+        if (state === twitchState) {
+          platform = 'twitch';
+          setIsLoadingTwitch(true);
+        } else if (state === kickState) {
+          platform = 'kick';
+          setIsLoadingKick(true);
+        }
+
+        if (platform) {
+          try {
+            await processOAuthCallback(code, state, platform);
+          } catch (err) {
+            // Error already handled in processOAuthCallback
+          } finally {
+            setIsLoadingTwitch(false);
+            setIsLoadingKick(false);
+          }
+        } else {
+          setError('Estado de autenticação inválido. Por favor, tente novamente.');
+        }
+      }
+    };
+
+    init();
+  }, []); // Empty dependency array - only run once on mount
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -189,7 +167,7 @@ const Login: React.FC<LoginProps> = () => {
     return isLoadingTwitch
       ? 'Carregando...'
       : (isAuthenticated && authenticatedPlatform === 'twitch')
-        ? '✓ Conectado Twitch'
+        ? 'Conectado'
         : 'Login Twitch'
   };
 
@@ -197,7 +175,7 @@ const Login: React.FC<LoginProps> = () => {
     return isLoadingKick
       ? 'Carregando...'
       : (isAuthenticated && authenticatedPlatform === 'kick')
-        ? '✓ Conectado Kick'
+        ? 'Conectado'
         : 'Login Kick'
   };
 
@@ -206,19 +184,6 @@ const Login: React.FC<LoginProps> = () => {
       <div className="login-box">
         <h1 className="login-title">MultiStream Chat</h1>
         <p className="login-subtitle">Conecte-se aos chats da Twitch e Kick</p>
-
-        {error && (
-          <div style={{
-            background: '#ffebee',
-            color: '#c62828',
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            border: '1px solid #ffcdd2'
-          }}>
-            {error}
-          </div>
-        )}
 
         <div className="login-form">
           <div className="platform-section">
@@ -256,7 +221,7 @@ const Login: React.FC<LoginProps> = () => {
             {isAuthenticated && widgetUrl && (
               <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '2px solid #ddd' }}>
                 <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#333' }}>
-                  URL do Widget:
+                  URL do Widget OBS:
                 </p>
                 <div className="url-input-container">
                   <input

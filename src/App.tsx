@@ -27,70 +27,56 @@ const App: React.FC = () => {
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Initialize authentication from URL params or localStorage
+  const initAuth = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Check for widget URL parameters (direct chat access)
+    const twitchChannelParam = urlParams.get('twitchChannel');
+    const twitchTokenParam = urlParams.get('twitchToken');
+    const kickChannelParam = urlParams.get('kickChannel');
+    const kickTokenParam = urlParams.get('kickToken');
+
+    // Initialize from URL params (widget URL)
+    if (twitchChannelParam && twitchTokenParam) {
+      setTwitchChannel(twitchChannelParam);
+      setTwitchOauthToken(twitchTokenParam);
+      return;
+    }
+
+    if (kickChannelParam && kickTokenParam) {
+      setKickChannel(kickChannelParam);
+      return;
+    }
+
+    // Check for existing authentication from localStorage
+    const twitchToken = localStorage.getItem('twitchToken');
+    const kickToken = localStorage.getItem('kickToken');
+    const twitchChannelInfo = localStorage.getItem('twitchChannelInfo');
+    const kickChannelInfo = localStorage.getItem('kickChannelInfo');
+
+    if (twitchToken && twitchChannelInfo) {
+      try {
+        const channelInfo = JSON.parse(twitchChannelInfo);
+        setTwitchOauthToken(twitchToken);
+        setTwitchChannel(channelInfo.username);
+      } catch (e) {
+        console.error('Error parsing Twitch channel info:', e);
+      }
+    } else if (kickToken && kickChannelInfo) {
+      try {
+        const channelInfo = JSON.parse(kickChannelInfo);
+        setKickChannel(channelInfo.username);
+      } catch (e) {
+        console.error('Error parsing Kick channel info:', e);
+      }
+    }
+
+  };
+
   useEffect(() => {
-    const initAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-
-      // Check for widget URL parameters (direct chat access)
-      const twitchChannelParam = urlParams.get('twitchChannel');
-      const twitchTokenParam = urlParams.get('twitchToken');
-      const kickChannelParam = urlParams.get('kickChannel');
-      const kickTokenParam = urlParams.get('kickToken');
-
-      // Initialize from URL params (widget URL)
-      if (twitchChannelParam && twitchTokenParam) {
-        setTwitchChannel(twitchChannelParam);
-        setTwitchOauthToken(twitchTokenParam);
-        return;
-      }
-
-      if (kickChannelParam && kickTokenParam) {
-        setKickChannel(kickChannelParam);
-        return;
-      }
-
-      // Check for existing authentication from localStorage
-      const twitchToken = localStorage.getItem('twitchToken');
-      const kickToken = localStorage.getItem('kickToken');
-      const twitchChannelInfo = localStorage.getItem('twitchChannelInfo');
-      const kickChannelInfo = localStorage.getItem('kickChannelInfo');
-
-      if (twitchToken && twitchChannelInfo) {
-        try {
-          const channelInfo = JSON.parse(twitchChannelInfo);
-          setTwitchOauthToken(twitchToken);
-          setTwitchChannel(channelInfo.username);
-        } catch (e) {
-          console.error('Error parsing Twitch channel info:', e);
-        }
-      } else if (kickToken && kickChannelInfo) {
-        try {
-          const channelInfo = JSON.parse(kickChannelInfo);
-          setKickChannel(channelInfo.username);
-        } catch (e) {
-          console.error('Error parsing Kick channel info:', e);
-        }
-      }
-
-    };
-
     initAuth();
   }, []);
 
-  // Initialize Cloudflare beacon
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015';
-    script.setAttribute('data-cf-beacon', JSON.stringify({
-      token: 'vcd15cbe7772f49c399c6a5babf22c1241717689176015',
-      spa: true
-    }));
-    document.head.appendChild(script);
-
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, []);
 
   const handleNewMessage = useCallback((message: ChatMessage) => {
     // Check if message should be hidden
