@@ -121,6 +121,8 @@ export class TwitchChatService implements ChatProvider {
     }
 
     return Object.entries(badges).map(([type, version]) => {
+      // Debug: Log badge parsing
+      console.log(`Parsing badge: type=${type}, version=${version}`);
       // Try to get description from API data (check channel badges first)
       let description = this.getBadgeDescription(type);
       
@@ -181,6 +183,7 @@ export class TwitchChatService implements ChatProvider {
     // Parse BTTV emotes - Add all available BTTV emotes to the list for name-based matching
     // We don't need position data since the messageUtils will use regex matching
     if (this.bttvEmotes.length > 0) {
+      console.log('Teste Parsing BTTV emotes');
       const words = message.split(/\s+/); // Split by any whitespace
       const uniqueBttvEmotes = new Set<string>();
       
@@ -205,7 +208,7 @@ export class TwitchChatService implements ChatProvider {
         }
       });
     }
-
+    console.log('Teste Parsing BTTV emotes', emoteList);
     return emoteList;
   }
 
@@ -286,9 +289,15 @@ export class TwitchChatService implements ChatProvider {
             });
             this.channelBadges.set(badgeSet.set_id, versionMap);
           });
+          
+          // Debug: Log fetched channel badges
+          console.log('Fetched channel badges:', Array.from(this.channelBadges.keys()));
         }
       } else if (!this.oauthToken) {
         // Channel badges require OAuth token - this is expected
+        console.log('Channel badges require OAuth token');
+      } else {
+        console.log('Failed to fetch channel badges:', response.status, response.statusText);
       }
     } catch (error) {
       // Error fetching channel badges
@@ -305,15 +314,19 @@ export class TwitchChatService implements ChatProvider {
       
       // Then try to fetch channel-specific emotes using the channel login name
       // Some BTTV APIs accept channel name directly
+      console.log(`Fetching BTTV emotes for channel: ${this.channel}`);
       const userResponse = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${this.channel}`);
       
       if (userResponse.ok) {
         const data = await userResponse.json();
+        console.log('BTTV channel data:', data);
         
         // Combine channel emotes and shared emotes
         const channelEmotes = data.channelEmotes || [];
         const sharedEmotes = data.sharedEmotes || [];
         const newEmotes = [...channelEmotes, ...sharedEmotes];
+        
+        console.log(`Found ${channelEmotes.length} channel emotes and ${sharedEmotes.length} shared emotes`);
         
         // Add to existing global emotes (avoid duplicates)
         newEmotes.forEach(emote => {
@@ -321,21 +334,29 @@ export class TwitchChatService implements ChatProvider {
             this.bttvEmotes.push(emote);
           }
         });
+        
+        console.log(`Total BTTV emotes after adding channel emotes: ${this.bttvEmotes.length}`);
+      } else {
+        console.log('Failed to fetch BTTV channel emotes:', userResponse.status, userResponse.statusText);
       }
     } catch (error) {
-      // Failed to fetch BTTV emotes, will continue without them
+      console.log('Error fetching BTTV emotes:', error);
     }
   }
 
   private async fetchGlobalBttvEmotes(): Promise<void> {
     try {
+      console.log('Fetching global BTTV emotes...');
       const response = await fetch('https://api.betterttv.net/3/cached/emotes/global');
       if (response.ok) {
         const globalEmotes = await response.json();
         this.bttvEmotes = globalEmotes || [];
+        console.log('Fetched global BTTV emotes:', this.bttvEmotes.length);
+      } else {
+        console.log('Failed to fetch global BTTV emotes:', response.status, response.statusText);
       }
     } catch (error) {
-      // Failed to fetch global BTTV emotes
+      console.log('Error fetching global BTTV emotes:', error);
     }
   }
 
@@ -356,6 +377,11 @@ export class TwitchChatService implements ChatProvider {
       if (badgeVersion) {
         return badgeVersion.image_url_2x || badgeVersion.image_url_1x;
       }
+    }
+    
+    // For subscriber badges, try to use the version as a UUID if it looks like one
+    if (type === 'subscriber' && version && version.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      return `https://static-cdn.jtvnw.net/badges/v1/${version}/2`;
     }
     
     // Fallback to hardcoded UUIDs if API fetch failed

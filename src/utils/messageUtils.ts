@@ -7,14 +7,26 @@ export function htmlEncode(text: string): string {
   });
 }
 
-// Generate color from username (similar to MD5 hash approach)
+// Generate color from username with improved brightness
 export function generateColor(username: string): string {
   let hash = 0;
   for (let i = 0; i < username.length; i++) {
     hash = username.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const color = Math.abs(hash).toString(16).substring(0, 6);
-  let hexColor = "#" + color.padEnd(6, '0');
+  
+  // Generate RGB values with better distribution and brightness
+  const r = Math.abs(hash) % 256;
+  const g = Math.abs(hash >> 8) % 256;
+  const b = Math.abs(hash >> 16) % 256;
+  
+  // Ensure minimum brightness (at least 120 for each component)
+  const minBrightness = 120;
+  const adjustedR = Math.max(minBrightness, r);
+  const adjustedG = Math.max(minBrightness, g);
+  const adjustedB = Math.max(minBrightness, b);
+  
+  // Convert to hex using the existing helper
+  const hexColor = "#" + ((1 << 24) + (adjustedR << 16) + (adjustedG << 8) + adjustedB).toString(16).slice(1);
   
   // Ensure good contrast with dark header background #30034d
   return ensureContrastWithHeader(hexColor);

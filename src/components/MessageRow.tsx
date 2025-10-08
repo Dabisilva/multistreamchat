@@ -4,8 +4,6 @@ import { attachEmotes, createUsernameHtml, getValidBadges } from '../utils/messa
 
 export const MessageRow: React.FC<MessageRowProps> = ({
   message,
-  animationIn,
-  animationOut,
   hideAfter,
   onRemove
 }) => {
@@ -13,22 +11,10 @@ export const MessageRow: React.FC<MessageRowProps> = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const element = messageRef.current;
-    if (!element) return;
-
-    // Add animation class
-    element.classList.add(animationIn, 'animated');
-
-    // Set up auto-hide if hideAfter is not 999 (infinite)
-    if (hideAfter !== 120) {
+    // Set up auto-hide if hideAfter is not 120 (infinite)
+    if (hideAfter !== 180) {
       timeoutRef.current = setTimeout(() => {
-        element.classList.remove(animationIn);
-        element.classList.add(animationOut);
-
-        // Remove element after animation
-        setTimeout(() => {
-          onRemove(message.id);
-        }, 1000);
+        onRemove(message.id);
       }, hideAfter * 1000);
     }
 
@@ -37,7 +23,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [message.id, animationIn, animationOut, hideAfter, onRemove]);
+  }, [message.id, hideAfter, onRemove]);
 
   const processedText = attachEmotes(message, message.provider);
   const usernameHtml = createUsernameHtml(
@@ -53,7 +39,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       ref={messageRef}
       data-sender={message.userId}
       data-msgid={message.msgId}
-      className={`message-row ${animationIn} animated`}
+      className="message-row"
       id={`msg-${message.id}`}
     >
       <div className={`user-box ${actionClass}`}>
@@ -73,7 +59,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
                 const target = e.target as HTMLImageElement;
                 target.style.opacity = '1';
               }}
-              style={{ opacity: 0, transition: 'opacity 0.2s ease-in' }}
+              style={{ opacity: 0 }}
             />
           ))}
         </div>

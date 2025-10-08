@@ -9,8 +9,6 @@ import './style.css';
 const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [config] = useState<ChatConfig>({
-    animationIn: 'none',
-    animationOut: 'none',
     hideAfter: 60,
     messagesLimit: 50,
     nickColor: 'user',
@@ -207,8 +205,6 @@ const App: React.FC = () => {
             <MessageRow
               key={message.id}
               message={message}
-              animationIn={config.animationIn}
-              animationOut={config.animationOut}
               hideAfter={config.hideAfter}
               onRemove={removeMessage}
             />
