@@ -192,7 +192,7 @@ export class OAuthService {
    * Get Twitch OAuth configuration
    */
   private getTwitchConfig(): OAuthConfig {
-    const defaultRedirectUri = `${window.location.origin}/login`;
+    const defaultRedirectUri = `${window.location.origin}/`;
     return {
       clientId: (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Public Twitch client ID
       clientSecret: (import.meta as any).env?.VITE_TWITCH_CLIENT_SECRET || '',

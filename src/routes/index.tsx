@@ -2,8 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Lazy load components for better performance
+const Chat = lazy(() => import('../pages/Chat'));
 const App = lazy(() => import('../App'));
-const Login = lazy(() => import('../pages/Login'));
 
 // Loading component
 const LoadingScreen: React.FC = () => (
@@ -38,7 +38,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   };
 
   if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -53,14 +53,14 @@ export const AppRoutes: React.FC = () => {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* Login route - no guard needed, handles its own state */}
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<App />} />
 
         {/* Protected route - requires authentication */}
         <Route
-          path="/"
+          path="/chat"
           element={
             <ProtectedRoute>
-              <App />
+              <Chat />
             </ProtectedRoute>
           }
         />

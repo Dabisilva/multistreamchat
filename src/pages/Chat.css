@@ -1,0 +1,73 @@
+body {
+  margin: 0;
+  background: transparent;
+  background-size: 20px 20px; /* Dot pattern */
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+  color: #333;
+}
+
+.chat-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+}
+
+.chat-box {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 10px;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Main container for messages */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Alignment classes */
+.block-align {
+  justify-content: flex-start;
+}
+
+.bottom-align {
+  justify-content: flex-end;
+  flex-grow: 1;
+}
+
+/* Scroll to Bottom Button */
+.scroll-to-bottom-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scroll-to-bottom-btn:hover {
+  background: #7c3aed;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.scroll-to-bottom-btn:active {
+  transform: scale(0.95);
+}
