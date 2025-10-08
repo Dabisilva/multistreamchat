@@ -192,37 +192,29 @@ const App: React.FC<LoginProps> = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-box">
-        <h1 className="login-title">MultiStream Chat</h1>
-        <p className="login-subtitle">Conecte-se aos chats da Twitch e Kick</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-5 font-sans">
+      <div className="bg-white/98 rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-10 md:p-6 max-w-[800px] w-full animate-fade-in">
+        <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStream Chat</h1>
+        <p className="text-center text-gray-600 m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
 
         {error && (
-          <div style={{
-            background: '#ffebee',
-            color: '#c62828',
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            border: '1px solid #ffcdd2'
-          }}>
+          <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-5 border border-red-200">
             {error}
           </div>
         )}
 
 
-        <div className="login-form">
-          <div className="platform-section">
+        <div className="flex flex-col gap-8">
+          <div className="bg-gray-100 rounded-xl p-6 border-2 border-transparent transition-all duration-300">
             {/* Twitch Section */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="mb-5">
+              <div className="flex gap-2.5">
                 <button
-                  className="oauth-button twitch-button"
+                  className="flex-1 mb-4 px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-purple-600 hover:bg-purple-700 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(145,70,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleTwitchOAuth}
                   disabled={isLoadingTwitch || twitchAuthenticated}
-                  style={{ marginBottom: '15px', flex: 1 }}
                 >
-                  <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
                   </svg>
                   {twitchButtonText()}
@@ -231,12 +223,7 @@ const App: React.FC<LoginProps> = () => {
                 {twitchAuthenticated && (
                   <button
                     onClick={handleTwitchSignOut}
-                    className="oauth-button"
-                    style={{
-                      marginBottom: '15px',
-                      background: '#ff6b6b',
-                      width: '120px'
-                    }}
+                    className="mb-4 px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-red-500 hover:bg-red-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(239,68,68,0.3)] w-[120px]"
                     title="Sair do Twitch"
                   >
                     Sair
@@ -247,53 +234,30 @@ const App: React.FC<LoginProps> = () => {
 
             {/* Kick Section */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                color: '#333',
-                fontWeight: '500',
-                fontSize: '14px'
-              }}>
+              <label className="block mb-2 text-gray-800 font-medium text-sm">
                 Canal da Kick
               </label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="flex gap-2.5">
                 <input
                   type="text"
                   value={kickChannel}
                   onChange={(e) => setKickChannel(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleKickChannelSubmit()}
                   placeholder="Digite o nome do canal"
-                  className="channel-input"
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    border: '2px solid #53fc18',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    outline: 'none',
-                    transition: 'border-color 0.3s',
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#45d912'}
-                  onBlur={(e) => e.target.style.borderColor = '#53fc18'}
+                  className="flex-1 px-4 py-3 border-2 border-green-400 focus:border-green-500 rounded-lg text-base outline-none transition-colors duration-300"
                 />
 
                 {!kickChannelSaved ? (
                   <button
                     onClick={handleKickChannelSubmit}
-                    className="oauth-button kick-button"
-                    style={{ width: '120px', marginBottom: 0 }}
+                    className="w-[120px] px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-black bg-[#53fc18] hover:bg-[#42d914] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(83,252,24,0.3)]"
                   >
                     Confirmar
                   </button>
                 ) : (
                   <button
                     onClick={handleKickChannelClear}
-                    className="oauth-button"
-                    style={{
-                      background: '#ff6b6b',
-                      width: '120px',
-                      marginBottom: 0
-                    }}
+                    className="w-[120px] px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-red-500 hover:bg-red-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(239,68,68,0.3)]"
                     title="Limpar canal"
                   >
                     Limpar
@@ -304,16 +268,16 @@ const App: React.FC<LoginProps> = () => {
 
             {/* Widget URL Section */}
             {(twitchWidgetUrl || kickWidgetUrl) && (
-              <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '2px solid #ddd' }}>
-                <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>
-                  URL do Widget:
+              <div className="mt-8 pt-5 border-t-2 border-gray-300 animate-slide-down">
+                <p className="m-0 mb-2.5 font-bold">
+                  URL do Widget(Pode usar no OBS):
                 </p>
-                <div className="url-input-container">
+                <div className="flex flex-col md:flex-row gap-2.5 mb-5">
                   <input
                     type="text"
                     value={twitchWidgetUrl || kickWidgetUrl}
                     readOnly
-                    className="widget-url-input"
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 focus:border-green-500 rounded-lg text-sm bg-gray-50 text-gray-800 font-mono outline-none"
                   />
                   <button onClick={() => {
                     const url = twitchWidgetUrl || kickWidgetUrl;
@@ -325,14 +289,13 @@ const App: React.FC<LoginProps> = () => {
                       document.execCommand('copy');
                       document.body.removeChild(textArea);
                     });
-                  }} className="copy-button">
+                  }} className="bg-green-500 text-white border-0 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap hover:bg-green-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(46,204,113,0.3)] md:w-full">
                     Copiar
                   </button>
                 </div>
                 <button
                   onClick={() => window.open(twitchWidgetUrl || kickWidgetUrl, '_blank')?.focus()}
-                  className="go-to-chat-button"
-                  style={{ marginTop: '10px' }}
+                  className="bg-indigo-500 text-white border-0 rounded-lg px-8 py-3.5 text-base font-semibold cursor-pointer transition-all duration-300 w-full hover:bg-indigo-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(102,126,234,0.3)] mt-2.5"
                 >
                   Ir para o Chat
                 </button>

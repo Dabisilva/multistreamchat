@@ -171,7 +171,7 @@ export class ChannelService {
           channelBadges = channelData.data || [];
         }
       } catch (error) {
-        console.warn('Failed to fetch channel badges:', error);
+        // Failed to fetch channel badges
       }
     }
 
@@ -223,7 +223,7 @@ export class ChannelService {
         emotes.push(...bttvEmotes);
       }
     } catch (error) {
-      console.warn('Failed to fetch BTTV emotes:', error);
+      // Failed to fetch BTTV emotes
     }
 
     try {
@@ -242,7 +242,7 @@ export class ChannelService {
         emotes.push(...ffzEmotes);
       }
     } catch (error) {
-      console.warn('Failed to fetch FFZ emotes:', error);
+      // Failed to fetch FFZ emotes
     }
 
     return emotes;
