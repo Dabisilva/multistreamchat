@@ -75,7 +75,7 @@ textarea {
 
 /* BTTV emotes with 100% width */
 .bttv-emote {
-  width: 100%;
+  width: auto;
   height: auto;
   max-height: 28px;
 }
