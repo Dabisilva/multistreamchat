@@ -4,6 +4,8 @@ import { TwitchChatService } from './services/TwitchChat';
 import { KickChatService } from './services/KickChat';
 import { MessageRow } from './components/MessageRow';
 import { shouldHideMessage } from './utils/messageUtils';
+import { Login } from './components/Login';
+import AuthService from './services/AuthService';
 import './style.css';
 
 const App: React.FC = () => {
@@ -24,24 +26,56 @@ const App: React.FC = () => {
   const [twitchService, setTwitchService] = useState<TwitchChatService | null>(null);
   const [kickService, setKickService] = useState<KickChatService | null>(null);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Parse URL parameters for channel names and auto-connect
+  // Check for OAuth redirect and restore authentication state
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const twitchParam = urlParams.get('twitchChannel');
-    const kickParam = urlParams.get('kickChannel');
-    const twitchTokenParam = urlParams.get('twitchToken');
+    const initAuth = async () => {
+      // Check if we're returning from OAuth redirect
+      const { token, error } = AuthService.parseOAuthFromUrl();
 
-    if (twitchParam) {
-      setTwitchChannel(twitchParam);
-    }
-    if (kickParam) {
-      setKickChannel(kickParam);
-    }
-    if (twitchTokenParam) {
-      setTwitchOauthToken(twitchTokenParam);
-    }
+      if (error) {
+        console.error('OAuth error:', error);
+        alert(`Authentication failed: ${error}`);
+        setIsLoading(false);
+        return;
+      }
+
+      if (token) {
+        // We have a token from OAuth redirect
+        // Get the channel names from sessionStorage
+        const savedTwitchChannel = sessionStorage.getItem('twitchChannel') || '';
+        const savedKickChannel = sessionStorage.getItem('kickChannel') || '';
+
+        if (savedTwitchChannel) {
+          // Save auth and connect
+          AuthService.saveAuth(token, savedTwitchChannel, savedKickChannel);
+          setTwitchOauthToken(token);
+          setTwitchChannel(savedTwitchChannel);
+          if (savedKickChannel) {
+            setKickChannel(savedKickChannel);
+          }
+          setIsAuthenticated(true);
+        }
+      } else {
+        // Check for existing authentication
+        const authState = AuthService.getAuthState();
+        if (authState.isAuthenticated) {
+          setTwitchOauthToken(authState.twitchToken);
+          setTwitchChannel(authState.twitchChannel);
+          if (authState.kickChannel) {
+            setKickChannel(authState.kickChannel);
+          }
+          setIsAuthenticated(true);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   // Initialize Cloudflare beacon
@@ -162,15 +196,99 @@ const App: React.FC = () => {
     };
   }, []); // Remove service dependencies to prevent cleanup on service changes
 
+  // Handle login
+  const handleLogin = (token: string, twitch: string, kick?: string) => {
+    AuthService.saveAuth(token, twitch, kick);
+    setTwitchOauthToken(token);
+    setTwitchChannel(twitch);
+    if (kick) {
+      setKickChannel(kick);
+    }
+    setIsAuthenticated(true);
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    // Disconnect services
+    if (twitchService) {
+      twitchService.disconnect();
+      setTwitchService(null);
+    }
+    if (kickService) {
+      kickService.disconnect();
+      setKickService(null);
+    }
+
+    // Clear state
+    AuthService.logout();
+    setIsAuthenticated(false);
+    setTwitchChannel('');
+    setKickChannel('');
+    setTwitchOauthToken('');
+    setMessages([]);
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        fontSize: '1.5rem',
+        color: '#667eea'
+      }}>
+        Carregando...
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  // Show chat interface
   return (
     <div className="chat-container">
+      {/* Logout button */}
+      <button
+        onClick={handleLogout}
+        style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          background: '#667eea',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          padding: '10px 20px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '600',
+          zIndex: 1000,
+          transition: 'all 0.3s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#5568d3';
+          e.currentTarget.style.transform = 'scale(1.05)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#667eea';
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+      >
+        Sair
+      </button>
+
       <div
         className="chat-box"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
         {/* Status Display */}
-        {/* <div style={{
+        <div style={{
           position: 'fixed',
           top: '10px',
           left: '10px',
@@ -189,15 +307,17 @@ const App: React.FC = () => {
               <span style={{ color: '#ff0000', marginLeft: '5px' }}>● Disconnected</span>
             )}
           </div>
-          <div>
-            <strong>Kick:</strong> {kickChannel}
-            {kickService && kickService.isConnected() ? (
-              <span style={{ color: '#00ff00', marginLeft: '5px' }}>● Connected</span>
-            ) : (
-              <span style={{ color: '#ff0000', marginLeft: '5px' }}>● Disconnected</span>
-            )}
-          </div>
-        </div> */}
+          {kickChannel && (
+            <div>
+              <strong>Kick:</strong> {kickChannel}
+              {kickService && kickService.isConnected() ? (
+                <span style={{ color: '#00ff00', marginLeft: '5px' }}>● Connected</span>
+              ) : (
+                <span style={{ color: '#ff0000', marginLeft: '5px' }}>● Disconnected</span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Chat Messages */}
         <div className={`main-container ${config.alignMessages === 'block' ? 'block-align' : 'bottom-align'}`}>
@@ -216,7 +336,7 @@ const App: React.FC = () => {
           <button
             className="scroll-to-bottom-btn"
             onClick={scrollToBottom}
-            title="Scroll to bottom"
+            title="Rolar para o final"
           >
             ↓
           </button>

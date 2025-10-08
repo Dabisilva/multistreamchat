@@ -44,7 +44,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
     >
       <div className={`user-box ${actionClass}`}>
         <div className="badges-container">
-          {getValidBadges(message.badges).map((badge, index) => (
+          {/* {getValidBadges(message.badges).map((badge, index) => (
             <img
               key={`${badge.type}-${badge.version}-${index}`}
               alt=""
@@ -61,7 +61,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
               }}
               style={{ opacity: 0 }}
             />
-          ))}
+          ))} */}
         </div>
         <span
           className="username"
