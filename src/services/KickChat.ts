@@ -187,13 +187,32 @@ export class KickChatService implements ChatProvider {
   private processKickMessage(data: any): void {
     if (!data.sender || !data.content) return;
 
+    const badges = this.parseKickBadges(data.sender.identity?.badges || []);
+    
+    // If sender username matches channel name, they are the broadcaster
+    if (data.sender.username?.toLowerCase() === this.channel.toLowerCase()) {
+      // Check if broadcaster badge already exists
+      const hasBroadcasterBadge = badges.some(b => 
+        b.type?.toLowerCase() === 'broadcaster' || b.type?.toLowerCase() === 'owner'
+      );
+      
+      if (!hasBroadcasterBadge) {
+        badges.push({
+          type: 'broadcaster',
+          version: '1',
+          url: '',
+          description: 'Channel Owner'
+        });
+      }
+    }
+
     const chatMessage: ChatMessage = {
       id: data.id?.toString() || `${Date.now()}-${Math.random()}`,
       userId: data.sender.id?.toString() || '',
       displayName: data.sender.username || '',
       displayColor: data.sender.identity?.color || '',
       text: data.content,
-      badges: this.parseKickBadges(data.sender.identity?.badges || []),
+      badges: badges,
       emotes: this.parseKickEmotes(data.content),
       isAction: false,
       timestamp: Date.now(),
@@ -250,13 +269,16 @@ export class KickChatService implements ChatProvider {
         badgeUrl = `https://files.kick.com/badges/${badge.id}/medium`;
       }
 
+      // Normalize badge type to lowercase for consistent comparison
+      const badgeType = (badge.type || badge.slug || '').toLowerCase();
+
       return {
-        type: badge.type || badge.slug || 'custom',
+        type: badgeType,
         version: badge.count?.toString() || '1',
         url: badgeUrl,
-        description: badge.text || badge.name || this.getKickBadgeDescription(badge.type || badge.slug)
+        description: badge.text || badge.name || this.getKickBadgeDescription(badgeType)
       };
-    }).filter(badge => badge.url); // Only return badges with valid URLs
+    }).filter(badge => badge.type); // Keep all badges with a valid type
   }
 
   private getKickBadgeDescription(type: string): string {

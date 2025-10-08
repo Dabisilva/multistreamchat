@@ -139,12 +139,20 @@ const Chat: React.FC = () => {
       return;
     }
 
-    // Check if user is a moderator, VIP, or broadcaster
-    const hasPrivilegedBadge = message.badges.some(badge =>
-      badge.type === 'moderator' ||
-      badge.type === 'vip' ||
-      badge.type === 'broadcaster'
-    );
+    // Check if user is a moderator, VIP, broadcaster, or OG
+    // Note: Kick and Twitch use different badge names
+    const hasPrivilegedBadge = message.badges.some(badge => {
+      const badgeType = badge.type?.toLowerCase() || '';
+      return (
+        badgeType === 'moderator' ||
+        badgeType === 'vip' ||
+        badgeType === 'broadcaster' ||
+        badgeType === 'owner' || // Kick channel owner
+        badgeType === 'og' || // Kick OG badge
+        badgeType === 'staff' || // Platform staff
+        badgeType === 'super_admin' // Kick super admin
+      );
+    });
 
     const addMessage = () => {
       // Remove from pending timeouts if it was delayed
