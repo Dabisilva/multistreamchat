@@ -53,6 +53,14 @@ body {
   color: #333;
 }
 
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-size: 16px;
+}
+
 /* Emote styling */
 .emote {
   width: 28px;

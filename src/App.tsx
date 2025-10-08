@@ -23,6 +23,10 @@ const App: React.FC<LoginProps> = () => {
   const [usernameTextColor, setUsernameTextColor] = useState('#ffffff');
   const [messageBgColor, setMessageBgColor] = useState('#8b5cf6');
   const [messageTextColor, setMessageTextColor] = useState('#ffffff');
+  const [usernameBgAlpha, setUsernameBgAlpha] = useState('1');
+  const [usernameTextAlpha, setUsernameTextAlpha] = useState('1');
+  const [messageBgAlpha, setMessageBgAlpha] = useState('1');
+  const [messageTextAlpha, setMessageTextAlpha] = useState('1');
   const [borderRadius, setBorderRadius] = useState('10');
   const [usernameFontSize, setUsernameFontSize] = useState('16');
   const [messageFontSize, setMessageFontSize] = useState('20');
@@ -150,7 +154,7 @@ const App: React.FC<LoginProps> = () => {
         setKickWidgetUrl(url);
       }
     }
-  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, borderRadius, usernameFontSize, messageFontSize, messageDelay]);
+  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, usernameBgAlpha, usernameTextAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messageDelay]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -240,8 +244,21 @@ const App: React.FC<LoginProps> = () => {
     )?.focus();
   };
 
+  // Helper function to convert hex to RGBA
+  const hexToRgba = (hex: string, alpha: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
   const getCustomizationParams = () => {
-    return `&usernameBg=${encodeURIComponent(usernameBgColor)}&usernameColor=${encodeURIComponent(usernameTextColor)}&messageBg=${encodeURIComponent(messageBgColor)}&messageColor=${encodeURIComponent(messageTextColor)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messageDelay=${messageDelay}`;
+    const usernameBgRgba = hexToRgba(usernameBgColor, usernameBgAlpha);
+    const usernameColorRgba = hexToRgba(usernameTextColor, usernameTextAlpha);
+    const messageBgRgba = hexToRgba(messageBgColor, messageBgAlpha);
+    const messageColorRgba = hexToRgba(messageTextColor, messageTextAlpha);
+
+    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&usernameColor=${encodeURIComponent(usernameColorRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messageDelay=${messageDelay}`;
   };
 
   const copyChatUrl = () => {
@@ -397,6 +414,18 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
+                      Transparência: {Math.round(parseFloat(usernameBgAlpha) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={usernameBgAlpha}
+                      onChange={(e) => setUsernameBgAlpha(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
                   </div>
 
                   {/* Username Text Color */}
@@ -418,6 +447,18 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
+                      Transparência: {Math.round(parseFloat(usernameTextAlpha) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={usernameTextAlpha}
+                      onChange={(e) => setUsernameTextAlpha(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
                   </div>
 
                   {/* Message Background Color */}
@@ -439,6 +480,18 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
+                      Transparência: {Math.round(parseFloat(messageBgAlpha) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={messageBgAlpha}
+                      onChange={(e) => setMessageBgAlpha(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
                   </div>
 
                   {/* Message Text Color */}
@@ -460,57 +513,69 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
+                      Transparência: {Math.round(parseFloat(messageTextAlpha) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={messageTextAlpha}
+                      onChange={(e) => setMessageTextAlpha(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
                   </div>
 
                   {/* Border Radius */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Borda arredondada: {borderRadius}px
+                      Borda arredondada (px)
                     </label>
                     <input
-                      type="range"
+                      type="number"
                       min="0"
                       max="30"
                       value={borderRadius}
                       onChange={(e) => setBorderRadius(e.target.value)}
-                      className="w-full accent-purple-600"
+                      className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                     />
                   </div>
 
                   {/* Username Font Size */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Tamanho do Nome: {usernameFontSize}px
+                      Tamanho do Nome (px)
                     </label>
                     <input
-                      type="range"
+                      type="number"
                       min="12"
-                      max="24"
+                      max="32"
                       value={usernameFontSize}
                       onChange={(e) => setUsernameFontSize(e.target.value)}
-                      className="w-full accent-purple-600"
+                      className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                     />
                   </div>
 
                   {/* Message Font Size */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Tamanho da Mensagem: {messageFontSize}px
+                      Tamanho da Mensagem (px)
                     </label>
                     <input
-                      type="range"
+                      type="number"
                       min="12"
-                      max="24"
+                      max="32"
                       value={messageFontSize}
                       onChange={(e) => setMessageFontSize(e.target.value)}
-                      className="w-full accent-purple-600"
+                      className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                     />
                   </div>
 
                   {/* Message Delay */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Delay  das Mensagens: {messageDelay}s
+                      Delay das Mensagens: {messageDelay}s
                     </label>
                     <input
                       type="range"
@@ -529,15 +594,16 @@ const App: React.FC<LoginProps> = () => {
               </div>
               {/* Preview */}
               <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border">
-                <div className=" bg-transparent rounded-lg">
+                <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Preview</h3>
+                <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-4">
                   <div className="space-y-3">
                     {/* Example Message 1 */}
                     <div className="p-0 rounded-none break-words bg-transparent border-0">
                       <div
                         className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
                         style={{
-                          backgroundColor: usernameBgColor,
-                          color: usernameTextColor,
+                          backgroundColor: hexToRgba(usernameBgColor, usernameBgAlpha),
+                          color: hexToRgba(usernameTextColor, usernameTextAlpha),
                           fontSize: `${usernameFontSize}px`,
                           borderRadius: `${borderRadius}px`
                         }}
@@ -547,8 +613,8 @@ const App: React.FC<LoginProps> = () => {
                       <div
                         className="px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block"
                         style={{
-                          backgroundColor: messageBgColor,
-                          color: messageTextColor,
+                          backgroundColor: hexToRgba(messageBgColor, messageBgAlpha),
+                          color: hexToRgba(messageTextColor, messageTextAlpha),
                           fontSize: `${messageFontSize}px`,
                           borderRadius: `${borderRadius}px`
                         }}
@@ -562,8 +628,8 @@ const App: React.FC<LoginProps> = () => {
                       <div
                         className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
                         style={{
-                          backgroundColor: usernameBgColor,
-                          color: usernameTextColor,
+                          backgroundColor: hexToRgba(usernameBgColor, usernameBgAlpha),
+                          color: hexToRgba(usernameTextColor, usernameTextAlpha),
                           fontSize: `${usernameFontSize}px`,
                           borderRadius: `${borderRadius}px`
                         }}
@@ -573,8 +639,8 @@ const App: React.FC<LoginProps> = () => {
                       <div
                         className="px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block"
                         style={{
-                          backgroundColor: messageBgColor,
-                          color: messageTextColor,
+                          backgroundColor: hexToRgba(messageBgColor, messageBgAlpha),
+                          color: hexToRgba(messageTextColor, messageTextAlpha),
                           fontSize: `${messageFontSize}px`,
                           borderRadius: `${borderRadius}px`
                         }}
