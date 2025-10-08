@@ -3,15 +3,21 @@ import { ChatMessage, ChatProvider } from '../types';
 export class KickChatService implements ChatProvider {
   private channel: string;
   private onMessage: (message: ChatMessage) => void;
+  private onMessageDelete?: (msgId: string) => void;
   private connected: boolean = false;
   private chatroomId: number | null = null;
   private pusherSocket: WebSocket | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
 
-  constructor(channel: string, onMessage: (message: ChatMessage) => void) {
+  constructor(
+    channel: string, 
+    onMessage: (message: ChatMessage) => void,
+    options?: { onMessageDelete?: (msgId: string) => void }
+  ) {
     this.channel = channel;
     this.onMessage = onMessage;
+    if (options?.onMessageDelete) this.onMessageDelete = options.onMessageDelete;
   }
 
   async connect(): Promise<void> {
@@ -99,6 +105,9 @@ export class KickChatService implements ChatProvider {
           } else if (data.event === 'App\\Events\\ChatMessageEvent') {
             // New chat message received
             this.handlePusherMessage(data);
+          } else if (data.event === 'App\\Events\\MessageDeletedEvent') {
+            // Message deleted by moderator
+            this.handleMessageDeleted(data);
           }
         } catch (error) {
           // Failed to parse message
@@ -138,6 +147,19 @@ export class KickChatService implements ChatProvider {
       }
     } catch (error) {
       // Failed to process message
+    }
+  }
+
+  private handleMessageDeleted(data: any): void {
+    try {
+      const messageData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+      const msgId = messageData?.id?.toString() || messageData?.message?.id?.toString();
+      
+      if (msgId && this.onMessageDelete) {
+        this.onMessageDelete(msgId);
+      }
+    } catch (error) {
+      // Failed to process message deletion
     }
   }
 

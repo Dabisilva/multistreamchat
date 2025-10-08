@@ -144,6 +144,12 @@ const Chat: React.FC = () => {
     );
   }, []);
 
+  const removeMessageByMsgId = useCallback((msgId: string) => {
+    setMessages(prevMessages =>
+      prevMessages.filter(msg => msg.msgId !== msgId)
+    );
+  }, []);
+
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
     if (chatContainerRef.current) {
@@ -214,21 +220,26 @@ const Chat: React.FC = () => {
         {
           clientId: twitchClientId || undefined,
           oauthToken: twitchOauthToken || undefined,
-          userInfo: userInfo
+          userInfo: userInfo,
+          onMessageDelete: removeMessageByMsgId
         }
       );
       service.connect();
       setTwitchService(service);
     }
-  }, [twitchChannel, twitchService, twitchOauthToken, broadcasterId, clientId, handleNewMessage]);
+  }, [twitchChannel, twitchService, twitchOauthToken, broadcasterId, clientId, handleNewMessage, removeMessageByMsgId]);
 
   useEffect(() => {
     if (kickChannel && !kickService) {
-      const service = new KickChatService(kickChannel, handleNewMessage);
+      const service = new KickChatService(
+        kickChannel,
+        handleNewMessage,
+        { onMessageDelete: removeMessageByMsgId }
+      );
       service.connect();
       setKickService(service);
     }
-  }, [kickChannel, kickService, handleNewMessage]);
+  }, [kickChannel, kickService, handleNewMessage, removeMessageByMsgId]);
 
   // Cleanup on unmount
   useEffect(() => {

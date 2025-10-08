@@ -26,6 +26,7 @@ export class TwitchChatService implements ChatProvider {
   private client: tmi.Client | null = null;
   private channel: string;
   private onMessage: (message: ChatMessage) => void;
+  private onMessageDelete?: (msgId: string) => void;
   private connected: boolean = false;
   private globalBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
@@ -37,12 +38,13 @@ export class TwitchChatService implements ChatProvider {
   constructor(
     channel: string, 
     onMessage: (message: ChatMessage) => void,
-    options?: { clientId?: string; oauthToken?: string; userInfo?: any }
+    options?: { clientId?: string; oauthToken?: string; userInfo?: any; onMessageDelete?: (msgId: string) => void }
   ) {
     this.channel = channel;
     this.onMessage = onMessage;
     if (options?.clientId) this.clientId = options.clientId;
     if (options?.oauthToken) this.oauthToken = options.oauthToken;
+    if (options?.onMessageDelete) this.onMessageDelete = options.onMessageDelete;
     
     // Store user info for enhanced badge fetching
     if (options?.userInfo) {
@@ -129,6 +131,14 @@ export class TwitchChatService implements ChatProvider {
 
     this.client.on('disconnected', () => {
       this.connected = false;
+    });
+
+    // Handle message deletions by moderators
+    this.client.on('messagedeleted', (_channel, _username, _deletedMessage, userstate) => {
+      const targetMsgId = userstate['target-msg-id'];
+      if (targetMsgId && this.onMessageDelete) {
+        this.onMessageDelete(targetMsgId);
+      }
     });
 
     this.client.connect().catch(() => {
