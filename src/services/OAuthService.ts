@@ -105,8 +105,12 @@ export class OAuthService {
     const config = this.getKickConfig();
     
     // Validate required config
-    if (!config.clientId) {
-      throw new Error('Kick Client ID não configurado. Configure VITE_KICK_CLIENT_ID no arquivo .env.local');
+    if (!config.clientId || config.clientId === '') {
+      throw new Error('Kick OAuth não está disponível no momento. Configure seu Client ID em .env.local para usar esta funcionalidade.');
+    }
+    
+    if (!config.clientSecret || config.clientSecret === '') {
+      throw new Error('Kick OAuth requer Client Secret. Configure VITE_KICK_CLIENT_SECRET no arquivo .env.local');
     }
     
     const state = this.generateRandomString(32);
@@ -118,16 +122,18 @@ export class OAuthService {
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
     localStorage.setItem('kick_code_verifier', codeVerifier);
     
-    // Kick OAuth 2.1 scopes
-    const scopes = 'user:read:email chat:read';
-    const authUrl = `https://kick.com/oauth/authorize?` +
+    // Kick OAuth 2.1 scopes (must match exact scope names from Kick API)
+    const scopes = 'user:read';
+    
+    // Use id.kick.com as per official documentation
+    const authUrl = `https://id.kick.com/oauth/authorize?` +
+      `response_type=code&` +
       `client_id=${config.clientId}&` +
       `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
-      `response_type=code&` +
       `scope=${encodeURIComponent(scopes)}&` +
-      `state=${state}&` +
       `code_challenge=${codeChallenge}&` +
-      `code_challenge_method=S256`;
+      `code_challenge_method=S256&` +
+      `state=${state}`;
     
     window.location.href = authUrl;
   }
@@ -154,7 +160,7 @@ export class OAuthService {
     
     const tokenUrl = platform === 'twitch' 
       ? 'https://id.twitch.tv/oauth2/token'
-      : 'https://kick.com/oauth/token';
+      : 'https://id.kick.com/oauth/token';
     
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -266,29 +272,6 @@ export class OAuthService {
     };
   }
 
-  /**
-   * Validate access token
-   */
-  async validateToken(accessToken: string, platform: 'twitch' | 'kick'): Promise<boolean> {
-    try {
-      const validateUrl = platform === 'twitch' 
-        ? 'https://id.twitch.tv/oauth2/validate'
-        : 'https://kick.com/api/v1/user';
-      
-      const headers: HeadersInit = {
-        'Authorization': `Bearer ${accessToken}`
-      };
-      
-      if (platform === 'twitch') {
-        headers['Client-Id'] = this.getTwitchConfig().clientId;
-      }
-      
-      const response = await fetch(validateUrl, { headers });
-      return response.ok;
-    } catch (error) {
-      return false;
-    }
-  }
 }
 
 export default OAuthService.getInstance();

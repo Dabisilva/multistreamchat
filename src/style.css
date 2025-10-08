@@ -3,7 +3,7 @@ body {
   background: transparent;
   background-size: 20px 20px; /* Dot pattern */
   font-family: Arial, sans-serif;
-  font-size: 16px;
+  font-size: 20px;
   color: #333;
 }
 
@@ -101,23 +101,6 @@ body {
   margin: 0 1px;
   object-fit: contain;
   display: inline-block;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .message-row {
-    max-width: 95%;
-  }
-
-  .badge {
-    width: 16px;
-    height: 16px;
-  }
-
-  .emote {
-    width: 24px;
-    height: 24px;
-  }
 }
 
 /* Scroll to Bottom Button */
