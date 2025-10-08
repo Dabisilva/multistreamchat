@@ -61,4 +61,12 @@ body {
   margin: 0 1px;
   object-fit: contain;
   display: inline-block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Ensure animated GIFs play */
+.emote[src$=".gif"],
+.emote[src*="/emote/"] {
+  image-rendering: auto;
 }

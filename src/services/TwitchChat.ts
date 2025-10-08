@@ -99,6 +99,20 @@ export class TwitchChatService implements ChatProvider {
         text: message,
         badges: this.parseBadges(tags.badges as Record<string, string>),
         emotes: this.parseEmotes(tags.emotes as Record<string, string[]>, message),
+        thirdPartyEmotes: this.bttvEmotes.map(e => {
+          const extension = (e.animated || e.imageType === 'gif') ? 'gif' : 'webp';
+          return {
+            type: 'bttv',
+            name: e.code,
+            id: e.id,
+            gif: e.animated || e.imageType === 'gif',
+            urls: {
+              '1': `https://cdn.betterttv.net/emote/${e.id}/1x.${extension}`,
+              '2': `https://cdn.betterttv.net/emote/${e.id}/2x.${extension}`,
+              '4': `https://cdn.betterttv.net/emote/${e.id}/3x.${extension}`
+            }
+          };
+        }),
         isAction: false,
         timestamp: Date.now(),
         provider: 'twitch',
@@ -349,27 +363,23 @@ export class TwitchChatService implements ChatProvider {
 
   private async fetchChannelIdAndBttv(): Promise<void> {
     try {
-      // Try using the TMI client to get the channel ID from tags
-      // Or use the alternative BetterTTV API endpoint that accepts channel name
-      
       // First, fetch global BTTV emotes
       await this.fetchGlobalBttvEmotes();
       
-      // Then try to fetch channel-specific emotes using the channel login name
-      // Some BTTV APIs accept channel name directly
+      // Then try to fetch channel-specific emotes using the broadcaster ID
+      if (!this.broadcasterId) {
+        return; // Can't fetch channel emotes without broadcaster ID
+      }
   
-      const userResponse = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${this.channel}`);
+      const userResponse = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${this.broadcasterId}`);
       
       if (userResponse.ok) {
         const data = await userResponse.json();
-    
         
         // Combine channel emotes and shared emotes
         const channelEmotes = data.channelEmotes || [];
         const sharedEmotes = data.sharedEmotes || [];
         const newEmotes = [...channelEmotes, ...sharedEmotes];
-        
-    
         
         // Add to existing global emotes (avoid duplicates)
         newEmotes.forEach(emote => {
@@ -377,10 +387,6 @@ export class TwitchChatService implements ChatProvider {
             this.bttvEmotes.push(emote);
           }
         });
-        
-    
-      } else {
-    
       }
     } catch (error) {
   
@@ -389,17 +395,13 @@ export class TwitchChatService implements ChatProvider {
 
   private async fetchGlobalBttvEmotes(): Promise<void> {
     try {
-  
       const response = await fetch('https://api.betterttv.net/3/cached/emotes/global');
       if (response.ok) {
         const globalEmotes = await response.json();
         this.bttvEmotes = globalEmotes || [];
-    
-      } else {
-    
       }
     } catch (error) {
-  
+      // Failed to fetch global BTTV emotes
     }
   }
 

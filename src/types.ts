@@ -7,6 +7,7 @@ export interface ChatMessage {
   text: string;
   badges: Badge[];
   emotes: Emote[];
+  thirdPartyEmotes?: Emote[]; // BTTV, FFZ, 7TV emotes
   isAction: boolean;
   timestamp: number;
   provider: 'twitch' | 'kick';

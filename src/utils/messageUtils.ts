@@ -101,7 +101,7 @@ export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' =
 
   // Separate Twitch native emotes (with positions) from third-party emotes (BTTV, etc.)
   const nativeEmotes = emotes.filter(e => e.type === 'twitch' && e.start !== undefined && e.end !== undefined);
-  const thirdPartyEmotes = emotes.filter(e => e.type !== 'twitch' || e.start === undefined);
+  const thirdPartyEmotes = message.thirdPartyEmotes || emotes.filter(e => e.type !== 'twitch' || e.start === undefined);
 
   // First, replace Twitch native emotes using their position data (before HTML encoding affected positions)
   // We need to do this on the ORIGINAL text, not the encoded one
