@@ -77,7 +77,7 @@ textarea {
 .bttv-emote {
   width: 100%;
   height: auto;
-  max-height: 40px;
+  max-height: 28px;
 }
 
 /* Ensure animated GIFs play */
