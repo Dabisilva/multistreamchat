@@ -11,15 +11,16 @@ const Login: React.FC<LoginProps> = () => {
   const [isLoadingTwitch, setIsLoadingTwitch] = useState(false);
   const [isLoadingKick, setIsLoadingKick] = useState(false);
   const [_, setError] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authenticatedPlatform, setAuthenticatedPlatform] = useState<'twitch' | 'kick' | null>(null);
-  const [widgetUrl, setWidgetUrl] = useState('');
+  const [twitchAuthenticated, setTwitchAuthenticated] = useState(false);
+  const [kickAuthenticated, setKickAuthenticated] = useState(false);
+  const [twitchWidgetUrl, setTwitchWidgetUrl] = useState('');
+  const [kickWidgetUrl, setKickWidgetUrl] = useState('');
 
   // Process OAuth callback
   const processOAuthCallback = useCallback(async (code: string, state: string, platform: 'twitch' | 'kick') => {
     try {
       const tokenResponse = await OAuthService.handleOAuthCallback(platform, code, state);
-      console.log(tokenResponse);
+
       const userData = platform === 'twitch'
         ? await OAuthService.getTwitchUserInfo(tokenResponse.access_token)
         : await OAuthService.getKickUserInfo(tokenResponse.access_token);
@@ -43,13 +44,17 @@ const Login: React.FC<LoginProps> = () => {
       const tokenParam = platform === 'twitch' ? 'twitchToken' : 'kickToken';
       const widget = `${baseUrl}/?${channelParam}=${userData.username}&${tokenParam}=${tokenResponse.access_token}`;
 
-      setAuthenticatedPlatform(platform);
-      setWidgetUrl(widget);
-      setIsAuthenticated(true);
+      // Set platform-specific state
+      if (platform === 'twitch') {
+        setTwitchWidgetUrl(widget);
+        setTwitchAuthenticated(true);
+      } else {
+        setKickWidgetUrl(widget);
+        setKickAuthenticated(true);
+      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar autenticação');
-      setIsAuthenticated(false);
       throw err;
     }
   }, []);
@@ -57,31 +62,7 @@ const Login: React.FC<LoginProps> = () => {
   // Initialize on component mount
   useEffect(() => {
     const init = async () => {
-      // Check for existing auth first
-      const twitchToken = localStorage.getItem('twitchToken');
-      const kickToken = localStorage.getItem('kickToken');
-      const twitchUser = localStorage.getItem('twitchUserInfo');
-      const kickUser = localStorage.getItem('kickUserInfo');
-
-      if (twitchToken && twitchUser) {
-        const userData = JSON.parse(twitchUser);
-        const widget = `${baseUrl}/?twitchChannel=${userData.username}&twitchToken=${twitchToken}`;
-        setAuthenticatedPlatform('twitch');
-        setWidgetUrl(widget);
-        setIsAuthenticated(true);
-        return;
-      }
-
-      if (kickToken && kickUser) {
-        const userData = JSON.parse(kickUser);
-        const widget = `${baseUrl}/?kickChannel=${userData.username}&kickToken=${kickToken}`;
-        setAuthenticatedPlatform('kick');
-        setWidgetUrl(widget);
-        setIsAuthenticated(true);
-        return;
-      }
-
-      // Check for OAuth callback
+      // First, process OAuth callback if present (new authentication)
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
@@ -89,7 +70,6 @@ const Login: React.FC<LoginProps> = () => {
 
       if (urlError) {
         setError(`Erro de autenticação: ${urlError}`);
-        return;
       }
 
       if (code && state) {
@@ -118,10 +98,32 @@ const Login: React.FC<LoginProps> = () => {
           setError('Estado de autenticação inválido. Por favor, tente novamente.');
         }
       }
+
+      // Always check for existing auth (supports both platforms simultaneously)
+      const twitchToken = localStorage.getItem('twitchToken');
+      const kickToken = localStorage.getItem('kickToken');
+      const twitchUser = localStorage.getItem('twitchUserInfo');
+      const kickUser = localStorage.getItem('kickUserInfo');
+
+      // Check Twitch authentication
+      if (twitchToken && twitchUser) {
+        const userData = JSON.parse(twitchUser);
+        const widget = `${baseUrl}/?twitchChannel=${userData.username}&twitchToken=${twitchToken}`;
+        setTwitchWidgetUrl(widget);
+        setTwitchAuthenticated(true);
+      }
+
+      // Check Kick authentication (doesn't return, so both can be checked)
+      if (kickToken && kickUser) {
+        const userData = JSON.parse(kickUser);
+        const widget = `${baseUrl}/?kickChannel=${userData.username}&kickToken=${kickToken}`;
+        setKickWidgetUrl(widget);
+        setKickAuthenticated(true);
+      }
     };
 
     init();
-  }, []); // Empty dependency array - only run once on mount
+  }, [processOAuthCallback]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -147,26 +149,11 @@ const Login: React.FC<LoginProps> = () => {
     }
   };
 
-  const copyWidgetUrl = () => {
-    navigator.clipboard.writeText(widgetUrl).catch(() => {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = widgetUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    });
-  };
-
-  const goToChat = () => {
-    window.open(widgetUrl, '_blank')?.focus();
-  };
 
   const twitchButtonText = () => {
     return isLoadingTwitch
       ? 'Carregando...'
-      : (isAuthenticated && authenticatedPlatform === 'twitch')
+      : twitchAuthenticated
         ? 'Conectado'
         : 'Login Twitch'
   };
@@ -174,7 +161,7 @@ const Login: React.FC<LoginProps> = () => {
   const kickButtonText = () => {
     return isLoadingKick
       ? 'Carregando...'
-      : (isAuthenticated && authenticatedPlatform === 'kick')
+      : kickAuthenticated
         ? 'Conectado'
         : 'Login Kick'
   };
@@ -192,7 +179,7 @@ const Login: React.FC<LoginProps> = () => {
               <button
                 className="oauth-button twitch-button"
                 onClick={handleTwitchOAuth}
-                disabled={isLoadingTwitch || (isAuthenticated && authenticatedPlatform === 'twitch')}
+                disabled={isLoadingTwitch || twitchAuthenticated}
                 style={{ marginBottom: '15px', width: '100%' }}
               >
                 <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -207,7 +194,7 @@ const Login: React.FC<LoginProps> = () => {
               <button
                 className="oauth-button kick-button"
                 onClick={handleKickOAuth}
-                disabled={isLoadingKick || (isAuthenticated && authenticatedPlatform === 'kick')}
+                disabled={isLoadingKick || kickAuthenticated}
                 style={{ marginBottom: '15px', width: '100%' }}
               >
                 <svg className="button-icon" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
@@ -217,30 +204,81 @@ const Login: React.FC<LoginProps> = () => {
               </button>
             </div>
 
-            {/* Widget URL Section - Only show when authenticated */}
-            {isAuthenticated && widgetUrl && (
+            {/* Widget URL Section - Show when any platform is authenticated */}
+            {(twitchAuthenticated || kickAuthenticated) && (
               <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '2px solid #ddd' }}>
-                <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#333' }}>
-                  URL do Widget OBS:
-                </p>
-                <div className="url-input-container">
-                  <input
-                    type="text"
-                    value={widgetUrl}
-                    readOnly
-                    className="widget-url-input"
-                  />
-                  <button onClick={copyWidgetUrl} className="copy-button">
-                    Copiar
-                  </button>
-                </div>
-                <button
-                  onClick={goToChat}
-                  className="go-to-chat-button"
-                  style={{ marginTop: '10px' }}
-                >
-                  Ir para o Chat
-                </button>
+
+                {/* Twitch Widget URL */}
+                {twitchAuthenticated && twitchWidgetUrl && (
+                  <div style={{ marginBottom: kickAuthenticated ? '20px' : '0' }}>
+                    <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#9146ff' }}>
+                      🎮 URL do Widget Twitch:
+                    </p>
+                    <div className="url-input-container">
+                      <input
+                        type="text"
+                        value={twitchWidgetUrl}
+                        readOnly
+                        className="widget-url-input"
+                      />
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(twitchWidgetUrl).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = twitchWidgetUrl;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        });
+                      }} className="copy-button">
+                        Copiar
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => window.open(twitchWidgetUrl, '_blank')?.focus()}
+                      className="go-to-chat-button"
+                      style={{ marginTop: '10px' }}
+                    >
+                      Ir para o Chat Twitch
+                    </button>
+                  </div>
+                )}
+
+                {/* Kick Widget URL */}
+                {kickAuthenticated && kickWidgetUrl && (
+                  <div>
+                    <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#53fc18' }}>
+                      ⚡ URL do Widget Kick:
+                    </p>
+                    <div className="url-input-container">
+                      <input
+                        type="text"
+                        value={kickWidgetUrl}
+                        readOnly
+                        className="widget-url-input"
+                      />
+                      <button onClick={() => {
+                        navigator.clipboard.writeText(kickWidgetUrl).catch(() => {
+                          const textArea = document.createElement('textarea');
+                          textArea.value = kickWidgetUrl;
+                          document.body.appendChild(textArea);
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        });
+                      }} className="copy-button">
+                        Copiar
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => window.open(kickWidgetUrl, '_blank')?.focus()}
+                      className="go-to-chat-button"
+                      style={{ marginTop: '10px' }}
+                    >
+                      Ir para o Chat Kick
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
