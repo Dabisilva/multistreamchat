@@ -12,7 +12,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showManualToken, setShowManualToken] = useState(false);
 
   // Twitch OAuth Configuration
-  const TWITCH_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // You should replace this with your own Client ID
+  const TWITCH_CLIENT_ID = 'arryx6wxz5asg8eaneg16j0emyp3of'; // You should replace this with your own Client ID
   const REDIRECT_URI = window.location.origin + window.location.pathname;
   const SCOPES = 'user:read:email chat:read';
 
@@ -102,35 +102,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
               </svg>
-              Entrar com OAuth da Twitch
+              Conectar Twitch
             </button>
-
-            <div className="manual-token-section">
-              <button
-                className="toggle-manual-button"
-                onClick={() => setShowManualToken(!showManualToken)}
-              >
-                {showManualToken ? '▼' : '►'} Usar token manual
-              </button>
-
-              {showManualToken && (
-                <div className="manual-token-inputs">
-                  <div className="input-group">
-                    <label htmlFor="twitch-token">Token OAuth</label>
-                    <input
-                      id="twitch-token"
-                      type="password"
-                      placeholder="oauth:seu_token_aqui"
-                      value={twitchToken}
-                      onChange={(e) => setTwitchToken(e.target.value)}
-                    />
-                  </div>
-                  <button className="manual-button" onClick={handleManualLogin}>
-                    Conectar com Token Manual
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Kick Section */}
@@ -157,7 +130,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
               </svg>
-              Conectar à Kick
+              Conectar Kick
             </button>
           </div>
         </div>

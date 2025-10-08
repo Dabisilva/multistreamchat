@@ -287,38 +287,6 @@ const App: React.FC = () => {
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
-        {/* Status Display */}
-        <div style={{
-          position: 'fixed',
-          top: '10px',
-          left: '10px',
-          background: 'rgba(0,0,0,0.8)',
-          padding: '10px',
-          borderRadius: '5px',
-          color: 'white',
-          zIndex: 1000,
-          fontSize: '12px'
-        }}>
-          <div style={{ marginBottom: '5px' }}>
-            <strong>Twitch:</strong> {twitchChannel}
-            {twitchService && twitchService.isConnected() ? (
-              <span style={{ color: '#00ff00', marginLeft: '5px' }}>● Connected</span>
-            ) : (
-              <span style={{ color: '#ff0000', marginLeft: '5px' }}>● Disconnected</span>
-            )}
-          </div>
-          {kickChannel && (
-            <div>
-              <strong>Kick:</strong> {kickChannel}
-              {kickService && kickService.isConnected() ? (
-                <span style={{ color: '#00ff00', marginLeft: '5px' }}>● Connected</span>
-              ) : (
-                <span style={{ color: '#ff0000', marginLeft: '5px' }}>● Disconnected</span>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Chat Messages */}
         <div className={`main-container ${config.alignMessages === 'block' ? 'block-align' : 'bottom-align'}`}>
           {messages.map((message) => (
