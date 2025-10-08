@@ -5,7 +5,8 @@ import { attachEmotes, createUsernameHtml, getValidBadges } from '../utils/messa
 export const MessageRow: React.FC<MessageRowProps> = ({
   message,
   hideAfter,
-  onRemove
+  onRemove,
+  customStyles
 }) => {
   const messageRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,6 +35,16 @@ export const MessageRow: React.FC<MessageRowProps> = ({
 
   const actionClass = message.isAction ? 'action' : '';
 
+  const styles = customStyles || {
+    usernameBg: '#30034d',
+    usernameColor: '#ffffff',
+    messageBg: '#8b5cf6',
+    messageColor: '#ffffff',
+    borderRadius: '10',
+    usernameFontSize: '16',
+    messageFontSize: '16'
+  };
+
   return (
     <div
       ref={messageRef}
@@ -42,7 +53,15 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0"
       id={`msg-${message.id}`}
     >
-      <div className={`flex items-center gap-1.5 font-bold text-base bg-purple-950 px-2 py-1 rounded-md w-fit ${actionClass}`}>
+      <div
+        className={`flex items-center gap-1.5 font-bold px-2 py-1 w-fit ${actionClass}`}
+        style={{
+          backgroundColor: styles.usernameBg,
+          color: styles.usernameColor,
+          fontSize: `${styles.usernameFontSize}px`,
+          borderRadius: `${styles.borderRadius}px`
+        }}
+      >
         <div className="flex items-center gap-0.5 flex-wrap">
           {getValidBadges(message.badges).map((badge, index) => (
             <img
@@ -69,7 +88,13 @@ export const MessageRow: React.FC<MessageRowProps> = ({
         />
       </div>
       <div
-        className={`text-white bg-purple-500 px-3 py-2 rounded-[10px] leading-[1.4] m-0 ml-1.5 w-fit inline-block ${actionClass}`}
+        className={`px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block ${actionClass}`}
+        style={{
+          backgroundColor: styles.messageBg,
+          color: styles.messageColor,
+          fontSize: `${styles.messageFontSize}px`,
+          borderRadius: `${styles.borderRadius}px`
+        }}
         dangerouslySetInnerHTML={{ __html: processedText }}
       />
     </div>

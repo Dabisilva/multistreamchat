@@ -51,6 +51,15 @@ export interface MessageRowProps {
   message: ChatMessage;
   hideAfter: number;
   onRemove: (id: string) => void;
+  customStyles?: {
+    usernameBg: string;
+    usernameColor: string;
+    messageBg: string;
+    messageColor: string;
+    borderRadius: string;
+    usernameFontSize: string;
+    messageFontSize: string;
+  };
 }
 
 export interface ChatProvider {

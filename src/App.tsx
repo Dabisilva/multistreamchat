@@ -16,6 +16,16 @@ const App: React.FC<LoginProps> = () => {
   const [kickChannelSaved, setKickChannelSaved] = useState(!!localStorage.getItem('kickChannel'));
   const [twitchWidgetUrl, setTwitchWidgetUrl] = useState('');
   const [kickWidgetUrl, setKickWidgetUrl] = useState('');
+  const [showCustomization, setShowCustomization] = useState(false);
+
+  // Customization options
+  const [usernameBgColor, setUsernameBgColor] = useState('#30034d');
+  const [usernameTextColor, setUsernameTextColor] = useState('#ffffff');
+  const [messageBgColor, setMessageBgColor] = useState('#8b5cf6');
+  const [messageTextColor, setMessageTextColor] = useState('#ffffff');
+  const [borderRadius, setBorderRadius] = useState('10');
+  const [usernameFontSize, setUsernameFontSize] = useState('16');
+  const [messageFontSize, setMessageFontSize] = useState('16');
 
   // Process Twitch OAuth callback
   const processTwitchOAuthCallback = useCallback(async (code: string, state: string) => {
@@ -41,8 +51,10 @@ const App: React.FC<LoginProps> = () => {
         localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
       }
 
-      // Generate widget URL with parameters
-      const widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}`;
+      // Generate widget URL with all necessary parameters
+      const broadcasterId = userData.broadcasterId || userData.id;
+      const widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${clientId}${getCustomizationParams()}`;
+
       setTwitchWidgetUrl(widget);
       setTwitchAuthenticated(true);
 
@@ -89,7 +101,10 @@ const App: React.FC<LoginProps> = () => {
 
       if (twitchToken && twitchUser) {
         const userData = JSON.parse(twitchUser);
-        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}`;
+        const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+        const broadcasterId = userData.broadcasterId || userData.id;
+
+        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
 
         // If there's a saved Kick channel, append it
         if (savedKickChannel) {
@@ -109,6 +124,32 @@ const App: React.FC<LoginProps> = () => {
 
     init();
   }, [processTwitchOAuthCallback]);
+
+  // Update widget URL when customization changes
+  useEffect(() => {
+    if (twitchWidgetUrl || kickWidgetUrl) {
+      const baseUrl = window.location.origin;
+      const twitchToken = localStorage.getItem('twitchToken');
+      const twitchUser = localStorage.getItem('twitchUserInfo');
+      const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+      const savedKickChannel = localStorage.getItem('kickChannel');
+
+      if (twitchToken && twitchUser) {
+        const userData = JSON.parse(twitchUser);
+        const broadcasterId = userData.broadcasterId || userData.id;
+        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+
+        if (savedKickChannel) {
+          widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
+        }
+
+        setTwitchWidgetUrl(widget);
+      } else if (kickWidgetUrl && savedKickChannel) {
+        const url = `${baseUrl}/chat?kickChannel=${encodeURIComponent(savedKickChannel)}${getCustomizationParams()}`;
+        setKickWidgetUrl(url);
+      }
+    }
+  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, borderRadius, usernameFontSize, messageFontSize]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -156,10 +197,11 @@ const App: React.FC<LoginProps> = () => {
 
       // Add the new kickChannel parameter
       url = `${url}&kickChannel=${encodeURIComponent(trimmedChannel)}`;
+
       setTwitchWidgetUrl(url);
     } else {
       // Otherwise, create URL with just Kick
-      const url = `${baseUrl}/chat?kickChannel=${encodeURIComponent(trimmedChannel)}`;
+      const url = `${baseUrl}/chat?kickChannel=${encodeURIComponent(trimmedChannel)}${getCustomizationParams()}`;
       setKickWidgetUrl(url);
     }
 
@@ -183,6 +225,36 @@ const App: React.FC<LoginProps> = () => {
   };
 
 
+  const openChatPopup = () => {
+    const url = twitchWidgetUrl || kickWidgetUrl;
+    const width = 480;
+    const height = 800;
+    const left = window.screen.width - width;
+    const top = 400;
+
+    window.open(
+      url,
+      'ChatWidget',
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,addressbar=no`
+    )?.focus();
+  };
+
+  const getCustomizationParams = () => {
+    return `&usernameBg=${encodeURIComponent(usernameBgColor)}&usernameColor=${encodeURIComponent(usernameTextColor)}&messageBg=${encodeURIComponent(messageBgColor)}&messageColor=${encodeURIComponent(messageTextColor)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}`;
+  };
+
+  const copyChatUrl = () => {
+    const url = twitchWidgetUrl || kickWidgetUrl;
+    navigator.clipboard.writeText(url).catch(() => {
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    });
+  };
+
   const twitchButtonText = () => {
     return isLoadingTwitch
       ? 'Carregando...'
@@ -193,24 +265,22 @@ const App: React.FC<LoginProps> = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-5 font-sans">
-      <div className="bg-white/98 rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-10 md:p-6 max-w-[800px] w-full animate-fade-in">
+      <div className="bg-white/98 rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-10 md:p-6">
         <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStream Chat</h1>
         <p className="text-center text-gray-600 m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
 
-        {error && (
-          <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-5 border border-red-200">
-            {error}
-          </div>
-        )}
-
-
-        <div className="flex flex-col gap-8">
-          <div className="bg-gray-100 rounded-xl p-6 border-2 border-transparent transition-all duration-300">
+        <div className="flex gap-8">
+          <div className="bg-gray-100 rounded-xl p-6">
+            {error && (
+              <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-5 border border-red-200">
+                {error}
+              </div>
+            )}
             {/* Twitch Section */}
             <div className="mb-5">
               <div className="flex gap-2.5">
                 <button
-                  className="flex-1 mb-4 px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-purple-600 hover:bg-purple-700 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(145,70,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 mb-4 px-6 py-3.5 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-purple-600 hover:bg-purple-700 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(145,70,255,0.3)] disabled:cursor-not-allowed"
                   onClick={handleTwitchOAuth}
                   disabled={isLoadingTwitch || twitchAuthenticated}
                 >
@@ -274,34 +344,233 @@ const App: React.FC<LoginProps> = () => {
                 </p>
                 <div className="flex flex-col md:flex-row gap-2.5 mb-5">
                   <input
-                    type="text"
+                    type="password"
                     value={twitchWidgetUrl || kickWidgetUrl}
                     readOnly
                     className="flex-1 px-4 py-3 border-2 border-gray-300 focus:border-green-500 rounded-lg text-sm bg-gray-50 text-gray-800 font-mono outline-none"
                   />
-                  <button onClick={() => {
-                    const url = twitchWidgetUrl || kickWidgetUrl;
-                    navigator.clipboard.writeText(url).catch(() => {
-                      const textArea = document.createElement('textarea');
-                      textArea.value = url;
-                      document.body.appendChild(textArea);
-                      textArea.select();
-                      document.execCommand('copy');
-                      document.body.removeChild(textArea);
-                    });
-                  }} className="bg-green-500 text-white border-0 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap hover:bg-green-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(46,204,113,0.3)] md:w-full">
+                  <button onClick={copyChatUrl} className="w-[120px] bg-green-500 text-white border-0 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap hover:bg-green-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(46,204,113,0.3)]">
                     Copiar
                   </button>
                 </div>
-                <button
-                  onClick={() => window.open(twitchWidgetUrl || kickWidgetUrl, '_blank')?.focus()}
-                  className="bg-indigo-500 text-white border-0 rounded-lg px-8 py-3.5 text-base font-semibold cursor-pointer transition-all duration-300 w-full hover:bg-indigo-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(102,126,234,0.3)] mt-2.5"
-                >
-                  Ir para o Chat
-                </button>
+                <div className="flex gap-2.5">
+                  <button
+                    onClick={openChatPopup}
+                    className="flex-1 bg-indigo-500 text-white border-0 rounded-lg px-8 py-3.5 text-base font-semibold cursor-pointer transition-all duration-300 hover:bg-indigo-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(102,126,234,0.3)] mt-2.5"
+                  >
+                    Abrir Chat
+                  </button>
+                  <button
+                    onClick={() => setShowCustomization(!showCustomization)}
+                    className="flex-1 bg-purple-500 text-white border-0 rounded-lg px-8 py-3.5 text-base font-semibold cursor-pointer transition-all duration-300 hover:bg-purple-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(139,92,246,0.3)] mt-2.5"
+                  >
+                    {showCustomization ? 'Fechar Edição' : 'Editar Chat'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
+          {/* Customization Panel */}
+          {showCustomization && (twitchWidgetUrl || kickWidgetUrl) && (
+            <div className="bg-gray-100 rounded-xl p-6">
+              <h2 className="text-2xl font-bold mb-5 text-gray-800">Personalizar Chat</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Customization Options */}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-700">Opções de Personalização</h3>
+
+                  <div className="space-y-4">
+                    {/* Username Background Color */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cor de Fundo do Nome
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={usernameBgColor}
+                          onChange={(e) => setUsernameBgColor(e.target.value)}
+                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={usernameBgColor}
+                          onChange={(e) => setUsernameBgColor(e.target.value)}
+                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Username Text Color */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cor do Texto do Nome
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={usernameTextColor}
+                          onChange={(e) => setUsernameTextColor(e.target.value)}
+                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={usernameTextColor}
+                          onChange={(e) => setUsernameTextColor(e.target.value)}
+                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Message Background Color */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cor de Fundo da Mensagem
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={messageBgColor}
+                          onChange={(e) => setMessageBgColor(e.target.value)}
+                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={messageBgColor}
+                          onChange={(e) => setMessageBgColor(e.target.value)}
+                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Message Text Color */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cor do Texto da Mensagem
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={messageTextColor}
+                          onChange={(e) => setMessageTextColor(e.target.value)}
+                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={messageTextColor}
+                          onChange={(e) => setMessageTextColor(e.target.value)}
+                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Border Radius */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Borda Arredondada: {borderRadius}px
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="30"
+                        value={borderRadius}
+                        onChange={(e) => setBorderRadius(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Username Font Size */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tamanho da Fonte do Nome: {usernameFontSize}px
+                      </label>
+                      <input
+                        type="range"
+                        min="12"
+                        max="24"
+                        value={usernameFontSize}
+                        onChange={(e) => setUsernameFontSize(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Message Font Size */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tamanho da Fonte da Mensagem: {messageFontSize}px
+                      </label>
+                      <input
+                        type="range"
+                        min="12"
+                        max="24"
+                        value={messageFontSize}
+                        onChange={(e) => setMessageFontSize(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Preview */}
+              <div className="bg-gray-50 rounded-xl p-4 mt-2.5">
+                <div className="bg-transparent rounded-lg">
+                  <div className="space-y-3">
+                    {/* Example Message 1 */}
+                    <div className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0">
+                      <div
+                        className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
+                        style={{
+                          backgroundColor: usernameBgColor,
+                          color: usernameTextColor,
+                          fontSize: `${usernameFontSize}px`,
+                          borderRadius: `${borderRadius}px`
+                        }}
+                      >
+                        <span>Streamer</span>
+                      </div>
+                      <div
+                        className="px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block"
+                        style={{
+                          backgroundColor: messageBgColor,
+                          color: messageTextColor,
+                          fontSize: `${messageFontSize}px`,
+                          borderRadius: `${borderRadius}px`
+                        }}
+                      >
+                        Esta é uma mensagem de exemplo! 👋
+                      </div>
+                    </div>
+
+                    {/* Example Message 2 */}
+                    <div className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0">
+                      <div
+                        className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
+                        style={{
+                          backgroundColor: usernameBgColor,
+                          color: usernameTextColor,
+                          fontSize: `${usernameFontSize}px`,
+                          borderRadius: `${borderRadius}px`
+                        }}
+                      >
+                        <span>Viewer</span>
+                      </div>
+                      <div
+                        className="px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block"
+                        style={{
+                          backgroundColor: messageBgColor,
+                          color: messageTextColor,
+                          fontSize: `${messageFontSize}px`,
+                          borderRadius: `${borderRadius}px`
+                        }}
+                      >
+                        Olá! Chat ficou incrível! 🎉
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

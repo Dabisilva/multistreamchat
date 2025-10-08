@@ -20,10 +20,23 @@ const Chat: React.FC = () => {
   const [twitchChannel, setTwitchChannel] = useState<string>('');
   const [kickChannel, setKickChannel] = useState<string>('');
   const [twitchOauthToken, setTwitchOauthToken] = useState<string>('');
+  const [broadcasterId, setBroadcasterId] = useState<string>('');
+  const [clientId, setClientId] = useState<string>('');
   const [twitchService, setTwitchService] = useState<TwitchChatService | null>(null);
   const [kickService, setKickService] = useState<KickChatService | null>(null);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Customization options from URL
+  const [customStyles, setCustomStyles] = useState({
+    usernameBg: '#30034d',
+    usernameColor: '#ffffff',
+    messageBg: '#8b5cf6',
+    messageColor: '#ffffff',
+    borderRadius: '10',
+    usernameFontSize: '16',
+    messageFontSize: '16'
+  });
 
   // Initialize authentication from URL params or localStorage
   const initAuth = async () => {
@@ -32,7 +45,29 @@ const Chat: React.FC = () => {
     // Check for widget URL parameters (direct chat access)
     const twitchChannelParam = urlParams.get('twitchChannel');
     const twitchTokenParam = urlParams.get('twitchToken');
+    const broadcasterIdParam = urlParams.get('broadcasterId');
+    const clientIdParam = urlParams.get('clientId');
     const kickChannelParam = urlParams.get('kickChannel');
+
+    // Get customization parameters
+    const usernameBg = urlParams.get('usernameBg') || '#30034d';
+    const usernameColor = urlParams.get('usernameColor') || '#ffffff';
+    const messageBg = urlParams.get('messageBg') || '#8b5cf6';
+    const messageColor = urlParams.get('messageColor') || '#ffffff';
+    const borderRadius = urlParams.get('borderRadius') || '10';
+    const usernameFontSize = urlParams.get('usernameFontSize') || '16';
+    const messageFontSize = urlParams.get('messageFontSize') || '16';
+
+    // Set custom styles
+    setCustomStyles({
+      usernameBg,
+      usernameColor,
+      messageBg,
+      messageColor,
+      borderRadius,
+      usernameFontSize,
+      messageFontSize
+    });
 
     // If we have URL params, use them (widget URL - takes priority)
     const hasUrlParams = (twitchChannelParam && twitchTokenParam) || kickChannelParam;
@@ -42,6 +77,8 @@ const Chat: React.FC = () => {
       if (twitchChannelParam && twitchTokenParam) {
         setTwitchChannel(twitchChannelParam);
         setTwitchOauthToken(twitchTokenParam);
+        if (broadcasterIdParam) setBroadcasterId(broadcasterIdParam);
+        if (clientIdParam) setClientId(clientIdParam);
       }
 
       // Initialize Kick from URL params (no OAuth needed)
@@ -151,9 +188,9 @@ const Chat: React.FC = () => {
   // Auto-connect when channels are available
   useEffect(() => {
     if (twitchChannel && !twitchService) {
-      // Get user info and client ID from localStorage
+      // Get user info and client ID from localStorage or URL params
       const twitchUserInfo = localStorage.getItem('twitchUserInfo');
-      const twitchClientId = localStorage.getItem('twitchClientId');
+      const twitchClientId = clientId || localStorage.getItem('twitchClientId');
       let userInfo = null;
 
       if (twitchUserInfo) {
@@ -164,11 +201,18 @@ const Chat: React.FC = () => {
         }
       }
 
+      // If broadcasterId from URL, use it to override userInfo
+      if (broadcasterId && userInfo) {
+        userInfo.broadcasterId = broadcasterId;
+      } else if (broadcasterId && !userInfo) {
+        userInfo = { broadcasterId };
+      }
+
       const service = new TwitchChatService(
         twitchChannel,
         handleNewMessage,
         {
-          clientId: twitchClientId || undefined, // ⭐ Use the same client ID
+          clientId: twitchClientId || undefined,
           oauthToken: twitchOauthToken || undefined,
           userInfo: userInfo
         }
@@ -176,7 +220,7 @@ const Chat: React.FC = () => {
       service.connect();
       setTwitchService(service);
     }
-  }, [twitchChannel, twitchService, twitchOauthToken, handleNewMessage]);
+  }, [twitchChannel, twitchService, twitchOauthToken, broadcasterId, clientId, handleNewMessage]);
 
   useEffect(() => {
     if (kickChannel && !kickService) {
@@ -214,6 +258,7 @@ const Chat: React.FC = () => {
               message={message}
               hideAfter={config.hideAfter}
               onRemove={removeMessage}
+              customStyles={customStyles}
             />
           ))}
         </div>
