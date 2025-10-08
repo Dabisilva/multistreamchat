@@ -196,16 +196,6 @@ const App: React.FC = () => {
     };
   }, []); // Remove service dependencies to prevent cleanup on service changes
 
-  // Handle login
-  const handleLogin = (token: string, twitch: string, kick?: string) => {
-    AuthService.saveAuth(token, twitch, kick);
-    setTwitchOauthToken(token);
-    setTwitchChannel(twitch);
-    if (kick) {
-      setKickChannel(kick);
-    }
-    setIsAuthenticated(true);
-  };
 
   // Handle logout
   const handleLogout = () => {
@@ -246,7 +236,7 @@ const App: React.FC = () => {
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return <Login />;
   }
 
   // Show chat interface

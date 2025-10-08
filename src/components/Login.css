@@ -265,6 +265,97 @@
   font-style: italic;
 }
 
+/* Widget URL Section */
+.widget-url-section {
+  margin-top: 30px;
+  animation: slideDown 0.5s ease;
+}
+
+.widget-url-container {
+  background: linear-gradient(
+    135deg,
+    rgba(46, 204, 113, 0.1) 0%,
+    rgba(39, 174, 96, 0.1) 100%
+  );
+  border: 2px solid #2ecc71;
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+}
+
+.widget-url-container h3 {
+  margin: 0 0 10px 0;
+  color: #27ae60;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.widget-url-container p {
+  margin: 0 0 20px 0;
+  color: #555;
+  font-size: 1rem;
+}
+
+.url-input-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.widget-url-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #f8f9fa;
+  color: #333;
+  font-family: "Courier New", monospace;
+}
+
+.widget-url-input:focus {
+  outline: none;
+  border-color: #2ecc71;
+}
+
+.copy-button {
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.copy-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+}
+
+.go-to-chat-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.go-to-chat-button:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .login-box {
@@ -281,5 +372,13 @@
 
   .help-section {
     padding: 15px;
+  }
+
+  .url-input-container {
+    flex-direction: column;
+  }
+
+  .copy-button {
+    width: 100%;
   }
 }

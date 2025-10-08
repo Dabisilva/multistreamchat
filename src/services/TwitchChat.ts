@@ -37,12 +37,17 @@ export class TwitchChatService implements ChatProvider {
   constructor(
     channel: string, 
     onMessage: (message: ChatMessage) => void,
-    options?: { clientId?: string; oauthToken?: string }
+    options?: { clientId?: string; oauthToken?: string; userInfo?: any }
   ) {
     this.channel = channel;
     this.onMessage = onMessage;
     if (options?.clientId) this.clientId = options.clientId;
     if (options?.oauthToken) this.oauthToken = options.oauthToken;
+    
+    // Store user info for enhanced badge fetching
+    if (options?.userInfo) {
+      localStorage.setItem('twitchUserInfo', JSON.stringify(options.userInfo));
+    }
   }
 
   async connect(): Promise<void> {
