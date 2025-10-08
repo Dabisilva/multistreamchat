@@ -4,7 +4,7 @@ A real-time chat overlay that combines messages from both Twitch and Kick platfo
 
 ## Features
 
-- **OAuth Authentication**: Secure OAuth 2.0/2.1 login flow for both Twitch and Kick
+- **OAuth Authentication**: Secure OAuth 2.0/2.1 login flow for Twitch
 - **Dual Platform Support**: Connects to both Twitch and Kick simultaneously
 - **Real Platform Badges**: Uses platform APIs to fetch actual badge data with OAuth tokens
 - **Channel-Specific Badges**: Displays custom subscriber badges and channel-specific emotes
