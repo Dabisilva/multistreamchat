@@ -26,6 +26,7 @@ const Chat: React.FC = () => {
   const [kickService, setKickService] = useState<KickChatService | null>(null);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
+  const pendingTimeoutsRef = React.useRef<Map<string, { timeout: NodeJS.Timeout; message: ChatMessage }>>(new Map());
 
   // Customization options from URL
   const [customStyles, setCustomStyles] = useState({
@@ -126,16 +127,42 @@ const Chat: React.FC = () => {
       return;
     }
 
-    setMessages(prevMessages => {
-      const newMessages = [...prevMessages, message];
+    // Check if user is a moderator, VIP, or broadcaster
+    const hasPrivilegedBadge = message.badges.some(badge =>
+      badge.type === 'moderator' ||
+      badge.type === 'vip' ||
+      badge.type === 'broadcaster'
+    );
 
-      // Remove old messages if limit is exceeded
-      if (newMessages.length > config.messagesLimit) {
-        return newMessages.slice(-config.messagesLimit);
+    const addMessage = () => {
+      // Remove from pending timeouts if it was delayed
+      if (message.msgId) {
+        pendingTimeoutsRef.current.delete(message.msgId);
       }
 
-      return newMessages;
-    });
+      setMessages(prevMessages => {
+        const newMessages = [...prevMessages, message];
+
+        // Remove old messages if limit is exceeded
+        if (newMessages.length > config.messagesLimit) {
+          return newMessages.slice(-config.messagesLimit);
+        }
+
+        return newMessages;
+      });
+    };
+
+    // If user has a privileged badge, show message immediately
+    // Otherwise, delay by 5 seconds
+    if (hasPrivilegedBadge) {
+      addMessage();
+    } else {
+      const timeoutId = setTimeout(addMessage, 5000);
+      // Track the timeout and message so we can cancel it if message is deleted or user is banned
+      if (message.msgId) {
+        pendingTimeoutsRef.current.set(message.msgId, { timeout: timeoutId, message });
+      }
+    }
   }, [config.hideCommands, config.ignoredUsers, config.messagesLimit]);
 
   const removeMessage = useCallback((messageId: string) => {
@@ -145,14 +172,30 @@ const Chat: React.FC = () => {
   }, []);
 
   const removeMessageByMsgId = useCallback((msgId: string) => {
+    // Cancel pending timeout if message is waiting to be displayed
+    const pending = pendingTimeoutsRef.current.get(msgId);
+    if (pending) {
+      clearTimeout(pending.timeout);
+      pendingTimeoutsRef.current.delete(msgId);
+    }
+
     setMessages(prevMessages =>
       prevMessages.filter(msg => msg.msgId !== msgId)
     );
   }, []);
 
   const removeMessagesByUser = useCallback((username: string) => {
+    // Cancel all pending timeouts for messages from this user
+    const lowerUsername = username.toLowerCase();
+    pendingTimeoutsRef.current.forEach((pending, msgId) => {
+      if (pending.message.displayName.toLowerCase() === lowerUsername) {
+        clearTimeout(pending.timeout);
+        pendingTimeoutsRef.current.delete(msgId);
+      }
+    });
+
     setMessages(prevMessages =>
-      prevMessages.filter(msg => msg.displayName.toLowerCase() !== username.toLowerCase())
+      prevMessages.filter(msg => msg.displayName.toLowerCase() !== lowerUsername)
     );
   }, []);
 
@@ -254,6 +297,12 @@ const Chat: React.FC = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clear all pending timeouts
+      pendingTimeoutsRef.current.forEach((pending) => {
+        clearTimeout(pending.timeout);
+      });
+      pendingTimeoutsRef.current.clear();
+
       if (twitchService) {
         twitchService.disconnect();
       }
