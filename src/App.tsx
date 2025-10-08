@@ -26,6 +26,7 @@ const App: React.FC<LoginProps> = () => {
   const [borderRadius, setBorderRadius] = useState('10');
   const [usernameFontSize, setUsernameFontSize] = useState('16');
   const [messageFontSize, setMessageFontSize] = useState('20');
+  const [messageDelay, setMessageDelay] = useState('5');
 
   // Process Twitch OAuth callback
   const processTwitchOAuthCallback = useCallback(async (code: string, state: string) => {
@@ -149,7 +150,7 @@ const App: React.FC<LoginProps> = () => {
         setKickWidgetUrl(url);
       }
     }
-  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, borderRadius, usernameFontSize, messageFontSize]);
+  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, borderRadius, usernameFontSize, messageFontSize, messageDelay]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -240,7 +241,7 @@ const App: React.FC<LoginProps> = () => {
   };
 
   const getCustomizationParams = () => {
-    return `&usernameBg=${encodeURIComponent(usernameBgColor)}&usernameColor=${encodeURIComponent(usernameTextColor)}&messageBg=${encodeURIComponent(messageBgColor)}&messageColor=${encodeURIComponent(messageTextColor)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}`;
+    return `&usernameBg=${encodeURIComponent(usernameBgColor)}&usernameColor=${encodeURIComponent(usernameTextColor)}&messageBg=${encodeURIComponent(messageBgColor)}&messageColor=${encodeURIComponent(messageTextColor)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messageDelay=${messageDelay}`;
   };
 
   const copyChatUrl = () => {
@@ -504,6 +505,25 @@ const App: React.FC<LoginProps> = () => {
                       onChange={(e) => setMessageFontSize(e.target.value)}
                       className="w-full accent-purple-600"
                     />
+                  </div>
+
+                  {/* Message Delay */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Delay  das Mensagens: {messageDelay}s
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="6"
+                      step="0.5"
+                      value={messageDelay}
+                      onChange={(e) => setMessageDelay(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
+                    <p className="text-xs text-dark-text-muted mt-1">
+                      Mods, VIPs e dono do canal não são afetados
+                    </p>
                   </div>
                 </div>
               </div>

@@ -39,6 +39,9 @@ const Chat: React.FC = () => {
     messageFontSize: '16'
   });
 
+  // Message delay in milliseconds (default 5s, max 6s)
+  const [messageDelay, setMessageDelay] = useState<number>(5000);
+
   // Initialize authentication from URL params or localStorage
   const initAuth = async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -58,6 +61,15 @@ const Chat: React.FC = () => {
     const borderRadius = urlParams.get('borderRadius') || '10';
     const usernameFontSize = urlParams.get('usernameFontSize') || '16';
     const messageFontSize = urlParams.get('messageFontSize') || '16';
+
+    // Get message delay parameter (in seconds, default 5, max 6)
+    const delayParam = urlParams.get('messageDelay');
+    if (delayParam) {
+      const delayInSeconds = parseFloat(delayParam);
+      // Clamp between 0 and 6 seconds, convert to milliseconds
+      const delayInMs = Math.min(Math.max(delayInSeconds, 0), 6) * 1000;
+      setMessageDelay(delayInMs);
+    }
 
     // Set custom styles
     setCustomStyles({
@@ -153,17 +165,17 @@ const Chat: React.FC = () => {
     };
 
     // If user has a privileged badge, show message immediately
-    // Otherwise, delay by 5 seconds
+    // Otherwise, delay by the configured amount
     if (hasPrivilegedBadge) {
       addMessage();
     } else {
-      const timeoutId = setTimeout(addMessage, 5000);
+      const timeoutId = setTimeout(addMessage, messageDelay);
       // Track the timeout and message so we can cancel it if message is deleted or user is banned
       if (message.msgId) {
         pendingTimeoutsRef.current.set(message.msgId, { timeout: timeoutId, message });
       }
     }
-  }, [config.hideCommands, config.ignoredUsers, config.messagesLimit]);
+  }, [config.hideCommands, config.ignoredUsers, config.messagesLimit, messageDelay]);
 
   const removeMessage = useCallback((messageId: string) => {
     setMessages(prevMessages =>
