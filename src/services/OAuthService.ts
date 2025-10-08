@@ -98,52 +98,13 @@ export class OAuthService {
     window.location.href = authUrl;
   }
 
-  /**
-   * Initiate Kick OAuth flow
-   */
-  async initiateKickOAuth(): Promise<void> {
-    const config = this.getKickConfig();
-    
-    // Validate required config
-    if (!config.clientId || config.clientId === '') {
-      throw new Error('Kick OAuth não está disponível no momento. Configure seu Client ID em .env.local para usar esta funcionalidade.');
-    }
-    
-    if (!config.clientSecret || config.clientSecret === '') {
-      throw new Error('Kick OAuth requer Client Secret. Configure VITE_KICK_CLIENT_SECRET no arquivo .env.local');
-    }
-    
-    const state = this.generateRandomString(32);
-    
-    // Store state for verification
-    localStorage.setItem('kick_oauth_state', state);
-    
-    // Generate PKCE challenge
-    const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
-    localStorage.setItem('kick_code_verifier', codeVerifier);
-    
-    // Kick OAuth 2.1 scopes (must match exact scope names from Kick API)
-    const scopes = 'user:read';
-    
-    // Use id.kick.com as per official documentation
-    const authUrl = `https://id.kick.com/oauth/authorize?` +
-      `response_type=code&` +
-      `client_id=${config.clientId}&` +
-      `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
-      `scope=${encodeURIComponent(scopes)}&` +
-      `code_challenge=${codeChallenge}&` +
-      `code_challenge_method=S256&` +
-      `state=${state}`;
-    
-    window.location.href = authUrl;
-  }
 
   /**
-   * Handle OAuth callback and exchange code for token
+   * Handle Twitch OAuth callback and exchange code for token
    */
-  async handleOAuthCallback(platform: 'twitch' | 'kick', code: string, state: string): Promise<TokenResponse> {
-    const stateKey = `${platform}_oauth_state`;
-    const verifierKey = `${platform}_code_verifier`;
+  async handleOAuthCallback(_platform: 'twitch', code: string, state: string): Promise<TokenResponse> {
+    const stateKey = 'twitch_oauth_state';
+    const verifierKey = 'twitch_code_verifier';
     
     const storedState = localStorage.getItem(stateKey);
     const codeVerifier = localStorage.getItem(verifierKey);
@@ -156,11 +117,9 @@ export class OAuthService {
       throw new Error('Missing code verifier');
     }
     
-    const config = platform === 'twitch' ? this.getTwitchConfig() : this.getKickConfig();
+    const config = this.getTwitchConfig();
     
-    const tokenUrl = platform === 'twitch' 
-      ? 'https://id.twitch.tv/oauth2/token'
-      : 'https://id.kick.com/oauth/token';
+    const tokenUrl = 'https://id.twitch.tv/oauth2/token';
     
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -170,7 +129,7 @@ export class OAuthService {
       code: code,
       code_verifier: codeVerifier
     });
-    
+
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -180,8 +139,16 @@ export class OAuthService {
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Token exchange failed: ${error}`);
+      const errorText = await response.text();
+      let errorMessage = `Token exchange failed (${response.status}): ${errorText}`;
+      
+      if (response.status === 401) {
+        errorMessage = 'Twitch OAuth: Credenciais inválidas';
+      } else if (response.status === 400) {
+        errorMessage = 'OAuth: Código inválido ou expirado. Tente fazer login novamente.';
+      }
+      
+      throw new Error(errorMessage);
     }
     
     const tokenData: TokenResponse = await response.json();
@@ -189,7 +156,7 @@ export class OAuthService {
     // Clean up localStorage
     localStorage.removeItem(stateKey);
     localStorage.removeItem(verifierKey);
-    
+    console.log(tokenData);
     return tokenData;
   }
 
@@ -221,32 +188,6 @@ export class OAuthService {
     };
   }
 
-  /**
-   * Get user information from Kick API
-   */
-  async getKickUserInfo(accessToken: string): Promise<UserInfo> {
-    const response = await fetch('https://kick.com/api/v1/user', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get Kick user info');
-    }
-    
-    const user = await response.json();
-    
-    return {
-      id: user.id.toString(),
-      username: user.username,
-      displayName: user.username,
-      email: user.email,
-      avatar: user.profile_pic,
-      platform: 'kick'
-    };
-  }
 
   /**
    * Get Twitch OAuth configuration
@@ -257,18 +198,6 @@ export class OAuthService {
       clientId: (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Public Twitch client ID
       clientSecret: (import.meta as any).env?.VITE_TWITCH_CLIENT_SECRET || '',
       redirectUri: (import.meta as any).env?.VITE_TWITCH_REDIRECT_URI || defaultRedirectUri
-    };
-  }
-
-  /**
-   * Get Kick OAuth configuration
-   */
-  private getKickConfig(): OAuthConfig {
-    const defaultRedirectUri = `${window.location.origin}/login`;
-    return {
-      clientId: (import.meta as any).env?.VITE_KICK_CLIENT_ID || '',
-      clientSecret: (import.meta as any).env?.VITE_KICK_CLIENT_SECRET || '',
-      redirectUri: (import.meta as any).env?.VITE_KICK_REDIRECT_URI || defaultRedirectUri
     };
   }
 

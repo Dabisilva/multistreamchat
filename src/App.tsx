@@ -34,25 +34,29 @@ const App: React.FC = () => {
     const twitchChannelParam = urlParams.get('twitchChannel');
     const twitchTokenParam = urlParams.get('twitchToken');
     const kickChannelParam = urlParams.get('kickChannel');
-    const kickTokenParam = urlParams.get('kickToken');
 
-    // Initialize from URL params (widget URL)
-    if (twitchChannelParam && twitchTokenParam) {
-      setTwitchChannel(twitchChannelParam);
-      setTwitchOauthToken(twitchTokenParam);
-      return;
+    // If we have URL params, use them (widget URL - takes priority)
+    const hasUrlParams = (twitchChannelParam && twitchTokenParam) || kickChannelParam;
+
+    if (hasUrlParams) {
+      // Initialize Twitch from URL params
+      if (twitchChannelParam && twitchTokenParam) {
+        setTwitchChannel(twitchChannelParam);
+        setTwitchOauthToken(twitchTokenParam);
+      }
+
+      // Initialize Kick from URL params (no OAuth needed)
+      if (kickChannelParam) {
+        setKickChannel(kickChannelParam);
+      }
+
+      return; // Don't check localStorage if URL params exist
     }
 
-    if (kickChannelParam && kickTokenParam) {
-      setKickChannel(kickChannelParam);
-      return;
-    }
-
-    // Check for existing authentication from localStorage
+    // No URL params - check for existing authentication from localStorage
     const twitchToken = localStorage.getItem('twitchToken');
-    const kickToken = localStorage.getItem('kickToken');
     const twitchChannelInfo = localStorage.getItem('twitchChannelInfo');
-    const kickChannelInfo = localStorage.getItem('kickChannelInfo');
+    const savedKickChannel = localStorage.getItem('kickChannel');
 
     if (twitchToken && twitchChannelInfo) {
       try {
@@ -62,15 +66,12 @@ const App: React.FC = () => {
       } catch (e) {
         console.error('Error parsing Twitch channel info:', e);
       }
-    } else if (kickToken && kickChannelInfo) {
-      try {
-        const channelInfo = JSON.parse(kickChannelInfo);
-        setKickChannel(channelInfo.username);
-      } catch (e) {
-        console.error('Error parsing Kick channel info:', e);
-      }
     }
 
+    // Load saved Kick channel if exists
+    if (savedKickChannel) {
+      setKickChannel(savedKickChannel);
+    }
   };
 
   useEffect(() => {
@@ -151,6 +152,7 @@ const App: React.FC = () => {
   // Auto-connect when channels are available
   useEffect(() => {
     if (twitchChannel && !twitchService) {
+      console.log('Connecting to Twitch:', twitchChannel, 'with token:', twitchOauthToken ? 'Yes' : 'No');
       const service = new TwitchChatService(
         twitchChannel,
         handleNewMessage,

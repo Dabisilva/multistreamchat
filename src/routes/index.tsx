@@ -28,14 +28,13 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const isAuthenticated = () => {
     const twitchToken = localStorage.getItem('twitchToken');
-    const kickToken = localStorage.getItem('kickToken');
 
     // Check URL params for authentication (widget URL)
     const urlParams = new URLSearchParams(window.location.search);
-    const hasChannelParams = urlParams.has('twitchChannel') || urlParams.has('kickChannel');
-    const hasTokenParams = urlParams.has('twitchToken') || urlParams.has('kickToken');
+    const hasTwitchAuth = urlParams.has('twitchChannel') && urlParams.has('twitchToken');
+    const hasKickChannel = urlParams.has('kickChannel'); // Kick doesn't need OAuth
 
-    return (twitchToken || kickToken || (hasChannelParams && hasTokenParams));
+    return (twitchToken || hasTwitchAuth || hasKickChannel);
   };
 
   if (!isAuthenticated()) {
