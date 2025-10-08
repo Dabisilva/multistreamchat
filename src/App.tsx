@@ -152,7 +152,6 @@ const App: React.FC = () => {
   // Auto-connect when channels are available
   useEffect(() => {
     if (twitchChannel && !twitchService) {
-      console.log('Connecting to Twitch:', twitchChannel, 'with token:', twitchOauthToken ? 'Yes' : 'No');
       const service = new TwitchChatService(
         twitchChannel,
         handleNewMessage,

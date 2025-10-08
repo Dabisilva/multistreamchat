@@ -40,69 +40,6 @@ body {
   flex-grow: 1;
 }
 
-/* Additional styling for better message display */
-.message-row {
-  margin: 4px 0;
-  padding: 0;
-  border-radius: 0;
-  max-width: 90%;
-  word-wrap: break-word;
-  background: transparent;
-  border: none;
-}
-
-.user-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: bold;
-  background: #30034d;
-  padding: 4px 8px;
-  border-radius: 6px;
-  max-width: fit-content;
-}
-
-.user-message {
-  color: white;
-  background: #8b5cf6;
-  padding: 8px 12px;
-  border-radius: 10px;
-  line-height: 1.4;
-  margin: 0 0 0 6px;
-  max-width: fit-content;
-  display: inline-block;
-}
-
-/* Badge styling improvements */
-.badges-container {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-wrap: wrap;
-}
-
-.badge {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  vertical-align: middle;
-  border: none;
-  border-radius: 2px;
-  margin-right: 2px;
-  display: inline-block;
-  transition: all 0.2s ease-in-out;
-}
-
-/* Emote styling improvements */
-.emote {
-  width: 28px;
-  height: 28px;
-  vertical-align: middle;
-  margin: 0 1px;
-  object-fit: contain;
-  display: inline-block;
-}
-
 /* Scroll to Bottom Button */
 .scroll-to-bottom-btn {
   position: fixed;

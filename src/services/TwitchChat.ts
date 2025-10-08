@@ -55,6 +55,16 @@ export class TwitchChatService implements ChatProvider {
       this.disconnect();
     }
 
+    console.log('🎮 Twitch Chat - Connecting to:', this.channel);
+    console.log('🔑 OAuth Token:', this.oauthToken ? 'Available' : 'Not available');
+    console.log('🔑 Token (first 20 chars):', this.oauthToken ? this.oauthToken.substring(0, 20) + '...' : 'None');
+    console.log('🆔 Client ID:', this.clientId);
+
+    // Validate token if available
+    if (this.oauthToken) {
+      await this.validateToken();
+    }
+
     // Fetch broadcaster ID first (needed for channel badges and BTTV)
     await this.fetchBroadcasterId();
     
@@ -217,13 +227,56 @@ export class TwitchChatService implements ChatProvider {
     return emoteList;
   }
 
+  private async validateToken(): Promise<void> {
+    try {
+      const cleanToken = this.oauthToken.replace(/^Bearer\s+/i, '').trim();
+      
+      const response = await fetch('https://id.twitch.tv/oauth2/validate', {
+        headers: {
+          'Authorization': `Bearer ${cleanToken}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Token is valid!', {
+          client_id: data.client_id,
+          login: data.login,
+          scopes: data.scopes,
+          expires_in: data.expires_in + ' seconds'
+        });
+      } else {
+        console.error('❌ Token validation failed:', response.status);
+        const errorText = await response.text();
+        console.error('Error details:', errorText);
+        
+        if (response.status === 401) {
+          console.error('🚨 TOKEN IS INVALID OR EXPIRED - Please re-authenticate!');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error validating token:', error);
+    }
+  }
+
   private getTwitchHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Client-Id': this.clientId
     };
     
     if (this.oauthToken) {
-      headers['Authorization'] = `Bearer ${this.oauthToken}`;
+      // Clean the token - remove 'Bearer ' prefix if it exists
+      const cleanToken = this.oauthToken.replace(/^Bearer\s+/i, '').trim();
+      headers['Authorization'] = `Bearer ${cleanToken}`;
+      
+      console.log('🔐 Using headers:', {
+        'Client-Id': this.clientId.substring(0, 15) + '...',
+        'Authorization': 'Bearer ' + cleanToken.substring(0, 15) + '...'
+      });
+    } else {
+      console.log('🔐 Using headers (no auth):', {
+        'Client-Id': this.clientId.substring(0, 15) + '...'
+      });
     }
     
     return headers;
@@ -254,6 +307,8 @@ export class TwitchChatService implements ChatProvider {
 
   private async fetchGlobalBadges(): Promise<void> {
     try {
+      console.log('🌍 Fetching global badges');
+      
       // Use Twitch Helix API to get global badges
       const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
         headers: this.getTwitchHeaders()
@@ -263,6 +318,8 @@ export class TwitchChatService implements ChatProvider {
         const result = await response.json();
         
         if (result.data && Array.isArray(result.data)) {
+          console.log(`✅ Loaded ${result.data.length} global badge sets`);
+          
           // Store badges in a nested map: set_id -> version_id -> badge data
           result.data.forEach((badgeSet: TwitchBadgeSet) => {
             const versionMap = new Map<string, TwitchBadgeVersion>();
@@ -272,20 +329,23 @@ export class TwitchChatService implements ChatProvider {
             this.globalBadges.set(badgeSet.set_id, versionMap);
           });
         }
+      } else {
+        console.error('❌ Failed to fetch global badges:', response.status);
       }
     } catch (error) {
-      // Error fetching badges, will use fallback
+      console.error('❌ Error fetching global badges:', error);
     }
   }
 
   private async fetchChannelBadges(): Promise<void> {
     if (!this.broadcasterId) {
-  
+      console.warn('⚠️ No broadcaster ID available for channel badges');
       return;
     }
 
     try {
-  
+      console.log('🏅 Fetching channel badges for broadcaster:', this.broadcasterId);
+      
       // Fetch channel-specific badges (requires OAuth token)
       // Note: This endpoint REQUIRES Authorization header with OAuth token
       const response = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${this.broadcasterId}`, {
@@ -296,6 +356,8 @@ export class TwitchChatService implements ChatProvider {
         const result = await response.json();
         
         if (result.data && Array.isArray(result.data)) {
+          console.log(`✅ Loaded ${result.data.length} channel badge sets`);
+          
           // Store channel badges in a separate map
           result.data.forEach((badgeSet: TwitchBadgeSet) => {
             const versionMap = new Map<string, TwitchBadgeVersion>();
@@ -306,20 +368,25 @@ export class TwitchChatService implements ChatProvider {
           });
           
           // Debug: Log fetched channel badges
-      
+          console.log('📋 Channel badge sets loaded:', Array.from(this.channelBadges.keys()));
         } else {
-      
+          console.warn('⚠️ No channel badge data in response');
         }
       } else if (response.status === 404) {
-    
+        console.warn('⚠️ Channel badges endpoint not found (404)');
       } else if (!this.oauthToken) {
         // Channel badges require OAuth token - this is expected
-    
+        console.warn('⚠️ No OAuth token - channel badges unavailable');
       } else {
-    
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch channel badges:', response.status, errorText);
+        
+        if (response.status === 401) {
+          console.error('🔒 Unauthorized: OAuth token may be invalid or expired');
+        }
       }
     } catch (error) {
-  
+      console.error('❌ Error fetching channel badges:', error);
     }
   }
 

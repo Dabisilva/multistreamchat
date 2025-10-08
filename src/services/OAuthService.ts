@@ -156,7 +156,6 @@ export class OAuthService {
     // Clean up localStorage
     localStorage.removeItem(stateKey);
     localStorage.removeItem(verifierKey);
-    console.log(tokenData);
     return tokenData;
   }
 

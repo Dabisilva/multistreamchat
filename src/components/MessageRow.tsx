@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { MessageRowProps } from '../types';
 import { attachEmotes, createUsernameHtml, getValidBadges } from '../utils/messageUtils';
+import './MessageRow.css';
 
 export const MessageRow: React.FC<MessageRowProps> = ({
   message,
