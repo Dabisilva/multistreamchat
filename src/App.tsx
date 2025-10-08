@@ -28,7 +28,7 @@ const App: React.FC<LoginProps> = () => {
   const [messageBgAlpha, setMessageBgAlpha] = useState('1');
   const [messageTextAlpha, setMessageTextAlpha] = useState('1');
   const [borderRadius, setBorderRadius] = useState('10');
-  const [usernameFontSize, setUsernameFontSize] = useState('16');
+  const [usernameFontSize, setUsernameFontSize] = useState('18');
   const [messageFontSize, setMessageFontSize] = useState('20');
   const [messagePadding, setMessagePadding] = useState('0');
   const [messageDelay, setMessageDelay] = useState('5');

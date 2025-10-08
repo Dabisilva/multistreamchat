@@ -35,8 +35,8 @@ const Chat: React.FC = () => {
     messageBg: '#8b5cf6',
     messageColor: '#ffffff',
     borderRadius: '10',
-    usernameFontSize: '16',
-    messageFontSize: '16',
+    usernameFontSize: '18',
+    messageFontSize: '20',
     messagePadding: '0'
   });
 
@@ -60,8 +60,8 @@ const Chat: React.FC = () => {
     const messageBg = urlParams.get('messageBg') || '#8b5cf6';
     const messageColor = urlParams.get('messageColor') || '#ffffff';
     const borderRadius = urlParams.get('borderRadius') || '10';
-    const usernameFontSize = urlParams.get('usernameFontSize') || '16';
-    const messageFontSize = urlParams.get('messageFontSize') || '16';
+    const usernameFontSize = urlParams.get('usernameFontSize') || '18';
+    const messageFontSize = urlParams.get('messageFontSize') || '20';
     const messagePadding = urlParams.get('messagePadding') || '0';
 
     // Get message delay parameter (in seconds, default 5, max 6)
