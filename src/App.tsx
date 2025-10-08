@@ -30,6 +30,7 @@ const App: React.FC<LoginProps> = () => {
   const [borderRadius, setBorderRadius] = useState('10');
   const [usernameFontSize, setUsernameFontSize] = useState('16');
   const [messageFontSize, setMessageFontSize] = useState('20');
+  const [messagePadding, setMessagePadding] = useState('0');
   const [messageDelay, setMessageDelay] = useState('5');
 
   // Process Twitch OAuth callback
@@ -154,7 +155,7 @@ const App: React.FC<LoginProps> = () => {
         setKickWidgetUrl(url);
       }
     }
-  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, usernameBgAlpha, usernameTextAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messageDelay]);
+  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, usernameBgAlpha, usernameTextAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messagePadding, messageDelay]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -258,7 +259,7 @@ const App: React.FC<LoginProps> = () => {
     const messageBgRgba = hexToRgba(messageBgColor, messageBgAlpha);
     const messageColorRgba = hexToRgba(messageTextColor, messageTextAlpha);
 
-    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&usernameColor=${encodeURIComponent(usernameColorRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messageDelay=${messageDelay}`;
+    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&usernameColor=${encodeURIComponent(usernameColorRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messagePadding=${messagePadding}&messageDelay=${messageDelay}`;
   };
 
   const copyChatUrl = () => {
@@ -572,6 +573,21 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
+                  {/* Message Padding */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Espacamento da Mensagem (px)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="30"
+                      value={messagePadding}
+                      onChange={(e) => setMessagePadding(e.target.value)}
+                      className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
+                    />
+                  </div>
+
                   {/* Message Delay */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
@@ -611,12 +627,13 @@ const App: React.FC<LoginProps> = () => {
                         <span>Streamer</span>
                       </div>
                       <div
-                        className="px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block"
+                        className="leading-[1.4] m-0 ml-1.5 w-fit inline-block"
                         style={{
                           backgroundColor: hexToRgba(messageBgColor, messageBgAlpha),
                           color: hexToRgba(messageTextColor, messageTextAlpha),
                           fontSize: `${messageFontSize}px`,
-                          borderRadius: `${borderRadius}px`
+                          borderRadius: `${borderRadius}px`,
+                          padding: `${messagePadding}px`
                         }}
                       >
                         Esta é uma mensagem de exemplo! 👋
@@ -637,12 +654,13 @@ const App: React.FC<LoginProps> = () => {
                         <span>Viewer</span>
                       </div>
                       <div
-                        className="px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block"
+                        className="leading-[1.4] m-0 ml-1.5 w-fit inline-block"
                         style={{
                           backgroundColor: hexToRgba(messageBgColor, messageBgAlpha),
                           color: hexToRgba(messageTextColor, messageTextAlpha),
                           fontSize: `${messageFontSize}px`,
-                          borderRadius: `${borderRadius}px`
+                          borderRadius: `${borderRadius}px`,
+                          padding: `${messagePadding}px`
                         }}
                       >
                         Olá! Chat ficou incrível! 🎉

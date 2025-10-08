@@ -60,6 +60,7 @@ export interface MessageRowProps {
     borderRadius: string;
     usernameFontSize: string;
     messageFontSize: string;
+    messagePadding: string;
   };
 }
 

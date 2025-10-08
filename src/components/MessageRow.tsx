@@ -42,7 +42,8 @@ export const MessageRow: React.FC<MessageRowProps> = ({
     messageColor: '#ffffff',
     borderRadius: '10',
     usernameFontSize: '16',
-    messageFontSize: '16'
+    messageFontSize: '20',
+    messagePadding: '0'
   };
 
   return (
@@ -50,7 +51,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       ref={messageRef}
       data-sender={message.userId}
       data-msgid={message.msgId}
-      className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0"
+      className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0 overflow-hidden"
       id={`msg-${message.id}`}
     >
       <div
@@ -59,7 +60,9 @@ export const MessageRow: React.FC<MessageRowProps> = ({
           backgroundColor: styles.usernameBg,
           color: styles.usernameColor,
           fontSize: `${styles.usernameFontSize}px`,
-          borderRadius: `${styles.borderRadius}px`
+          borderRadius: `${styles.borderRadius}px`,
+          wordBreak: 'break-word',
+          maxWidth: '100%'
         }}
       >
         <div className="flex items-center gap-0.5 flex-wrap">
@@ -88,12 +91,16 @@ export const MessageRow: React.FC<MessageRowProps> = ({
         />
       </div>
       <div
-        className={`px-3 py-2 leading-[1.4] m-0 ml-1.5 w-fit inline-block ${actionClass}`}
+        className={`leading-[1.4] m-0 ml-1.5 w-fit inline-block ${actionClass}`}
         style={{
           backgroundColor: styles.messageBg,
           color: styles.messageColor,
           fontSize: `${styles.messageFontSize}px`,
-          borderRadius: `${styles.borderRadius}px`
+          borderRadius: `${styles.borderRadius}px`,
+          padding: `${styles.messagePadding}px`,
+          wordBreak: 'break-word',
+          overflowWrap: 'break-word',
+          maxWidth: '100%'
         }}
         dangerouslySetInnerHTML={{ __html: processedText }}
       />
