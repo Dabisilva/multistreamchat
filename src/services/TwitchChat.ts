@@ -167,7 +167,7 @@ export class TwitchChatService implements ChatProvider {
             type: 'twitch',
             name: emoteName,
             id,
-            gif: false,
+            gif: true,
             urls: {
               '1': `https://static-cdn.jtvnw.net/emoticons/v1/${id}/1.0`,
               '2': `https://static-cdn.jtvnw.net/emoticons/v1/${id}/2.0`,
