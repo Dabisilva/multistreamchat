@@ -25,7 +25,7 @@ const App: React.FC<LoginProps> = () => {
   const [messageTextColor, setMessageTextColor] = useState('#ffffff');
   const [borderRadius, setBorderRadius] = useState('10');
   const [usernameFontSize, setUsernameFontSize] = useState('16');
-  const [messageFontSize, setMessageFontSize] = useState('16');
+  const [messageFontSize, setMessageFontSize] = useState('20');
 
   // Process Twitch OAuth callback
   const processTwitchOAuthCallback = useCallback(async (code: string, state: string) => {
@@ -266,7 +266,7 @@ const App: React.FC<LoginProps> = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-5 font-sans">
       <div className="bg-dark-bg-secondary rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-10 md:p-6 border border-dark-border">
-        <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStream Chat</h1>
+        <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStreamDB Chat</h1>
         <p className="text-center text-dark-text-secondary m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
 
         <div className="flex gap-8">
@@ -464,7 +464,7 @@ const App: React.FC<LoginProps> = () => {
                   {/* Border Radius */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Borda Arredondada: {borderRadius}px
+                      Borda arredondada: {borderRadius}px
                     </label>
                     <input
                       type="range"
@@ -479,7 +479,7 @@ const App: React.FC<LoginProps> = () => {
                   {/* Username Font Size */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Tamanho da Fonte do Nome: {usernameFontSize}px
+                      Tamanho do Nome: {usernameFontSize}px
                     </label>
                     <input
                       type="range"
@@ -494,7 +494,7 @@ const App: React.FC<LoginProps> = () => {
                   {/* Message Font Size */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Tamanho da Fonte da Mensagem: {messageFontSize}px
+                      Tamanho da Mensagem: {messageFontSize}px
                     </label>
                     <input
                       type="range"
