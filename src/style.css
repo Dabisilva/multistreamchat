@@ -1,5 +1,50 @@
 @import "tailwindcss";
 
+@theme {
+  /* Dark mode colors */
+  --color-dark-bg-primary: #0f0f0f;
+  --color-dark-bg-secondary: #1a1a1a;
+  --color-dark-bg-card: #1e1e1e;
+  --color-dark-bg-hover: #252525;
+  --color-dark-text-primary: #ffffff;
+  --color-dark-text-secondary: #a3a3a3;
+  --color-dark-text-muted: #737373;
+  --color-dark-border: #2a2a2a;
+  --color-dark-border-light: #3a3a3a;
+
+  /* Brand colors */
+  --color-twitch: #9146ff;
+  --color-twitch-dark: #7c3aed;
+  --color-kick: #53fc18;
+  --color-kick-dark: #42d914;
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.5s ease-in;
+  --animate-slide-down: slide-down 0.5s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 300px;
+  }
+}
+
 body {
   margin: 0;
   background: transparent;

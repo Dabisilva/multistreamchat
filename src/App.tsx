@@ -265,14 +265,14 @@ const App: React.FC<LoginProps> = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-5 font-sans">
-      <div className="bg-white/98 rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-10 md:p-6">
+      <div className="bg-dark-bg-secondary rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-10 md:p-6 border border-dark-border">
         <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStream Chat</h1>
-        <p className="text-center text-gray-600 m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
+        <p className="text-center text-dark-text-secondary m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
 
         <div className="flex gap-8">
-          <div className="bg-gray-100 rounded-xl p-6">
+          <div className="bg-dark-bg-card rounded-xl p-6 border border-dark-border">
             {error && (
-              <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-5 border border-red-200">
+              <div className="bg-red-900/20 text-red-400 p-4 rounded-lg mb-5 border border-red-800">
                 {error}
               </div>
             )}
@@ -304,7 +304,7 @@ const App: React.FC<LoginProps> = () => {
 
             {/* Kick Section */}
             <div>
-              <label className="block mb-2 text-gray-800 font-medium text-sm">
+              <label className="block mb-2 text-dark-text-primary font-medium text-sm">
                 Canal da Kick
               </label>
               <div className="flex gap-2.5">
@@ -314,7 +314,7 @@ const App: React.FC<LoginProps> = () => {
                   onChange={(e) => setKickChannel(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleKickChannelSubmit()}
                   placeholder="Digite o nome do canal"
-                  className="flex-1 px-4 py-3 border-2 border-green-400 focus:border-green-500 rounded-lg text-base outline-none transition-colors duration-300"
+                  className="flex-1 px-4 py-3 bg-dark-bg-primary border-2 border-dark-border focus:border-green-500 rounded-lg text-base text-dark-text-primary placeholder-dark-text-muted outline-none transition-colors duration-300"
                 />
 
                 {!kickChannelSaved ? (
@@ -338,8 +338,8 @@ const App: React.FC<LoginProps> = () => {
 
             {/* Widget URL Section */}
             {(twitchWidgetUrl || kickWidgetUrl) && (
-              <div className="mt-8 pt-5 border-t-2 border-gray-300 animate-slide-down">
-                <p className="m-0 mb-2.5 font-bold">
+              <div className="mt-8 pt-5 border-t-2 border-dark-border animate-slide-down">
+                <p className="m-0 mb-2.5 font-bold text-dark-text-primary">
                   URL do Widget(Pode usar no OBS):
                 </p>
                 <div className="flex flex-col md:flex-row gap-2.5 mb-5">
@@ -347,7 +347,7 @@ const App: React.FC<LoginProps> = () => {
                     type="password"
                     value={twitchWidgetUrl || kickWidgetUrl}
                     readOnly
-                    className="flex-1 px-4 py-3 border-2 border-gray-300 focus:border-green-500 rounded-lg text-sm bg-gray-50 text-gray-800 font-mono outline-none"
+                    className="flex-1 px-4 py-3 border-2 border-dark-border focus:border-green-500 rounded-lg text-sm bg-dark-bg-primary text-dark-text-primary font-mono outline-none"
                   />
                   <button onClick={copyChatUrl} className="w-[120px] bg-green-500 text-white border-0 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap hover:bg-green-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(46,204,113,0.3)]">
                     Copiar
@@ -372,151 +372,147 @@ const App: React.FC<LoginProps> = () => {
           </div>
           {/* Customization Panel */}
           {showCustomization && (twitchWidgetUrl || kickWidgetUrl) && (
-            <div className="bg-gray-100 rounded-xl p-6">
-              <h2 className="text-2xl font-bold mb-5 text-gray-800">Personalizar Chat</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Customization Options */}
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700">Opções de Personalização</h3>
+            <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
+              <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border">
+                <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Opções de Personalização</h3>
 
-                  <div className="space-y-4">
-                    {/* Username Background Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cor de Fundo do Nome
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={usernameBgColor}
-                          onChange={(e) => setUsernameBgColor(e.target.value)}
-                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={usernameBgColor}
-                          onChange={(e) => setUsernameBgColor(e.target.value)}
-                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Username Text Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cor do Texto do Nome
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={usernameTextColor}
-                          onChange={(e) => setUsernameTextColor(e.target.value)}
-                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={usernameTextColor}
-                          onChange={(e) => setUsernameTextColor(e.target.value)}
-                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Message Background Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cor de Fundo da Mensagem
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={messageBgColor}
-                          onChange={(e) => setMessageBgColor(e.target.value)}
-                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={messageBgColor}
-                          onChange={(e) => setMessageBgColor(e.target.value)}
-                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Message Text Color */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cor do Texto da Mensagem
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={messageTextColor}
-                          onChange={(e) => setMessageTextColor(e.target.value)}
-                          className="h-10 w-20 rounded border-2 border-gray-300 cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={messageTextColor}
-                          onChange={(e) => setMessageTextColor(e.target.value)}
-                          className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Border Radius */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Borda Arredondada: {borderRadius}px
-                      </label>
+                <div className="space-y-4">
+                  {/* Username Background Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Cor de Fundo do Nome
+                    </label>
+                    <div className="flex gap-2">
                       <input
-                        type="range"
-                        min="0"
-                        max="30"
-                        value={borderRadius}
-                        onChange={(e) => setBorderRadius(e.target.value)}
-                        className="w-full"
+                        type="color"
+                        value={usernameBgColor}
+                        onChange={(e) => setUsernameBgColor(e.target.value)}
+                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                      />
+                      <input
+                        type="text"
+                        value={usernameBgColor}
+                        onChange={(e) => setUsernameBgColor(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                  </div>
 
-                    {/* Username Font Size */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tamanho da Fonte do Nome: {usernameFontSize}px
-                      </label>
+                  {/* Username Text Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Cor do Texto do Nome
+                    </label>
+                    <div className="flex gap-2">
                       <input
-                        type="range"
-                        min="12"
-                        max="24"
-                        value={usernameFontSize}
-                        onChange={(e) => setUsernameFontSize(e.target.value)}
-                        className="w-full"
+                        type="color"
+                        value={usernameTextColor}
+                        onChange={(e) => setUsernameTextColor(e.target.value)}
+                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                      />
+                      <input
+                        type="text"
+                        value={usernameTextColor}
+                        onChange={(e) => setUsernameTextColor(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                  </div>
 
-                    {/* Message Font Size */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tamanho da Fonte da Mensagem: {messageFontSize}px
-                      </label>
+                  {/* Message Background Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Cor de Fundo da Mensagem
+                    </label>
+                    <div className="flex gap-2">
                       <input
-                        type="range"
-                        min="12"
-                        max="24"
-                        value={messageFontSize}
-                        onChange={(e) => setMessageFontSize(e.target.value)}
-                        className="w-full"
+                        type="color"
+                        value={messageBgColor}
+                        onChange={(e) => setMessageBgColor(e.target.value)}
+                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                      />
+                      <input
+                        type="text"
+                        value={messageBgColor}
+                        onChange={(e) => setMessageBgColor(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
+                  </div>
+
+                  {/* Message Text Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Cor do Texto da Mensagem
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={messageTextColor}
+                        onChange={(e) => setMessageTextColor(e.target.value)}
+                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                      />
+                      <input
+                        type="text"
+                        value={messageTextColor}
+                        onChange={(e) => setMessageTextColor(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Border Radius */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Borda Arredondada: {borderRadius}px
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="30"
+                      value={borderRadius}
+                      onChange={(e) => setBorderRadius(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
+                  </div>
+
+                  {/* Username Font Size */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Tamanho da Fonte do Nome: {usernameFontSize}px
+                    </label>
+                    <input
+                      type="range"
+                      min="12"
+                      max="24"
+                      value={usernameFontSize}
+                      onChange={(e) => setUsernameFontSize(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
+                  </div>
+
+                  {/* Message Font Size */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Tamanho da Fonte da Mensagem: {messageFontSize}px
+                    </label>
+                    <input
+                      type="range"
+                      min="12"
+                      max="24"
+                      value={messageFontSize}
+                      onChange={(e) => setMessageFontSize(e.target.value)}
+                      className="w-full accent-purple-600"
+                    />
                   </div>
                 </div>
               </div>
               {/* Preview */}
-              <div className="bg-gray-50 rounded-xl p-4 mt-2.5">
-                <div className="bg-transparent rounded-lg">
+              <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border">
+                <div className=" bg-transparent rounded-lg">
                   <div className="space-y-3">
                     {/* Example Message 1 */}
-                    <div className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0">
+                    <div className="p-0 rounded-none break-words bg-transparent border-0">
                       <div
                         className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
                         style={{
