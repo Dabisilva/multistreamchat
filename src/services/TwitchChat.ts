@@ -182,15 +182,18 @@ export class TwitchChatService implements ChatProvider {
           const [start, end] = position.split('-').map(Number);
           const emoteName = message.substring(start, end + 1);
           
+          // Use v2 API which supports animated emotes
+          // Format: /emoticons/v2/{id}/{format}/dark/{scale}
+          // format can be 'default' (tries animated first, falls back to static) or 'static'/'animated'
           emoteList.push({
             type: 'twitch',
             name: emoteName,
             id,
             gif: true,
             urls: {
-              '1': `https://static-cdn.jtvnw.net/emoticons/v1/${id}/1.0`,
-              '2': `https://static-cdn.jtvnw.net/emoticons/v1/${id}/2.0`,
-              '4': `https://static-cdn.jtvnw.net/emoticons/v1/${id}/3.0`
+              '1': `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/1.0`,
+              '2': `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/2.0`,
+              '4': `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/3.0`
             },
             start,
             end
