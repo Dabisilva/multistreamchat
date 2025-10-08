@@ -162,8 +162,9 @@ function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick'): string {
   const url = emote.urls['2'] || emote.urls['1'] || Object.values(emote.urls)[0]; // Prefer 2x for better quality
   
   if (provider === 'twitch' || emote.type === 'bttv' || emote.type === 'kick') {
-    // Twitch, BTTV, and Kick emotes use simple img tags
-    return `<img class="emote" src="${url}" alt="${emote.name}" title="${emote.name}"/>`;
+    // Add specific class for BTTV emotes
+    const emoteClass = emote.type === 'bttv' ? 'emote bttv-emote' : 'emote';
+    return `<img class="${emoteClass}" src="${url}" alt="${emote.name}" title="${emote.name}"/>`;
   } else {
     // Mixer style emote with background positioning (legacy support)
     const coords = emote.coords || { x: 0, y: 0 };

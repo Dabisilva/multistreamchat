@@ -46,6 +46,17 @@ export const MessageRow: React.FC<MessageRowProps> = ({
     messagePadding: '0'
   };
 
+  // Helper function to check if color is transparent (alpha = 0)
+  const isTransparent = (color: string): boolean => {
+    if (color.startsWith('rgba')) {
+      const alphaMatch = color.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([0-9.]+)\)/);
+      if (alphaMatch && parseFloat(alphaMatch[1]) === 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   return (
     <div
       ref={messageRef}
@@ -57,7 +68,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       <div
         className={`flex items-center gap-1.5 font-bold px-2 py-1 w-fit ${actionClass}`}
         style={{
-          backgroundColor: styles.usernameBg,
+          backgroundColor: isTransparent(styles.usernameBg) ? 'transparent' : styles.usernameBg,
           color: styles.usernameColor,
           fontSize: `${styles.usernameFontSize}px`,
           borderRadius: `${styles.borderRadius}px`,
@@ -93,7 +104,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       <div
         className={`leading-[1.4] m-0 ml-1.5 w-fit inline-block ${actionClass}`}
         style={{
-          backgroundColor: styles.messageBg,
+          backgroundColor: isTransparent(styles.messageBg) ? 'transparent' : styles.messageBg,
           color: styles.messageColor,
           fontSize: `${styles.messageFontSize}px`,
           borderRadius: `${styles.borderRadius}px`,

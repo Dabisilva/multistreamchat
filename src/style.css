@@ -73,6 +73,13 @@ textarea {
   image-rendering: crisp-edges;
 }
 
+/* BTTV emotes with 100% width */
+.bttv-emote {
+  width: 100%;
+  height: auto;
+  max-height: 40px;
+}
+
 /* Ensure animated GIFs play */
 .emote[src$=".gif"],
 .emote[src*="/emote/"] {
