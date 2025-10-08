@@ -47,6 +47,13 @@ export class TwitchChatService implements ChatProvider {
     // Store user info for enhanced badge fetching
     if (options?.userInfo) {
       localStorage.setItem('twitchUserInfo', JSON.stringify(options.userInfo));
+      
+      // Extract broadcaster ID from user info
+      if (options.userInfo.broadcasterId) {
+        this.broadcasterId = options.userInfo.broadcasterId;
+      } else if (options.userInfo.id) {
+        this.broadcasterId = options.userInfo.id;
+      }
     }
   }
 
@@ -59,14 +66,19 @@ export class TwitchChatService implements ChatProvider {
     console.log('🔑 OAuth Token:', this.oauthToken ? 'Available' : 'Not available');
     console.log('🔑 Token (first 20 chars):', this.oauthToken ? this.oauthToken.substring(0, 20) + '...' : 'None');
     console.log('🆔 Client ID:', this.clientId);
+    console.log('📡 Broadcaster ID (from userInfo):', this.broadcasterId || 'Not available');
 
     // Validate token if available
     if (this.oauthToken) {
       await this.validateToken();
     }
 
-    // Fetch broadcaster ID first (needed for channel badges and BTTV)
-    await this.fetchBroadcasterId();
+    // Fetch broadcaster ID if not already available (needed for channel badges and BTTV)
+    if (!this.broadcasterId) {
+      await this.fetchBroadcasterId();
+    } else {
+      console.log('✅ Using broadcaster ID from user info:', this.broadcasterId);
+    }
     
     // Fetch global and channel badges from Twitch Helix API
     await this.fetchGlobalBadges();

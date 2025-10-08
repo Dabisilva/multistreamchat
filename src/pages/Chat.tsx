@@ -152,10 +152,27 @@ const Chat: React.FC = () => {
   // Auto-connect when channels are available
   useEffect(() => {
     if (twitchChannel && !twitchService) {
+      // Get user info and client ID from localStorage
+      const twitchUserInfo = localStorage.getItem('twitchUserInfo');
+      const twitchClientId = localStorage.getItem('twitchClientId');
+      let userInfo = null;
+
+      if (twitchUserInfo) {
+        try {
+          userInfo = JSON.parse(twitchUserInfo);
+        } catch (e) {
+          console.error('Error parsing Twitch user info:', e);
+        }
+      }
+
       const service = new TwitchChatService(
         twitchChannel,
         handleNewMessage,
-        twitchOauthToken ? { oauthToken: twitchOauthToken } : undefined
+        {
+          clientId: twitchClientId || undefined, // ⭐ Use the same client ID
+          oauthToken: twitchOauthToken || undefined,
+          userInfo: userInfo
+        }
       );
       service.connect();
       setTwitchService(service);

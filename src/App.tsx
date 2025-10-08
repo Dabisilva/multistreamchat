@@ -23,8 +23,12 @@ const App: React.FC<LoginProps> = () => {
       const tokenResponse = await OAuthService.handleOAuthCallback('twitch', code, state);
       const userData = await OAuthService.getTwitchUserInfo(tokenResponse.access_token);
 
-      // Store tokens and user info
+      // Get the client ID that was used for OAuth
+      const clientId = (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+
+      // Store tokens, client ID, and user info
       localStorage.setItem('twitchToken', tokenResponse.access_token);
+      localStorage.setItem('twitchClientId', clientId); // ⭐ Store the client ID used
       localStorage.setItem('twitchUserInfo', JSON.stringify(userData));
       localStorage.setItem('twitchChannelInfo', JSON.stringify({
         username: userData.username,
@@ -120,6 +124,7 @@ const App: React.FC<LoginProps> = () => {
 
   const handleTwitchSignOut = () => {
     localStorage.removeItem('twitchToken');
+    localStorage.removeItem('twitchClientId');
     localStorage.removeItem('twitchUserInfo');
     localStorage.removeItem('twitchChannelInfo');
     localStorage.removeItem('twitchRefreshToken');

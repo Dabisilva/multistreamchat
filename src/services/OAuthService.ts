@@ -13,6 +13,7 @@ export interface UserInfo {
   email?: string;
   avatar?: string;
   platform: 'twitch' | 'kick';
+  broadcasterId?: string; // For Twitch, this is the same as id
 }
 
 export interface TokenResponse {
@@ -85,7 +86,8 @@ export class OAuthService {
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
     localStorage.setItem('twitch_code_verifier', codeVerifier);
     
-    const scopes = 'user:read:email chat:read';
+    // Include scopes for reading user info, email, chat, and moderator data
+    const scopes = 'user:read:email chat:read moderator:read:chatters';
     const authUrl = `https://id.twitch.tv/oauth2/authorize?` +
       `client_id=${config.clientId}&` +
       `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
@@ -177,13 +179,15 @@ export class OAuthService {
     const data = await response.json();
     const user = data.data[0];
     
+    // For Twitch, the user ID is the broadcaster ID (when the user authenticates their own channel)
     return {
       id: user.id,
       username: user.login,
       displayName: user.display_name,
       email: user.email,
       avatar: user.profile_image_url,
-      platform: 'twitch'
+      platform: 'twitch',
+      broadcasterId: user.id // Store broadcaster ID (same as user ID for authenticated user)
     };
   }
 
