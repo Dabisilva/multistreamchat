@@ -75,22 +75,15 @@ export class OAuthService {
    * Initiate Twitch OAuth flow
    */
   async initiateTwitchOAuth(): Promise<void> {
-    console.log('=== Initiating Twitch OAuth ===');
     const config = this.getTwitchConfig();
-    console.log('Twitch config:', { clientId: config.clientId, redirectUri: config.redirectUri });
-    
     const state = this.generateRandomString(32);
-    console.log('Generated state:', state);
     
     // Store state for verification
     localStorage.setItem('twitch_oauth_state', state);
-    console.log('Stored twitch_oauth_state in localStorage');
     
     // Generate PKCE challenge
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
     localStorage.setItem('twitch_code_verifier', codeVerifier);
-    console.log('Stored twitch_code_verifier in localStorage');
-    console.log('Code challenge generated:', codeChallenge);
     
     const scopes = 'user:read:email chat:read';
     const authUrl = `https://id.twitch.tv/oauth2/authorize?` +
@@ -102,7 +95,6 @@ export class OAuthService {
       `code_challenge=${codeChallenge}&` +
       `code_challenge_method=S256`;
     
-    console.log('Redirecting to Twitch OAuth URL:', authUrl);
     window.location.href = authUrl;
   }
 
@@ -110,22 +102,15 @@ export class OAuthService {
    * Initiate Kick OAuth flow
    */
   async initiateKickOAuth(): Promise<void> {
-    console.log('=== Initiating Kick OAuth ===');
     const config = this.getKickConfig();
-    console.log('Kick config:', { clientId: config.clientId, redirectUri: config.redirectUri });
-    
     const state = this.generateRandomString(32);
-    console.log('Generated state:', state);
     
     // Store state for verification
     localStorage.setItem('kick_oauth_state', state);
-    console.log('Stored kick_oauth_state in localStorage');
     
     // Generate PKCE challenge
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
     localStorage.setItem('kick_code_verifier', codeVerifier);
-    console.log('Stored kick_code_verifier in localStorage');
-    console.log('Code challenge generated:', codeChallenge);
     
     const scopes = 'user:read:email chat:read';
     const authUrl = `https://id.kick.com/oauth/authorize?` +
@@ -137,7 +122,6 @@ export class OAuthService {
       `code_challenge=${codeChallenge}&` +
       `code_challenge_method=S256`;
     
-    console.log('Redirecting to Kick OAuth URL:', authUrl);
     window.location.href = authUrl;
   }
 
@@ -145,40 +129,25 @@ export class OAuthService {
    * Handle OAuth callback and exchange code for token
    */
   async handleOAuthCallback(platform: 'twitch' | 'kick', code: string, state: string): Promise<TokenResponse> {
-    console.log(`=== handleOAuthCallback (${platform}) ===`);
     const stateKey = `${platform}_oauth_state`;
     const verifierKey = `${platform}_code_verifier`;
     
-    console.log('Looking for stored state with key:', stateKey);
     const storedState = localStorage.getItem(stateKey);
-    console.log('Stored state:', storedState);
-    console.log('Received state:', state);
-    console.log('States match:', storedState === state);
-    
     const codeVerifier = localStorage.getItem(verifierKey);
-    console.log('Code verifier exists:', !!codeVerifier);
     
     if (!storedState || storedState !== state) {
-      console.error('State validation failed!');
       throw new Error('Invalid state parameter');
     }
     
     if (!codeVerifier) {
-      console.error('Code verifier missing!');
       throw new Error('Missing code verifier');
     }
-    
-    console.log('State and verifier validated successfully');
     
     const config = platform === 'twitch' ? this.getTwitchConfig() : this.getKickConfig();
     
     const tokenUrl = platform === 'twitch' 
       ? 'https://id.twitch.tv/oauth2/token'
       : 'https://id.kick.com/oauth/token';
-    
-    console.log('Token exchange URL:', tokenUrl);
-    console.log('Client ID:', config.clientId);
-    console.log('Redirect URI:', config.redirectUri);
     
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
@@ -189,7 +158,6 @@ export class OAuthService {
       code_verifier: codeVerifier
     });
     
-    console.log('Making token exchange request...');
     const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
@@ -198,22 +166,16 @@ export class OAuthService {
       body: body.toString()
     });
     
-    console.log('Token exchange response status:', response.status);
-    
     if (!response.ok) {
       const error = await response.text();
-      console.error('Token exchange failed with error:', error);
       throw new Error(`Token exchange failed: ${error}`);
     }
     
     const tokenData: TokenResponse = await response.json();
-    console.log('Token exchange successful!');
     
     // Clean up localStorage
-    console.log('Cleaning up OAuth state and verifier...');
     localStorage.removeItem(stateKey);
     localStorage.removeItem(verifierKey);
-    console.log('Cleanup complete');
     
     return tokenData;
   }
