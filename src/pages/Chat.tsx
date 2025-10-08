@@ -8,8 +8,8 @@ import { shouldHideMessage } from '../utils/messageUtils';
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [config] = useState<ChatConfig>({
-    hideAfter: 60,
-    messagesLimit: 50,
+    hideAfter: 180,
+    messagesLimit: 20,
     nickColor: 'user',
     customNickColor: '#ffffff',
     hideCommands: true,
@@ -37,7 +37,7 @@ const Chat: React.FC = () => {
     borderRadius: '10',
     usernameFontSize: '16',
     messageFontSize: '16',
-    messagePadding: '12'
+    messagePadding: '0'
   });
 
   // Message delay in milliseconds (default 5s, max 6s)
@@ -62,7 +62,7 @@ const Chat: React.FC = () => {
     const borderRadius = urlParams.get('borderRadius') || '10';
     const usernameFontSize = urlParams.get('usernameFontSize') || '16';
     const messageFontSize = urlParams.get('messageFontSize') || '16';
-    const messagePadding = urlParams.get('messagePadding') || '12';
+    const messagePadding = urlParams.get('messagePadding') || '0';
 
     // Get message delay parameter (in seconds, default 5, max 6)
     const delayParam = urlParams.get('messageDelay');
@@ -339,7 +339,7 @@ const Chat: React.FC = () => {
   return (
     <div className="h-screen flex flex-col bg-transparent">
       <div
-        className="flex flex-col h-screen p-2.5 overflow-y-auto relative"
+        className="flex flex-col h-full p-2.5 overflow-y-auto relative"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >

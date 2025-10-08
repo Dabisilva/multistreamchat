@@ -51,7 +51,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       ref={messageRef}
       data-sender={message.userId}
       data-msgid={message.msgId}
-      className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0 overflow-hidden"
+      className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0 overflow-hidden flex-shrink-0"
       id={`msg-${message.id}`}
     >
       <div
