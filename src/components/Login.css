@@ -61,19 +61,6 @@
   transition: all 0.3s ease;
 }
 
-.platform-section:hover {
-  border-color: #667eea;
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-}
-
-.twitch-section {
-  border-left: 4px solid #9146ff;
-}
-
-.kick-section {
-  border-left: 4px solid #53fc18;
-}
-
 .platform-header {
   display: flex;
   align-items: center;
@@ -153,6 +140,7 @@
 
 .twitch-button {
   background: #9146ff;
+  margin-bottom: 16px;
 }
 
 .twitch-button:hover {

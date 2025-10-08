@@ -78,54 +78,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <p className="login-subtitle">Conecte-se aos chats da Twitch e Kick</p>
 
         <div className="login-form">
-          {/* Twitch Section */}
-          <div className="platform-section twitch-section">
-            <div className="platform-header">
-              <svg className="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-              </svg>
-              <h2>Twitch</h2>
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="twitch-channel">Nome do Canal</label>
-              <input
-                id="twitch-channel"
-                type="text"
-                placeholder="Digite o nome do canal da Twitch"
-                value={twitchChannel}
-                onChange={(e) => setTwitchChannel(e.target.value.toLowerCase())}
-              />
-            </div>
-
+          <div className="platform-section">
             <button className="oauth-button twitch-button" onClick={handleTwitchOAuth}>
               <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
               </svg>
               Conectar Twitch
             </button>
-          </div>
-
-          {/* Kick Section */}
-          <div className="platform-section kick-section">
-            <div className="platform-header">
-              <svg className="platform-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7z" />
-              </svg>
-              <h2>Kick</h2>
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="kick-channel">Nome do Canal</label>
-              <input
-                id="kick-channel"
-                type="text"
-                placeholder="Digite o nome do canal da Kick"
-                value={kickChannel}
-                onChange={(e) => setKickChannel(e.target.value.toLowerCase())}
-              />
-            </div>
-
             <button className="oauth-button kick-button" onClick={handleKickLogin}>
               <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
