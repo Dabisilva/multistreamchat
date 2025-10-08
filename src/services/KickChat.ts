@@ -4,6 +4,7 @@ export class KickChatService implements ChatProvider {
   private channel: string;
   private onMessage: (message: ChatMessage) => void;
   private onMessageDelete?: (msgId: string) => void;
+  private onUserBanned?: (username: string) => void;
   private connected: boolean = false;
   private chatroomId: number | null = null;
   private pusherSocket: WebSocket | null = null;
@@ -13,11 +14,12 @@ export class KickChatService implements ChatProvider {
   constructor(
     channel: string, 
     onMessage: (message: ChatMessage) => void,
-    options?: { onMessageDelete?: (msgId: string) => void }
+    options?: { onMessageDelete?: (msgId: string) => void; onUserBanned?: (username: string) => void }
   ) {
     this.channel = channel;
     this.onMessage = onMessage;
     if (options?.onMessageDelete) this.onMessageDelete = options.onMessageDelete;
+    if (options?.onUserBanned) this.onUserBanned = options.onUserBanned;
   }
 
   async connect(): Promise<void> {
@@ -108,6 +110,12 @@ export class KickChatService implements ChatProvider {
           } else if (data.event === 'App\\Events\\MessageDeletedEvent') {
             // Message deleted by moderator
             this.handleMessageDeleted(data);
+          } else if (data.event === 'App\\Events\\UserBannedEvent') {
+            // User banned
+            this.handleUserBanned(data);
+          } else if (data.event === 'App\\Events\\BanEvent') {
+            // Alternative ban event
+            this.handleUserBanned(data);
           }
         } catch (error) {
           // Failed to parse message
@@ -160,6 +168,19 @@ export class KickChatService implements ChatProvider {
       }
     } catch (error) {
       // Failed to process message deletion
+    }
+  }
+
+  private handleUserBanned(data: any): void {
+    try {
+      const eventData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+      const username = eventData?.user?.username || eventData?.username;
+      
+      if (username && this.onUserBanned) {
+        this.onUserBanned(username.toLowerCase());
+      }
+    } catch (error) {
+      // Failed to process user ban
     }
   }
 

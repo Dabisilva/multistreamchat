@@ -27,6 +27,7 @@ export class TwitchChatService implements ChatProvider {
   private channel: string;
   private onMessage: (message: ChatMessage) => void;
   private onMessageDelete?: (msgId: string) => void;
+  private onUserBanned?: (username: string) => void;
   private connected: boolean = false;
   private globalBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
@@ -38,13 +39,14 @@ export class TwitchChatService implements ChatProvider {
   constructor(
     channel: string, 
     onMessage: (message: ChatMessage) => void,
-    options?: { clientId?: string; oauthToken?: string; userInfo?: any; onMessageDelete?: (msgId: string) => void }
+    options?: { clientId?: string; oauthToken?: string; userInfo?: any; onMessageDelete?: (msgId: string) => void; onUserBanned?: (username: string) => void }
   ) {
     this.channel = channel;
     this.onMessage = onMessage;
     if (options?.clientId) this.clientId = options.clientId;
     if (options?.oauthToken) this.oauthToken = options.oauthToken;
     if (options?.onMessageDelete) this.onMessageDelete = options.onMessageDelete;
+    if (options?.onUserBanned) this.onUserBanned = options.onUserBanned;
     
     // Store user info for enhanced badge fetching
     if (options?.userInfo) {
@@ -138,6 +140,20 @@ export class TwitchChatService implements ChatProvider {
       const targetMsgId = userstate['target-msg-id'];
       if (targetMsgId && this.onMessageDelete) {
         this.onMessageDelete(targetMsgId);
+      }
+    });
+
+    // Handle user bans
+    this.client.on('ban', (_channel, username) => {
+      if (username && this.onUserBanned) {
+        this.onUserBanned(username.toLowerCase());
+      }
+    });
+
+    // Handle user timeouts
+    this.client.on('timeout', (_channel, username) => {
+      if (username && this.onUserBanned) {
+        this.onUserBanned(username.toLowerCase());
       }
     });
 
