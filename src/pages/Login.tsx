@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './Login.css';
 import OAuthService from '../services/OAuthService';
 
+const baseUrl = window.location.origin;
 interface LoginProps {
   onLogin?: (twitchToken: string, twitchChannel: string, kickChannel?: string) => void;
 }
@@ -12,7 +13,6 @@ const Login: React.FC<LoginProps> = () => {
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedPlatform, setAuthenticatedPlatform] = useState<'twitch' | 'kick' | null>(null);
-  const [widgetUrl, setWidgetUrl] = useState('');
 
   // Process OAuth callback
   const processOAuthCallback = useCallback(async (code: string, state: string, platform: 'twitch' | 'kick') => {
@@ -37,14 +37,7 @@ const Login: React.FC<LoginProps> = () => {
         localStorage.setItem(`${platform}RefreshToken`, tokenResponse.refresh_token);
       }
 
-      // Generate widget URL
-      const baseUrl = window.location.origin;
-      const channelParam = platform === 'twitch' ? 'twitchChannel' : 'kickChannel';
-      const tokenParam = platform === 'twitch' ? 'twitchToken' : 'kickToken';
-      const widget = `${baseUrl}/?${channelParam}=${userData.username}&${tokenParam}=${tokenResponse.access_token}`;
-
       setAuthenticatedPlatform(platform);
-      setWidgetUrl(widget);
       setIsAuthenticated(true);
 
     } catch (err) {
@@ -64,19 +57,13 @@ const Login: React.FC<LoginProps> = () => {
       const kickUser = localStorage.getItem('kickUserInfo');
 
       if (twitchToken && twitchUser) {
-        const userData = JSON.parse(twitchUser);
-        const widget = `${window.location.origin}/?twitchChannel=${userData.username}&twitchToken=${twitchToken}`;
         setAuthenticatedPlatform('twitch');
-        setWidgetUrl(widget);
         setIsAuthenticated(true);
         return;
       }
 
       if (kickToken && kickUser) {
-        const userData = JSON.parse(kickUser);
-        const widget = `${window.location.origin}/?kickChannel=${userData.username}&kickToken=${kickToken}`;
         setAuthenticatedPlatform('kick');
-        setWidgetUrl(widget);
         setIsAuthenticated(true);
         return;
       }
@@ -142,16 +129,16 @@ const Login: React.FC<LoginProps> = () => {
     try {
       await OAuthService.initiateKickOAuth();
     } catch (error) {
-      setError('Erro ao iniciar autenticação com Kick');
+      setError(error instanceof Error ? error.message : 'Erro ao iniciar autenticação com Kick');
       setIsLoadingKick(false);
     }
   };
 
   const copyWidgetUrl = () => {
-    navigator.clipboard.writeText(widgetUrl).catch(() => {
+    navigator.clipboard.writeText(baseUrl).catch(() => {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = widgetUrl;
+      textArea.value = baseUrl;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
@@ -160,7 +147,7 @@ const Login: React.FC<LoginProps> = () => {
   };
 
   const goToChat = () => {
-    window.location.href = widgetUrl;
+    window.open(baseUrl, '_blank')?.focus();
   };
 
   const twitchButtonText = () => {
@@ -218,7 +205,7 @@ const Login: React.FC<LoginProps> = () => {
             </div>
 
             {/* Widget URL Section - Only show when authenticated */}
-            {isAuthenticated && widgetUrl && (
+            {isAuthenticated && (
               <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '2px solid #ddd' }}>
                 <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#333' }}>
                   URL do Widget OBS:
@@ -226,7 +213,7 @@ const Login: React.FC<LoginProps> = () => {
                 <div className="url-input-container">
                   <input
                     type="text"
-                    value={widgetUrl}
+                    value={baseUrl}
                     readOnly
                     className="widget-url-input"
                   />

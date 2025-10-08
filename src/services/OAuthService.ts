@@ -103,6 +103,12 @@ export class OAuthService {
    */
   async initiateKickOAuth(): Promise<void> {
     const config = this.getKickConfig();
+    
+    // Validate required config
+    if (!config.clientId) {
+      throw new Error('Kick Client ID não configurado. Configure VITE_KICK_CLIENT_ID no arquivo .env.local');
+    }
+    
     const state = this.generateRandomString(32);
     
     // Store state for verification
@@ -112,8 +118,9 @@ export class OAuthService {
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
     localStorage.setItem('kick_code_verifier', codeVerifier);
     
+    // Kick OAuth 2.1 scopes
     const scopes = 'user:read:email chat:read';
-    const authUrl = `https://id.kick.com/oauth/authorize?` +
+    const authUrl = `https://kick.com/oauth/authorize?` +
       `client_id=${config.clientId}&` +
       `redirect_uri=${encodeURIComponent(config.redirectUri)}&` +
       `response_type=code&` +
@@ -147,7 +154,7 @@ export class OAuthService {
     
     const tokenUrl = platform === 'twitch' 
       ? 'https://id.twitch.tv/oauth2/token'
-      : 'https://id.kick.com/oauth/token';
+      : 'https://kick.com/oauth/token';
     
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
