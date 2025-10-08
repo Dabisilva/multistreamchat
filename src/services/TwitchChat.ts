@@ -122,7 +122,7 @@ export class TwitchChatService implements ChatProvider {
 
     return Object.entries(badges).map(([type, version]) => {
       // Debug: Log badge parsing
-      console.log(`Parsing badge: type=${type}, version=${version}`);
+  
       // Try to get description from API data (check channel badges first)
       let description = this.getBadgeDescription(type);
       
@@ -183,7 +183,7 @@ export class TwitchChatService implements ChatProvider {
     // Parse BTTV emotes - Add all available BTTV emotes to the list for name-based matching
     // We don't need position data since the messageUtils will use regex matching
     if (this.bttvEmotes.length > 0) {
-      console.log('Teste Parsing BTTV emotes');
+  
       const words = message.split(/\s+/); // Split by any whitespace
       const uniqueBttvEmotes = new Set<string>();
       
@@ -208,7 +208,7 @@ export class TwitchChatService implements ChatProvider {
         }
       });
     }
-    console.log('Teste Parsing BTTV emotes', emoteList);
+
     return emoteList;
   }
 
@@ -226,6 +226,7 @@ export class TwitchChatService implements ChatProvider {
 
   private async fetchBroadcasterId(): Promise<void> {
     try {
+  
       const response = await fetch(`https://api.twitch.tv/helix/users?login=${this.channel}`, {
         headers: this.getTwitchHeaders()
       });
@@ -234,10 +235,15 @@ export class TwitchChatService implements ChatProvider {
         const result = await response.json();
         if (result.data && result.data.length > 0) {
           this.broadcasterId = result.data[0].id;
+      
+        } else {
+      
         }
+      } else {
+    
       }
     } catch (error) {
-      // Error fetching broadcaster ID
+  
     }
   }
 
@@ -268,9 +274,13 @@ export class TwitchChatService implements ChatProvider {
   }
 
   private async fetchChannelBadges(): Promise<void> {
-    if (!this.broadcasterId) return;
+    if (!this.broadcasterId) {
+  
+      return;
+    }
 
     try {
+  
       // Fetch channel-specific badges (requires OAuth token)
       // Note: This endpoint REQUIRES Authorization header with OAuth token
       const response = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${this.broadcasterId}`, {
@@ -291,16 +301,20 @@ export class TwitchChatService implements ChatProvider {
           });
           
           // Debug: Log fetched channel badges
-          console.log('Fetched channel badges:', Array.from(this.channelBadges.keys()));
+      
+        } else {
+      
         }
+      } else if (response.status === 404) {
+    
       } else if (!this.oauthToken) {
         // Channel badges require OAuth token - this is expected
-        console.log('Channel badges require OAuth token');
+    
       } else {
-        console.log('Failed to fetch channel badges:', response.status, response.statusText);
+    
       }
     } catch (error) {
-      // Error fetching channel badges
+  
     }
   }
 
@@ -314,19 +328,19 @@ export class TwitchChatService implements ChatProvider {
       
       // Then try to fetch channel-specific emotes using the channel login name
       // Some BTTV APIs accept channel name directly
-      console.log(`Fetching BTTV emotes for channel: ${this.channel}`);
+  
       const userResponse = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${this.channel}`);
       
       if (userResponse.ok) {
         const data = await userResponse.json();
-        console.log('BTTV channel data:', data);
+    
         
         // Combine channel emotes and shared emotes
         const channelEmotes = data.channelEmotes || [];
         const sharedEmotes = data.sharedEmotes || [];
         const newEmotes = [...channelEmotes, ...sharedEmotes];
         
-        console.log(`Found ${channelEmotes.length} channel emotes and ${sharedEmotes.length} shared emotes`);
+    
         
         // Add to existing global emotes (avoid duplicates)
         newEmotes.forEach(emote => {
@@ -335,28 +349,28 @@ export class TwitchChatService implements ChatProvider {
           }
         });
         
-        console.log(`Total BTTV emotes after adding channel emotes: ${this.bttvEmotes.length}`);
+    
       } else {
-        console.log('Failed to fetch BTTV channel emotes:', userResponse.status, userResponse.statusText);
+    
       }
     } catch (error) {
-      console.log('Error fetching BTTV emotes:', error);
+  
     }
   }
 
   private async fetchGlobalBttvEmotes(): Promise<void> {
     try {
-      console.log('Fetching global BTTV emotes...');
+  
       const response = await fetch('https://api.betterttv.net/3/cached/emotes/global');
       if (response.ok) {
         const globalEmotes = await response.json();
         this.bttvEmotes = globalEmotes || [];
-        console.log('Fetched global BTTV emotes:', this.bttvEmotes.length);
+    
       } else {
-        console.log('Failed to fetch global BTTV emotes:', response.status, response.statusText);
+    
       }
     } catch (error) {
-      console.log('Error fetching global BTTV emotes:', error);
+  
     }
   }
 

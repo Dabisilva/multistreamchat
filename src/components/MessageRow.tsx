@@ -43,7 +43,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       id={`msg-${message.id}`}
     >
       <div className={`user-box ${actionClass}`}>
-        <div className="badges-container">
+        {/* <div className="badges-container">
           {getValidBadges(message.badges).map((badge, index) => (
             <img
               key={`${badge.type}-${badge.version}-${index}`}
@@ -62,7 +62,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
               style={{ opacity: 0 }}
             />
           ))}
-        </div>
+        </div> */}
         <span
           className="username"
           dangerouslySetInnerHTML={{ __html: usernameHtml }}
