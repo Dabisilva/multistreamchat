@@ -4,7 +4,6 @@ import { TwitchChatService } from './services/TwitchChat';
 import { KickChatService } from './services/KickChat';
 import { MessageRow } from './components/MessageRow';
 import { shouldHideMessage } from './utils/messageUtils';
-import { Login } from './components/Login';
 import AuthService from './services/AuthService';
 import './style.css';
 
@@ -33,42 +32,39 @@ const App: React.FC = () => {
   // Check for OAuth redirect and restore authentication state
   useEffect(() => {
     const initAuth = async () => {
-      // Check if we're returning from OAuth redirect
-      const { token, error } = AuthService.parseOAuthFromUrl();
+      // Check if we're returning from OAuth redirect (code flow)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
 
-      if (error) {
-        console.error('OAuth error:', error);
-        alert(`Authentication failed: ${error}`);
+      if (code) {
+        // OAuth code flow - let Login component handle it
         setIsLoading(false);
+        setIsAuthenticated(false);
         return;
       }
 
-      if (token) {
-        // We have a token from OAuth redirect
-        // Get the channel names from sessionStorage
-        const savedTwitchChannel = sessionStorage.getItem('twitchChannel') || '';
-        const savedKickChannel = sessionStorage.getItem('kickChannel') || '';
+      // Check for existing authentication from localStorage
+      const twitchToken = localStorage.getItem('twitchToken');
+      const kickToken = localStorage.getItem('kickToken');
+      const twitchChannelInfo = localStorage.getItem('twitchChannelInfo');
+      const kickChannelInfo = localStorage.getItem('kickChannelInfo');
 
-        if (savedTwitchChannel) {
-          // Save auth and connect
-          AuthService.saveAuth(token, savedTwitchChannel, savedKickChannel);
-          setTwitchOauthToken(token);
-          setTwitchChannel(savedTwitchChannel);
-          if (savedKickChannel) {
-            setKickChannel(savedKickChannel);
-          }
+      if (twitchToken && twitchChannelInfo) {
+        try {
+          const channelInfo = JSON.parse(twitchChannelInfo);
+          setTwitchOauthToken(twitchToken);
+          setTwitchChannel(channelInfo.username);
           setIsAuthenticated(true);
+        } catch (e) {
+          console.error('Error parsing Twitch channel info:', e);
         }
-      } else {
-        // Check for existing authentication
-        const authState = AuthService.getAuthState();
-        if (authState.isAuthenticated) {
-          setTwitchOauthToken(authState.twitchToken);
-          setTwitchChannel(authState.twitchChannel);
-          if (authState.kickChannel) {
-            setKickChannel(authState.kickChannel);
-          }
+      } else if (kickToken && kickChannelInfo) {
+        try {
+          const channelInfo = JSON.parse(kickChannelInfo);
+          setKickChannel(channelInfo.username);
           setIsAuthenticated(true);
+        } catch (e) {
+          console.error('Error parsing Kick channel info:', e);
         }
       }
 
@@ -236,7 +232,7 @@ const App: React.FC = () => {
 
   // Show login screen if not authenticated
   if (!isAuthenticated) {
-    return <Login />;
+    return
   }
 
   // Show chat interface

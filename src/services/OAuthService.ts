@@ -79,11 +79,11 @@ export class OAuthService {
     const state = this.generateRandomString(32);
     
     // Store state for verification
-    sessionStorage.setItem('oauth_state', state);
+    localStorage.setItem('twitch_oauth_state', state);
     
     // Generate PKCE challenge
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
-    sessionStorage.setItem('code_verifier', codeVerifier);
+    localStorage.setItem('twitch_code_verifier', codeVerifier);
     
     const scopes = 'user:read:email chat:read';
     const authUrl = `https://id.twitch.tv/oauth2/authorize?` +
@@ -106,11 +106,11 @@ export class OAuthService {
     const state = this.generateRandomString(32);
     
     // Store state for verification
-    sessionStorage.setItem('oauth_state', state);
+    localStorage.setItem('kick_oauth_state', state);
     
     // Generate PKCE challenge
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
-    sessionStorage.setItem('code_verifier', codeVerifier);
+    localStorage.setItem('kick_code_verifier', codeVerifier);
     
     const scopes = 'user:read:email chat:read';
     const authUrl = `https://id.kick.com/oauth/authorize?` +
@@ -129,8 +129,11 @@ export class OAuthService {
    * Handle OAuth callback and exchange code for token
    */
   async handleOAuthCallback(platform: 'twitch' | 'kick', code: string, state: string): Promise<TokenResponse> {
-    const storedState = sessionStorage.getItem('oauth_state');
-    const codeVerifier = sessionStorage.getItem('code_verifier');
+    const stateKey = `${platform}_oauth_state`;
+    const verifierKey = `${platform}_code_verifier`;
+    
+    const storedState = localStorage.getItem(stateKey);
+    const codeVerifier = localStorage.getItem(verifierKey);
     
     if (!storedState || storedState !== state) {
       throw new Error('Invalid state parameter');
@@ -170,9 +173,9 @@ export class OAuthService {
     
     const tokenData: TokenResponse = await response.json();
     
-    // Clean up session storage
-    sessionStorage.removeItem('oauth_state');
-    sessionStorage.removeItem('code_verifier');
+    // Clean up localStorage
+    localStorage.removeItem(stateKey);
+    localStorage.removeItem(verifierKey);
     
     return tokenData;
   }
@@ -239,7 +242,7 @@ export class OAuthService {
     return {
       clientId: (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Public Twitch client ID
       clientSecret: (import.meta as any).env?.VITE_TWITCH_CLIENT_SECRET || '',
-      redirectUri: (import.meta as any).env?.VITE_TWITCH_REDIRECT_URI || `${window.location.origin}/auth/twitch/callback`
+      redirectUri: (import.meta as any).env?.VITE_TWITCH_REDIRECT_URI || window.location.origin
     };
   }
 
@@ -250,7 +253,7 @@ export class OAuthService {
     return {
       clientId: (import.meta as any).env?.VITE_KICK_CLIENT_ID || '',
       clientSecret: (import.meta as any).env?.VITE_KICK_CLIENT_SECRET || '',
-      redirectUri: (import.meta as any).env?.VITE_KICK_REDIRECT_URI || `${window.location.origin}/auth/kick/callback`
+      redirectUri: (import.meta as any).env?.VITE_KICK_REDIRECT_URI || window.location.origin
     };
   }
 

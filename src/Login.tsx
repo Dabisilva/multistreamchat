@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Login.css';
-import OAuthService from '../services/OAuthService';
+import OAuthService from './services/OAuthService';
 
 interface LoginProps {
   onLogin?: (twitchToken: string, twitchChannel: string, kickChannel?: string) => void;
@@ -270,7 +270,7 @@ export const Login: React.FC<LoginProps> = () => {
                 <svg className="button-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
                 </svg>
-                {isLoadingTwitch ? 'Carregando...' : 'Login OAuth Twitch'}
+                {isLoadingTwitch ? 'Carregando...' : 'Login Twitch'}
               </button>
             </div>
 
@@ -285,7 +285,7 @@ export const Login: React.FC<LoginProps> = () => {
                 <svg className="button-icon" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
                   <path d="M37 .036h164.448v113.621h54.71v-56.82h54.731V.036h164.448v170.777h-54.73v56.82h-54.711v56.8h54.71v56.82h54.73V512.03H310.89v-56.82h-54.73v-56.8h-54.711v113.62H37V.036z" />
                 </svg>
-                {isLoadingKick ? 'Carregando...' : 'Login OAuth Kick'}
+                {isLoadingKick ? 'Carregando...' : 'Login Kick'}
               </button>
             </div>
           </div>
