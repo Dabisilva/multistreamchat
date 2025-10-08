@@ -4,7 +4,6 @@ import { TwitchChatService } from './services/TwitchChat';
 import { KickChatService } from './services/KickChat';
 import { MessageRow } from './components/MessageRow';
 import { shouldHideMessage } from './utils/messageUtils';
-import AuthService from './services/AuthService';
 import './style.css';
 
 const App: React.FC = () => {
@@ -25,21 +24,28 @@ const App: React.FC = () => {
   const [twitchService, setTwitchService] = useState<TwitchChatService | null>(null);
   const [kickService, setKickService] = useState<KickChatService | null>(null);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Check for OAuth redirect and restore authentication state
+  // Initialize authentication from URL params or localStorage
   useEffect(() => {
     const initAuth = async () => {
-      // Check if we're returning from OAuth redirect (code flow)
       const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
 
-      if (code) {
-        // OAuth code flow - let Login component handle it
-        setIsLoading(false);
-        setIsAuthenticated(false);
+      // Check for widget URL parameters (direct chat access)
+      const twitchChannelParam = urlParams.get('twitchChannel');
+      const twitchTokenParam = urlParams.get('twitchToken');
+      const kickChannelParam = urlParams.get('kickChannel');
+      const kickTokenParam = urlParams.get('kickToken');
+
+      // Initialize from URL params (widget URL)
+      if (twitchChannelParam && twitchTokenParam) {
+        setTwitchChannel(twitchChannelParam);
+        setTwitchOauthToken(twitchTokenParam);
+        return;
+      }
+
+      if (kickChannelParam && kickTokenParam) {
+        setKickChannel(kickChannelParam);
         return;
       }
 
@@ -54,7 +60,6 @@ const App: React.FC = () => {
           const channelInfo = JSON.parse(twitchChannelInfo);
           setTwitchOauthToken(twitchToken);
           setTwitchChannel(channelInfo.username);
-          setIsAuthenticated(true);
         } catch (e) {
           console.error('Error parsing Twitch channel info:', e);
         }
@@ -62,13 +67,11 @@ const App: React.FC = () => {
         try {
           const channelInfo = JSON.parse(kickChannelInfo);
           setKickChannel(channelInfo.username);
-          setIsAuthenticated(true);
         } catch (e) {
           console.error('Error parsing Kick channel info:', e);
         }
       }
 
-      setIsLoading(false);
     };
 
     initAuth();
@@ -192,82 +195,9 @@ const App: React.FC = () => {
     };
   }, []); // Remove service dependencies to prevent cleanup on service changes
 
-
-  // Handle logout
-  const handleLogout = () => {
-    // Disconnect services
-    if (twitchService) {
-      twitchService.disconnect();
-      setTwitchService(null);
-    }
-    if (kickService) {
-      kickService.disconnect();
-      setKickService(null);
-    }
-
-    // Clear state
-    AuthService.logout();
-    setIsAuthenticated(false);
-    setTwitchChannel('');
-    setKickChannel('');
-    setTwitchOauthToken('');
-    setMessages([]);
-  };
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        fontSize: '1.5rem',
-        color: '#667eea'
-      }}>
-        Carregando...
-      </div>
-    );
-  }
-
-  // Show login screen if not authenticated
-  if (!isAuthenticated) {
-    return
-  }
-
   // Show chat interface
   return (
     <div className="chat-container">
-      {/* Logout button */}
-      <button
-        onClick={handleLogout}
-        style={{
-          position: 'fixed',
-          top: '10px',
-          right: '10px',
-          background: '#667eea',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          padding: '10px 20px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '600',
-          zIndex: 1000,
-          transition: 'all 0.3s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#5568d3';
-          e.currentTarget.style.transform = 'scale(1.05)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#667eea';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        Sair
-      </button>
-
       <div
         className="chat-box"
         ref={chatContainerRef}
