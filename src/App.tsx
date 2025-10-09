@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import OAuthService from './services/OAuthService';
+import CustomRangeInput from './components/CustomRangeInput';
 
 import './style.css';
 
@@ -23,9 +24,9 @@ const App: React.FC<LoginProps> = () => {
   const [usernameTextColor, setUsernameTextColor] = useState('#ffffff');
   const [messageBgColor, setMessageBgColor] = useState('#8b5cf6');
   const [messageTextColor, setMessageTextColor] = useState('#ffffff');
-  const [usernameBgAlpha, setUsernameBgAlpha] = useState('1');
+  const [usernameBgAlpha, setUsernameBgAlpha] = useState('0');
   const [usernameTextAlpha, setUsernameTextAlpha] = useState('1');
-  const [messageBgAlpha, setMessageBgAlpha] = useState('1');
+  const [messageBgAlpha, setMessageBgAlpha] = useState('0');
   const [messageTextAlpha, setMessageTextAlpha] = useState('1');
   const [borderRadius, setBorderRadius] = useState('10');
   const [usernameFontSize, setUsernameFontSize] = useState('18');
@@ -395,7 +396,7 @@ const App: React.FC<LoginProps> = () => {
               <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border">
                 <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Opções de Personalização</h3>
 
-                <div className="space-y-4">
+                <div className="space-y-4 grid grid-cols-2 gap-4">
                   {/* Username Background Color */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
@@ -415,17 +416,13 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
-                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
-                      Transparência: {Math.round(parseFloat(usernameBgAlpha) * 100)}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={usernameBgAlpha}
-                      onChange={(e) => setUsernameBgAlpha(e.target.value)}
-                      className="w-full accent-purple-600"
+                    <CustomRangeInput
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={1 - parseFloat(usernameBgAlpha)}
+                      onChange={(value) => setUsernameBgAlpha((1 - value).toString())}
+                      label={`Transparência: ${Math.round((1 - parseFloat(usernameBgAlpha)) * 100)}%`}
                     />
                   </div>
 
@@ -448,17 +445,13 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
-                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
-                      Transparência: {Math.round(parseFloat(usernameTextAlpha) * 100)}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={usernameTextAlpha}
-                      onChange={(e) => setUsernameTextAlpha(e.target.value)}
-                      className="w-full accent-purple-600"
+                    <CustomRangeInput
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={1 - parseFloat(usernameTextAlpha)}
+                      onChange={(value) => setUsernameTextAlpha((1 - value).toString())}
+                      label={`Transparência: ${Math.round((1 - parseFloat(usernameTextAlpha)) * 100)}%`}
                     />
                   </div>
 
@@ -481,17 +474,13 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
-                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
-                      Transparência: {Math.round(parseFloat(messageBgAlpha) * 100)}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={messageBgAlpha}
-                      onChange={(e) => setMessageBgAlpha(e.target.value)}
-                      className="w-full accent-purple-600"
+                    <CustomRangeInput
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={1 - parseFloat(messageBgAlpha)}
+                      onChange={(value) => setMessageBgAlpha((1 - value).toString())}
+                      label={`Transparência: ${Math.round((1 - parseFloat(messageBgAlpha)) * 100)}%`}
                     />
                   </div>
 
@@ -514,17 +503,13 @@ const App: React.FC<LoginProps> = () => {
                         className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
                       />
                     </div>
-                    <label className="block text-xs font-medium text-dark-text-muted mt-2 mb-1">
-                      Transparência: {Math.round(parseFloat(messageTextAlpha) * 100)}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={messageTextAlpha}
-                      onChange={(e) => setMessageTextAlpha(e.target.value)}
-                      className="w-full accent-purple-600"
+                    <CustomRangeInput
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={1 - parseFloat(messageTextAlpha)}
+                      onChange={(value) => setMessageTextAlpha((1 - value).toString())}
+                      label={`Transparência: ${Math.round((1 - parseFloat(messageTextAlpha)) * 100)}%`}
                     />
                   </div>
 
@@ -590,17 +575,13 @@ const App: React.FC<LoginProps> = () => {
 
                   {/* Message Delay */}
                   <div>
-                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Delay das Mensagens: {messageDelay}s
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="6"
-                      step="0.5"
-                      value={messageDelay}
-                      onChange={(e) => setMessageDelay(e.target.value)}
-                      className="w-full accent-purple-600"
+                    <CustomRangeInput
+                      min={0}
+                      max={6}
+                      step={0.5}
+                      value={parseFloat(messageDelay)}
+                      onChange={(value) => setMessageDelay(value.toString())}
+                      label={`Delay das Mensagens: ${messageDelay}s`}
                     />
                     <p className="text-xs text-dark-text-muted mt-1">
                       Mods, VIPs e dono do canal não são afetados
