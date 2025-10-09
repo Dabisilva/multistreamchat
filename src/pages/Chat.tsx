@@ -58,7 +58,6 @@ const Chat: React.FC = () => {
 
     if (shouldRefresh) {
       try {
-        console.log('🔄 Refreshing Twitch token in chat...');
         const tokenResponse = await OAuthService.refreshTwitchToken(refreshToken);
 
         // Calculate new expiration time
@@ -72,14 +71,11 @@ const Chat: React.FC = () => {
           localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
         }
 
-        console.log('✅ Twitch token refreshed successfully in chat');
-
         // Update the token in state to trigger reconnection
         setTwitchOauthToken(tokenResponse.access_token);
 
         return tokenResponse.access_token;
       } catch (err) {
-        console.error('❌ Failed to refresh Twitch token in chat:', err);
         return null;
       }
     }

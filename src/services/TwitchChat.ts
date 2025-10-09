@@ -68,14 +68,7 @@ export class TwitchChatService implements ChatProvider {
 
     // Validate token if available
     if (this.oauthToken) {
-      const validationResult = await this.validateToken();
-      if (!validationResult.valid) {
-        console.warn('⚠️ Twitch token is invalid or expired. Some features may not work properly.');
-        console.warn('💡 Token will be automatically refreshed if a refresh token is available.');
-      } else if (validationResult.expiresIn) {
-        const expiresInMinutes = Math.floor(validationResult.expiresIn / 60);
-        console.log(`✅ Twitch token is valid. Expires in ${expiresInMinutes} minutes.`);
-      }
+       await this.validateToken();
     }
 
     // Fetch broadcaster ID if not already available (needed for channel badges and BTTV)
@@ -292,7 +285,6 @@ export class TwitchChatService implements ChatProvider {
       });
 
       if (!response.ok) {
-        console.error('❌ Token validation failed:', response.status, response.statusText);
         return { valid: false };
       }
 
@@ -302,7 +294,6 @@ export class TwitchChatService implements ChatProvider {
         expiresIn: data.expires_in // Time in seconds until token expires
       };
     } catch (error) {
-      console.error('❌ Error validating token:', error);
       return { valid: false };
     }
   }
@@ -333,13 +324,7 @@ export class TwitchChatService implements ChatProvider {
         if (result.data && result.data.length > 0) {
           this.broadcasterId = result.data[0].id;
       
-        } else {
-          console.warn(`⚠️ Channel ${this.channel} not found`);
         }
-      } else if (response.status === 401) {
-        console.warn('⚠️ Token expired while fetching broadcaster ID. Token needs refresh.');
-      } else {
-        console.error(`❌ Failed to fetch broadcaster ID: ${response.status}`);
       }
     } catch (error) {
       console.error('❌ Error fetching broadcaster ID:', error);

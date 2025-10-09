@@ -89,7 +89,6 @@ const App: React.FC<LoginProps> = () => {
 
     if (shouldRefresh) {
       try {
-        console.log('🔄 Refreshing Twitch token...');
         const tokenResponse = await OAuthService.refreshTwitchToken(refreshToken);
 
         // Calculate new expiration time
@@ -102,8 +101,6 @@ const App: React.FC<LoginProps> = () => {
         if (tokenResponse.refresh_token) {
           localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
         }
-
-        console.log('✅ Twitch token refreshed successfully');
 
         // Update widget URL with new token
         const twitchUser = localStorage.getItem('twitchUserInfo');
@@ -124,7 +121,6 @@ const App: React.FC<LoginProps> = () => {
 
         return tokenResponse.access_token;
       } catch (err) {
-        console.error('❌ Failed to refresh Twitch token:', err);
         // Token refresh failed - user needs to re-authenticate
         handleTwitchSignOut();
         setError('Sua sessão expirou. Por favor, faça login novamente.');
