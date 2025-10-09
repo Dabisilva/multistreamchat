@@ -54,7 +54,6 @@ export interface MessageRowProps {
   onRemove: (id: string) => void;
   customStyles?: {
     usernameBg: string;
-    usernameColor: string;
     messageBg: string;
     messageColor: string;
     borderRadius: string;

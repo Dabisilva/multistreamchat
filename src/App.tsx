@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import OAuthService from './services/OAuthService';
 import CustomRangeInput from './components/CustomRangeInput';
+import { MessageRow } from './components/MessageRow';
 
 import './style.css';
 
@@ -21,15 +22,13 @@ const App: React.FC<LoginProps> = () => {
 
   // Customization options
   const [usernameBgColor, setUsernameBgColor] = useState('#30034d');
-  const [usernameTextColor, setUsernameTextColor] = useState('#15c9b1');
   const [messageBgColor, setMessageBgColor] = useState('#8b5cf6');
   const [messageTextColor, setMessageTextColor] = useState('#ffffff');
   const [usernameBgAlpha, setUsernameBgAlpha] = useState('0');
-  const [usernameTextAlpha, setUsernameTextAlpha] = useState('1');
   const [messageBgAlpha, setMessageBgAlpha] = useState('0');
   const [messageTextAlpha, setMessageTextAlpha] = useState('1');
   const [borderRadius, setBorderRadius] = useState('10');
-  const [usernameFontSize, setUsernameFontSize] = useState('18');
+  const [usernameFontSize, setUsernameFontSize] = useState('20');
   const [messageFontSize, setMessageFontSize] = useState('20');
   const [messagePadding, setMessagePadding] = useState('0');
   const [messageDelay, setMessageDelay] = useState('5');
@@ -156,7 +155,7 @@ const App: React.FC<LoginProps> = () => {
         setKickWidgetUrl(url);
       }
     }
-  }, [usernameBgColor, usernameTextColor, messageBgColor, messageTextColor, usernameBgAlpha, usernameTextAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messagePadding, messageDelay]);
+  }, [usernameBgColor, messageBgColor, messageTextColor, usernameBgAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messagePadding, messageDelay]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -256,11 +255,10 @@ const App: React.FC<LoginProps> = () => {
 
   const getCustomizationParams = () => {
     const usernameBgRgba = hexToRgba(usernameBgColor, usernameBgAlpha);
-    const usernameColorRgba = hexToRgba(usernameTextColor, usernameTextAlpha);
     const messageBgRgba = hexToRgba(messageBgColor, messageBgAlpha);
     const messageColorRgba = hexToRgba(messageTextColor, messageTextAlpha);
 
-    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&usernameColor=${encodeURIComponent(usernameColorRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messagePadding=${messagePadding}&messageDelay=${messageDelay}`;
+    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messagePadding=${messagePadding}&messageDelay=${messageDelay}`;
   };
 
   const copyChatUrl = () => {
@@ -396,7 +394,7 @@ const App: React.FC<LoginProps> = () => {
               <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border">
                 <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Opções de Personalização</h3>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-4">
                   {/* Username Background Color */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
@@ -426,39 +424,6 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
-                  {/* Username Text Color */}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                        Cor do Texto do Nome
-                      </label>
-                      <span className="block text-xs font-medium text-dark-text-muted mb-2">
-                        (somente para teste)
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={usernameTextColor}
-                        onChange={(e) => setUsernameTextColor(e.target.value)}
-                        className="h-10 w-10 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
-                      />
-                      <input
-                        type="text"
-                        value={usernameTextColor}
-                        onChange={(e) => setUsernameTextColor(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
-                      />
-                    </div>
-                    <CustomRangeInput
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={1 - parseFloat(usernameTextAlpha)}
-                      onChange={(value) => setUsernameTextAlpha((1 - value).toString())}
-                      label={`Transparência: ${Math.round((1 - parseFloat(usernameTextAlpha)) * 100)}%`}
-                    />
-                  </div>
 
                   {/* Message Background Color */}
                   <div>
@@ -518,25 +483,10 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
-                  {/* Border Radius */}
-                  <div>
-                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Borda arredondada (px)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="30"
-                      value={borderRadius}
-                      onChange={(e) => setBorderRadius(e.target.value)}
-                      className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
-                    />
-                  </div>
-
                   {/* Username Font Size */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Tamanho do Nome (px)
+                      Tamanho do Nome
                     </label>
                     <input
                       type="number"
@@ -551,7 +501,7 @@ const App: React.FC<LoginProps> = () => {
                   {/* Message Font Size */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Tamanho da Mensagem (px)
+                      Tamanho da Mensagem
                     </label>
                     <input
                       type="number"
@@ -563,10 +513,26 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
+                  {/* Border Radius */}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                      Borda arredondada
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="30"
+                      value={borderRadius}
+                      onChange={(e) => setBorderRadius(e.target.value)}
+                      className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
+                    />
+                  </div>
+
+
                   {/* Message Padding */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Espacamento da Mensagem (px)
+                      Espacamento da Mensagem
                     </label>
                     <input
                       type="number"
@@ -578,6 +544,8 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
+
+
                   {/* Message Delay */}
                   <div>
                     <CustomRangeInput
@@ -586,72 +554,97 @@ const App: React.FC<LoginProps> = () => {
                       step={0.5}
                       value={parseFloat(messageDelay)}
                       onChange={(value) => setMessageDelay(value.toString())}
-                      label={`Delay das Mensagens: ${messageDelay}s`}
+                      label={`Delay: ${messageDelay}s (Mods, VIPs e dono do canal não são afetados)`}
                     />
-                    <p className="text-xs text-dark-text-muted mt-1">
-                      Mods, VIPs e dono do canal não são afetados
-                    </p>
                   </div>
                 </div>
               </div>
               {/* Preview */}
-              <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border">
+              <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border h-[360px]">
                 <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Preview</h3>
                 <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-4">
-                  <div className="space-y-3">
-                    {/* Example Message 1 */}
-                    <div className="p-0 rounded-none break-words bg-transparent border-0">
-                      <div
-                        className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
-                        style={{
-                          backgroundColor: hexToRgba(usernameBgColor, usernameBgAlpha),
-                          color: hexToRgba(usernameTextColor, usernameTextAlpha),
-                          fontSize: `${usernameFontSize}px`,
-                          borderRadius: `${borderRadius}px`
-                        }}
-                      >
-                        <span>Streamer</span>
-                      </div>
-                      <div
-                        className="leading-[1.4] m-0 ml-1.5 w-fit inline-block"
-                        style={{
-                          backgroundColor: hexToRgba(messageBgColor, messageBgAlpha),
-                          color: hexToRgba(messageTextColor, messageTextAlpha),
-                          fontSize: `${messageFontSize}px`,
-                          borderRadius: `${borderRadius}px`,
-                          padding: `${messagePadding}px`
-                        }}
-                      >
-                        Esta é uma mensagem de exemplo! 👋
-                      </div>
-                    </div>
-
-                    {/* Example Message 2 */}
-                    <div className="my-1 p-0 rounded-none max-w-[400px] break-words bg-transparent border-0">
-                      <div
-                        className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
-                        style={{
-                          backgroundColor: hexToRgba(usernameBgColor, usernameBgAlpha),
-                          color: hexToRgba(usernameTextColor, usernameTextAlpha),
-                          fontSize: `${usernameFontSize}px`,
-                          borderRadius: `${borderRadius}px`
-                        }}
-                      >
-                        <span>Viewer</span>
-                      </div>
-                      <div
-                        className="leading-[1.4] m-0 ml-1.5 w-fit inline-block"
-                        style={{
-                          backgroundColor: hexToRgba(messageBgColor, messageBgAlpha),
-                          color: hexToRgba(messageTextColor, messageTextAlpha),
-                          fontSize: `${messageFontSize}px`,
-                          borderRadius: `${borderRadius}px`,
-                          padding: `${messagePadding}px`
-                        }}
-                      >
-                        Esta é uma mensagem de exemplo um pouco maior para testar o espaçamento da mensagem.
-                      </div>
-                    </div>
+                  <div className="space-y-3 w-[400px]">
+                    <MessageRow
+                      message={{
+                        id: 'preview-1',
+                        userId: 'user1',
+                        displayName: 'Jorge',
+                        displayColor: '#FF6B6B',
+                        text: 'O maior de todos os tempos',
+                        badges: [],
+                        emotes: [],
+                        isAction: false,
+                        timestamp: Date.now(),
+                        provider: 'twitch',
+                        channel: 'example',
+                        msgId: 'msg1'
+                      }}
+                      hideAfter={180}
+                      onRemove={() => { }}
+                      customStyles={{
+                        usernameBg: hexToRgba(usernameBgColor, usernameBgAlpha),
+                        messageBg: hexToRgba(messageBgColor, messageBgAlpha),
+                        messageColor: hexToRgba(messageTextColor, messageTextAlpha),
+                        borderRadius: borderRadius,
+                        usernameFontSize: usernameFontSize,
+                        messageFontSize: messageFontSize,
+                        messagePadding: messagePadding
+                      }}
+                    />
+                    <MessageRow
+                      message={{
+                        id: 'preview-2',
+                        userId: 'user2',
+                        displayName: 'Bruno',
+                        displayColor: '#4ECDC4',
+                        text: 'A que não sei oq não sei oq lá',
+                        badges: [],
+                        emotes: [],
+                        isAction: false,
+                        timestamp: Date.now(),
+                        provider: 'twitch',
+                        channel: 'example',
+                        msgId: 'msg2'
+                      }}
+                      hideAfter={180}
+                      onRemove={() => { }}
+                      customStyles={{
+                        usernameBg: hexToRgba(usernameBgColor, usernameBgAlpha),
+                        messageBg: hexToRgba(messageBgColor, messageBgAlpha),
+                        messageColor: hexToRgba(messageTextColor, messageTextAlpha),
+                        borderRadius: borderRadius,
+                        usernameFontSize: usernameFontSize,
+                        messageFontSize: messageFontSize,
+                        messagePadding: messagePadding
+                      }}
+                    />
+                    <MessageRow
+                      message={{
+                        id: 'preview-3',
+                        userId: 'user3',
+                        displayName: 'Mahmoojen',
+                        displayColor: '#b927e6',
+                        text: 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+                        badges: [],
+                        emotes: [],
+                        isAction: false,
+                        timestamp: Date.now(),
+                        provider: 'kick',
+                        channel: 'example',
+                        msgId: 'msg3'
+                      }}
+                      hideAfter={180}
+                      onRemove={() => { }}
+                      customStyles={{
+                        usernameBg: hexToRgba(usernameBgColor, usernameBgAlpha),
+                        messageBg: hexToRgba(messageBgColor, messageBgAlpha),
+                        messageColor: hexToRgba(messageTextColor, messageTextAlpha),
+                        borderRadius: borderRadius,
+                        usernameFontSize: usernameFontSize,
+                        messageFontSize: messageFontSize,
+                        messagePadding: messagePadding
+                      }}
+                    />
                   </div>
                 </div>
               </div>

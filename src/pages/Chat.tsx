@@ -31,11 +31,10 @@ const Chat: React.FC = () => {
   // Customization options from URL
   const [customStyles, setCustomStyles] = useState({
     usernameBg: '#30034d',
-    usernameColor: '#ffffff',
     messageBg: '#8b5cf6',
     messageColor: '#ffffff',
     borderRadius: '10',
-    usernameFontSize: '18',
+    usernameFontSize: '20',
     messageFontSize: '20',
     messagePadding: '0'
   });
@@ -56,11 +55,10 @@ const Chat: React.FC = () => {
 
     // Get customization parameters
     const usernameBg = urlParams.get('usernameBg') || '#30034d';
-    const usernameColor = urlParams.get('usernameColor') || '#ffffff';
     const messageBg = urlParams.get('messageBg') || '#8b5cf6';
     const messageColor = urlParams.get('messageColor') || '#ffffff';
     const borderRadius = urlParams.get('borderRadius') || '10';
-    const usernameFontSize = urlParams.get('usernameFontSize') || '18';
+    const usernameFontSize = urlParams.get('usernameFontSize') || '20';
     const messageFontSize = urlParams.get('messageFontSize') || '20';
     const messagePadding = urlParams.get('messagePadding') || '0';
 
@@ -76,7 +74,6 @@ const Chat: React.FC = () => {
     // Set custom styles
     setCustomStyles({
       usernameBg,
-      usernameColor,
       messageBg,
       messageColor,
       borderRadius,

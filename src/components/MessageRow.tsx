@@ -37,11 +37,10 @@ export const MessageRow: React.FC<MessageRowProps> = ({
 
   const styles = customStyles || {
     usernameBg: '#30034d',
-    usernameColor: '#ffffff',
     messageBg: '#8b5cf6',
     messageColor: '#ffffff',
     borderRadius: '10',
-    usernameFontSize: '16',
+    usernameFontSize: '20',
     messageFontSize: '20',
     messagePadding: '0'
   };
@@ -69,33 +68,34 @@ export const MessageRow: React.FC<MessageRowProps> = ({
         className={`flex items-center gap-1.5 font-bold px-2 py-1 w-fit ${actionClass}`}
         style={{
           backgroundColor: isTransparent(styles.usernameBg) ? 'transparent' : styles.usernameBg,
-          color: styles.usernameColor,
           fontSize: `${styles.usernameFontSize}px`,
           borderRadius: `${styles.borderRadius}px`,
           wordBreak: 'break-word',
           maxWidth: '100%'
         }}
       >
-        <div className="flex items-center gap-0.5 flex-wrap">
-          {getValidBadges(message.badges).map((badge, index) => (
-            <img
-              key={`${badge.type}-${badge.version}-${index}`}
-              alt=""
-              src={badge.url}
-              className="w-4 h-4 object-contain align-middle border-0 rounded-sm mr-0.5 inline-block transition-all duration-200 ease-in-out"
-              title={badge.description || `${badge.type} badge`}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-              onLoad={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.opacity = '1';
-              }}
-              style={{ opacity: 0 }}
-            />
-          ))}
-        </div>
+        {getValidBadges(message.badges).length > 0 && (
+          <div className="flex items-center gap-0.5 flex-wrap">
+            {getValidBadges(message.badges).map((badge, index) => (
+              <img
+                key={`${badge.type}-${badge.version}-${index}`}
+                alt=""
+                src={badge.url}
+                className="w-4 h-4 object-contain align-middle border-0 rounded-sm mr-0.5 inline-block transition-all duration-200 ease-in-out"
+                title={badge.description || `${badge.type} badge`}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+                onLoad={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.opacity = '1';
+                }}
+                style={{ opacity: 0 }}
+              />
+            ))}
+          </div>
+        )}
         <span
           className="username"
           dangerouslySetInnerHTML={{ __html: usernameHtml }}
