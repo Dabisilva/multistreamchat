@@ -21,7 +21,7 @@ const App: React.FC<LoginProps> = () => {
 
   // Customization options
   const [usernameBgColor, setUsernameBgColor] = useState('#30034d');
-  const [usernameTextColor, setUsernameTextColor] = useState('#ffffff');
+  const [usernameTextColor, setUsernameTextColor] = useState('#15c9b1');
   const [messageBgColor, setMessageBgColor] = useState('#8b5cf6');
   const [messageTextColor, setMessageTextColor] = useState('#ffffff');
   const [usernameBgAlpha, setUsernameBgAlpha] = useState('0');
@@ -396,7 +396,7 @@ const App: React.FC<LoginProps> = () => {
               <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border">
                 <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Opções de Personalização</h3>
 
-                <div className="space-y-4 grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {/* Username Background Color */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
@@ -407,7 +407,7 @@ const App: React.FC<LoginProps> = () => {
                         type="color"
                         value={usernameBgColor}
                         onChange={(e) => setUsernameBgColor(e.target.value)}
-                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                        className="h-10 w-10 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
                       />
                       <input
                         type="text"
@@ -428,15 +428,20 @@ const App: React.FC<LoginProps> = () => {
 
                   {/* Username Text Color */}
                   <div>
-                    <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-                      Cor do Texto do Nome
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+                        Cor do Texto do Nome
+                      </label>
+                      <span className="block text-xs font-medium text-dark-text-muted mb-2">
+                        (somente para teste)
+                      </span>
+                    </div>
                     <div className="flex gap-2">
                       <input
                         type="color"
                         value={usernameTextColor}
                         onChange={(e) => setUsernameTextColor(e.target.value)}
-                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                        className="h-10 w-10 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
                       />
                       <input
                         type="text"
@@ -465,7 +470,7 @@ const App: React.FC<LoginProps> = () => {
                         type="color"
                         value={messageBgColor}
                         onChange={(e) => setMessageBgColor(e.target.value)}
-                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                        className="h-10 w-10 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
                       />
                       <input
                         type="text"
@@ -494,7 +499,7 @@ const App: React.FC<LoginProps> = () => {
                         type="color"
                         value={messageTextColor}
                         onChange={(e) => setMessageTextColor(e.target.value)}
-                        className="h-10 w-20 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
+                        className="h-10 w-10 rounded border-2 border-dark-border cursor-pointer bg-dark-bg-secondary"
                       />
                       <input
                         type="text"
@@ -622,7 +627,7 @@ const App: React.FC<LoginProps> = () => {
                     </div>
 
                     {/* Example Message 2 */}
-                    <div className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0">
+                    <div className="my-1 p-0 rounded-none max-w-[400px] break-words bg-transparent border-0">
                       <div
                         className="flex items-center gap-1.5 font-bold w-fit px-2 py-1"
                         style={{
@@ -644,7 +649,7 @@ const App: React.FC<LoginProps> = () => {
                           padding: `${messagePadding}px`
                         }}
                       >
-                        Olá! Chat ficou incrível! 🎉
+                        Esta é uma mensagem de exemplo um pouco maior para testar o espaçamento da mensagem.
                       </div>
                     </div>
                   </div>
