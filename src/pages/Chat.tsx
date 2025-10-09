@@ -4,6 +4,7 @@ import { TwitchChatService } from '../services/TwitchChat';
 import { KickChatService } from '../services/KickChat';
 import { MessageRow } from '../components/MessageRow';
 import { shouldHideMessage } from '../utils/messageUtils';
+import OAuthService from '../services/OAuthService';
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -41,6 +42,50 @@ const Chat: React.FC = () => {
 
   // Message delay in milliseconds (default 5s, max 6s)
   const [messageDelay, setMessageDelay] = useState<number>(5000);
+
+  // Refresh Twitch token if expired or about to expire
+  const refreshTwitchTokenIfNeeded = useCallback(async (): Promise<string | null> => {
+    const twitchToken = localStorage.getItem('twitchToken');
+    const refreshToken = localStorage.getItem('twitchRefreshToken');
+    const expiresAt = localStorage.getItem('twitchTokenExpiresAt');
+
+    if (!twitchToken || !refreshToken) {
+      return null;
+    }
+
+    // Check if token expires within the next 10 minutes (600000 ms)
+    const shouldRefresh = !expiresAt || (parseInt(expiresAt) - Date.now()) < 600000;
+
+    if (shouldRefresh) {
+      try {
+        console.log('🔄 Refreshing Twitch token in chat...');
+        const tokenResponse = await OAuthService.refreshTwitchToken(refreshToken);
+
+        // Calculate new expiration time
+        const newExpiresAt = Date.now() + (tokenResponse.expires_in * 1000);
+
+        // Update stored tokens
+        localStorage.setItem('twitchToken', tokenResponse.access_token);
+        localStorage.setItem('twitchTokenExpiresAt', newExpiresAt.toString());
+
+        if (tokenResponse.refresh_token) {
+          localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
+        }
+
+        console.log('✅ Twitch token refreshed successfully in chat');
+
+        // Update the token in state to trigger reconnection
+        setTwitchOauthToken(tokenResponse.access_token);
+
+        return tokenResponse.access_token;
+      } catch (err) {
+        console.error('❌ Failed to refresh Twitch token in chat:', err);
+        return null;
+      }
+    }
+
+    return twitchToken;
+  }, []);
 
   // Initialize authentication from URL params or localStorage
   const initAuth = async () => {
@@ -109,9 +154,14 @@ const Chat: React.FC = () => {
 
     if (twitchToken && twitchChannelInfo) {
       try {
-        const channelInfo = JSON.parse(twitchChannelInfo);
-        setTwitchOauthToken(twitchToken);
-        setTwitchChannel(channelInfo.username);
+        // Validate and refresh token if needed
+        const validToken = await refreshTwitchTokenIfNeeded();
+
+        if (validToken) {
+          const channelInfo = JSON.parse(twitchChannelInfo);
+          setTwitchOauthToken(validToken);
+          setTwitchChannel(channelInfo.username);
+        }
       } catch (e) {
         // Error parsing channel info
       }
@@ -126,6 +176,17 @@ const Chat: React.FC = () => {
   useEffect(() => {
     initAuth();
   }, []);
+
+  // Set up periodic token refresh check (every 5 minutes)
+  useEffect(() => {
+    if (!twitchOauthToken) return;
+
+    const intervalId = setInterval(async () => {
+      await refreshTwitchTokenIfNeeded();
+    }, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(intervalId);
+  }, [twitchOauthToken, refreshTwitchTokenIfNeeded]);
 
 
   const handleNewMessage = useCallback((message: ChatMessage) => {

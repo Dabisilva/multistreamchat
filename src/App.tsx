@@ -42,9 +42,13 @@ const App: React.FC<LoginProps> = () => {
       // Get the client ID that was used for OAuth
       const clientId = (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
 
-      // Store tokens, client ID, and user info
+      // Calculate token expiration time (expires_in is in seconds)
+      const expiresAt = Date.now() + (tokenResponse.expires_in * 1000);
+
+      // Store tokens, client ID, expiration time, and user info
       localStorage.setItem('twitchToken', tokenResponse.access_token);
-      localStorage.setItem('twitchClientId', clientId); // ⭐ Store the client ID used
+      localStorage.setItem('twitchClientId', clientId);
+      localStorage.setItem('twitchTokenExpiresAt', expiresAt.toString());
       localStorage.setItem('twitchUserInfo', JSON.stringify(userData));
       localStorage.setItem('twitchChannelInfo', JSON.stringify({
         username: userData.username,
@@ -68,6 +72,67 @@ const App: React.FC<LoginProps> = () => {
       setError(err instanceof Error ? err.message : 'Erro ao processar autenticação da Twitch');
       throw err;
     }
+  }, []);
+
+  // Refresh Twitch token if expired or about to expire
+  const refreshTwitchTokenIfNeeded = useCallback(async (): Promise<string | null> => {
+    const twitchToken = localStorage.getItem('twitchToken');
+    const refreshToken = localStorage.getItem('twitchRefreshToken');
+    const expiresAt = localStorage.getItem('twitchTokenExpiresAt');
+
+    if (!twitchToken || !refreshToken) {
+      return null;
+    }
+
+    // Check if token expires within the next 10 minutes (600000 ms)
+    const shouldRefresh = !expiresAt || (parseInt(expiresAt) - Date.now()) < 600000;
+
+    if (shouldRefresh) {
+      try {
+        console.log('🔄 Refreshing Twitch token...');
+        const tokenResponse = await OAuthService.refreshTwitchToken(refreshToken);
+
+        // Calculate new expiration time
+        const newExpiresAt = Date.now() + (tokenResponse.expires_in * 1000);
+
+        // Update stored tokens
+        localStorage.setItem('twitchToken', tokenResponse.access_token);
+        localStorage.setItem('twitchTokenExpiresAt', newExpiresAt.toString());
+
+        if (tokenResponse.refresh_token) {
+          localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
+        }
+
+        console.log('✅ Twitch token refreshed successfully');
+
+        // Update widget URL with new token
+        const twitchUser = localStorage.getItem('twitchUserInfo');
+        if (twitchUser) {
+          const userData = JSON.parse(twitchUser);
+          const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+          const broadcasterId = userData.broadcasterId || userData.id;
+          const savedKickChannel = localStorage.getItem('kickChannel');
+
+          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+
+          if (savedKickChannel) {
+            widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
+          }
+
+          setTwitchWidgetUrl(widget);
+        }
+
+        return tokenResponse.access_token;
+      } catch (err) {
+        console.error('❌ Failed to refresh Twitch token:', err);
+        // Token refresh failed - user needs to re-authenticate
+        handleTwitchSignOut();
+        setError('Sua sessão expirou. Por favor, faça login novamente.');
+        return null;
+      }
+    }
+
+    return twitchToken;
   }, []);
 
   // Initialize on component mount
@@ -100,27 +165,32 @@ const App: React.FC<LoginProps> = () => {
         }
       }
 
-      // Check for existing Twitch authentication
+      // Check for existing Twitch authentication and refresh if needed
       const twitchToken = localStorage.getItem('twitchToken');
       const twitchUser = localStorage.getItem('twitchUserInfo');
       const savedKickChannel = localStorage.getItem('kickChannel');
 
       if (twitchToken && twitchUser) {
-        const userData = JSON.parse(twitchUser);
-        const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
-        const broadcasterId = userData.broadcasterId || userData.id;
+        // Validate and refresh token if needed
+        const validToken = await refreshTwitchTokenIfNeeded();
 
-        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+        if (validToken) {
+          const userData = JSON.parse(twitchUser);
+          const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+          const broadcasterId = userData.broadcasterId || userData.id;
 
-        // If there's a saved Kick channel, append it
-        if (savedKickChannel) {
-          setKickChannel(savedKickChannel);
-          widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
+          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${validToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+
+          // If there's a saved Kick channel, append it
+          if (savedKickChannel) {
+            setKickChannel(savedKickChannel);
+            widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
+          }
+
+          setTwitchWidgetUrl(widget);
+          setTwitchAuthenticated(true);
+          setError('')
         }
-
-        setTwitchWidgetUrl(widget);
-        setTwitchAuthenticated(true);
-        setError('')
       } else if (savedKickChannel) {
         // If only Kick channel is saved (no Twitch)
         setKickChannel(savedKickChannel);
@@ -129,7 +199,18 @@ const App: React.FC<LoginProps> = () => {
     };
 
     init();
-  }, [processTwitchOAuthCallback]);
+  }, [processTwitchOAuthCallback, refreshTwitchTokenIfNeeded]);
+
+  // Set up periodic token refresh check (every 5 minutes)
+  useEffect(() => {
+    if (!twitchAuthenticated) return;
+
+    const intervalId = setInterval(async () => {
+      await refreshTwitchTokenIfNeeded();
+    }, 5 * 60 * 1000); // Check every 5 minutes
+
+    return () => clearInterval(intervalId);
+  }, [twitchAuthenticated, refreshTwitchTokenIfNeeded]);
 
   // Update widget URL when customization changes
   useEffect(() => {
@@ -175,6 +256,7 @@ const App: React.FC<LoginProps> = () => {
     localStorage.removeItem('twitchUserInfo');
     localStorage.removeItem('twitchChannelInfo');
     localStorage.removeItem('twitchRefreshToken');
+    localStorage.removeItem('twitchTokenExpiresAt');
     setTwitchAuthenticated(false);
     setTwitchWidgetUrl('');
   };

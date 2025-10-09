@@ -162,6 +162,65 @@ export class OAuthService {
   }
 
   /**
+   * Refresh an expired access token using the refresh token
+   */
+  async refreshTwitchToken(refreshToken: string): Promise<TokenResponse> {
+    const config = this.getTwitchConfig();
+    
+    const tokenUrl = 'https://id.twitch.tv/oauth2/token';
+    
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: config.clientId,
+      client_secret: config.clientSecret
+    });
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString()
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Token refresh failed (${response.status}): ${errorText}`);
+    }
+    
+    const tokenData: TokenResponse = await response.json();
+    return tokenData;
+  }
+
+  /**
+   * Validate a Twitch access token and check if it's still valid
+   */
+  async validateTwitchToken(accessToken: string): Promise<{ valid: boolean; expiresIn?: number }> {
+    try {
+      const cleanToken = accessToken.replace(/^Bearer\s+/i, '').trim();
+      
+      const response = await fetch('https://id.twitch.tv/oauth2/validate', {
+        headers: {
+          'Authorization': `Bearer ${cleanToken}`
+        }
+      });
+
+      if (!response.ok) {
+        return { valid: false };
+      }
+
+      const data = await response.json();
+      return {
+        valid: true,
+        expiresIn: data.expires_in // Time in seconds until token expires
+      };
+    } catch (error) {
+      return { valid: false };
+    }
+  }
+
+  /**
    * Get user information from Twitch API
    */
   async getTwitchUserInfo(accessToken: string): Promise<UserInfo> {

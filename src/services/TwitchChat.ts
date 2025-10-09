@@ -68,7 +68,14 @@ export class TwitchChatService implements ChatProvider {
 
     // Validate token if available
     if (this.oauthToken) {
-      await this.validateToken();
+      const validationResult = await this.validateToken();
+      if (!validationResult.valid) {
+        console.warn('⚠️ Twitch token is invalid or expired. Some features may not work properly.');
+        console.warn('💡 Token will be automatically refreshed if a refresh token is available.');
+      } else if (validationResult.expiresIn) {
+        const expiresInMinutes = Math.floor(validationResult.expiresIn / 60);
+        console.log(`✅ Twitch token is valid. Expires in ${expiresInMinutes} minutes.`);
+      }
     }
 
     // Fetch broadcaster ID if not already available (needed for channel badges and BTTV)
@@ -274,7 +281,7 @@ export class TwitchChatService implements ChatProvider {
     return emoteList;
   }
 
-  private async validateToken(): Promise<void> {
+  private async validateToken(): Promise<{ valid: boolean; expiresIn?: number }> {
     try {
       const cleanToken = this.oauthToken.replace(/^Bearer\s+/i, '').trim();
       
@@ -285,10 +292,18 @@ export class TwitchChatService implements ChatProvider {
       });
 
       if (!response.ok) {
-        // Token validation failed
+        console.error('❌ Token validation failed:', response.status, response.statusText);
+        return { valid: false };
       }
+
+      const data = await response.json();
+      return {
+        valid: true,
+        expiresIn: data.expires_in // Time in seconds until token expires
+      };
     } catch (error) {
-      // Error validating token
+      console.error('❌ Error validating token:', error);
+      return { valid: false };
     }
   }
 
@@ -319,13 +334,15 @@ export class TwitchChatService implements ChatProvider {
           this.broadcasterId = result.data[0].id;
       
         } else {
-      
+          console.warn(`⚠️ Channel ${this.channel} not found`);
         }
+      } else if (response.status === 401) {
+        console.warn('⚠️ Token expired while fetching broadcaster ID. Token needs refresh.');
       } else {
-    
+        console.error(`❌ Failed to fetch broadcaster ID: ${response.status}`);
       }
     } catch (error) {
-  
+      console.error('❌ Error fetching broadcaster ID:', error);
     }
   }
 
@@ -349,9 +366,11 @@ export class TwitchChatService implements ChatProvider {
             this.globalBadges.set(badgeSet.set_id, versionMap);
           });
         }
+      } else if (response.status === 401) {
+        console.warn('⚠️ Token expired while fetching global badges. Token needs refresh.');
       }
     } catch (error) {
-      // Error fetching global badges
+      console.error('❌ Error fetching global badges:', error);
     }
   }
 
@@ -381,9 +400,11 @@ export class TwitchChatService implements ChatProvider {
             this.channelBadges.set(badgeSet.set_id, versionMap);
           });
         }
+      } else if (response.status === 401) {
+        console.warn('⚠️ Token expired while fetching channel badges. Token needs refresh.');
       }
     } catch (error) {
-      // Error fetching channel badges
+      console.error('❌ Error fetching channel badges:', error);
     }
   }
 
