@@ -27,11 +27,12 @@ const App: React.FC<LoginProps> = () => {
   const [usernameBgAlpha, setUsernameBgAlpha] = useState('0');
   const [messageBgAlpha, setMessageBgAlpha] = useState('0');
   const [messageTextAlpha, setMessageTextAlpha] = useState('1');
-  const [borderRadius, setBorderRadius] = useState('10');
+  const [borderRadius, setBorderRadius] = useState('4');
   const [usernameFontSize, setUsernameFontSize] = useState('20');
   const [messageFontSize, setMessageFontSize] = useState('20');
   const [messagePadding, setMessagePadding] = useState('0');
   const [messageDelay, setMessageDelay] = useState('5');
+  const [fullWidthMessages, setFullWidthMessages] = useState(false);
 
   // Process Twitch OAuth callback
   const processTwitchOAuthCallback = useCallback(async (code: string, state: string) => {
@@ -232,7 +233,7 @@ const App: React.FC<LoginProps> = () => {
         setKickWidgetUrl(url);
       }
     }
-  }, [usernameBgColor, messageBgColor, messageTextColor, usernameBgAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messagePadding, messageDelay]);
+  }, [usernameBgColor, messageBgColor, messageTextColor, usernameBgAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messagePadding, messageDelay, fullWidthMessages]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
@@ -336,7 +337,7 @@ const App: React.FC<LoginProps> = () => {
     const messageBgRgba = hexToRgba(messageBgColor, messageBgAlpha);
     const messageColorRgba = hexToRgba(messageTextColor, messageTextAlpha);
 
-    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messagePadding=${messagePadding}&messageDelay=${messageDelay}`;
+    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messagePadding=${messagePadding}&messageDelay=${messageDelay}&fullWidthMessages=${fullWidthMessages}`;
   };
 
   const copyChatUrl = () => {
@@ -530,6 +531,20 @@ const App: React.FC<LoginProps> = () => {
                       onChange={(value) => setMessageBgAlpha((1 - value).toString())}
                       label={`Transparência: ${Math.round((1 - parseFloat(messageBgAlpha)) * 100)}%`}
                     />
+                    {/* Full Width Messages */}
+                    <div className="mt-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={fullWidthMessages}
+                          onChange={(e) => setFullWidthMessages(e.target.checked)}
+                          className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-purple-500"
+                        />
+                        <span className="text-sm font-medium text-dark-text-secondary">
+                          Mensagens com largura total
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
                   {/* Message Text Color */}
@@ -635,6 +650,8 @@ const App: React.FC<LoginProps> = () => {
                       label={`Delay: ${messageDelay}s (Mods, VIPs e dono do canal não são afetados)`}
                     />
                   </div>
+
+
                 </div>
               </div>
               {/* Preview */}
@@ -666,7 +683,8 @@ const App: React.FC<LoginProps> = () => {
                         borderRadius: borderRadius,
                         usernameFontSize: usernameFontSize,
                         messageFontSize: messageFontSize,
-                        messagePadding: messagePadding
+                        messagePadding: messagePadding,
+                        fullWidthMessages: fullWidthMessages.toString()
                       }}
                     />
                     <MessageRow
@@ -693,7 +711,8 @@ const App: React.FC<LoginProps> = () => {
                         borderRadius: borderRadius,
                         usernameFontSize: usernameFontSize,
                         messageFontSize: messageFontSize,
-                        messagePadding: messagePadding
+                        messagePadding: messagePadding,
+                        fullWidthMessages: fullWidthMessages.toString()
                       }}
                     />
                     <MessageRow
@@ -720,7 +739,8 @@ const App: React.FC<LoginProps> = () => {
                         borderRadius: borderRadius,
                         usernameFontSize: usernameFontSize,
                         messageFontSize: messageFontSize,
-                        messagePadding: messagePadding
+                        messagePadding: messagePadding,
+                        fullWidthMessages: fullWidthMessages.toString()
                       }}
                     />
                   </div>

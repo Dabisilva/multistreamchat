@@ -39,11 +39,14 @@ export const MessageRow: React.FC<MessageRowProps> = ({
     usernameBg: '#30034d',
     messageBg: '#8b5cf6',
     messageColor: '#ffffff',
-    borderRadius: '10',
+    borderRadius: '4',
     usernameFontSize: '20',
     messageFontSize: '20',
-    messagePadding: '0'
+    messagePadding: '0',
+    fullWidthMessages: 'false'
   };
+
+  const isFullWidth = styles.fullWidthMessages === 'true';
 
   // Helper function to check if color is transparent (alpha = 0)
   const isTransparent = (color: string): boolean => {
@@ -61,11 +64,11 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       ref={messageRef}
       data-sender={message.userId}
       data-msgid={message.msgId}
-      className="my-1 p-0 rounded-none max-w-[90%] break-words bg-transparent border-0 overflow-hidden flex-shrink-0"
+      className={`my-1 p-0 rounded-none ${isFullWidth ? 'w-full' : 'max-w-[90%]'} break-words bg-transparent border-0 overflow-hidden flex-shrink-0`}
       id={`msg-${message.id}`}
     >
       <div
-        className={`flex items-center gap-1.5 font-bold px-2 py-1 w-fit ${actionClass}`}
+        className={`flex items-center gap-1.5 font-bold py-1 ${isFullWidth ? 'w-full' : 'w-fit'} ${actionClass}`}
         style={{
           backgroundColor: isTransparent(styles.usernameBg) ? 'transparent' : styles.usernameBg,
           fontSize: `${styles.usernameFontSize}px`,
@@ -102,7 +105,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
         />
       </div>
       <div
-        className={`leading-[1.4] m-0 ml-1.5 w-fit inline-block ${actionClass}`}
+        className={`leading-[1.4] m-0 ${isFullWidth ? 'w-full' : 'w-auto'} ${actionClass}`}
         style={{
           backgroundColor: isTransparent(styles.messageBg) ? 'transparent' : styles.messageBg,
           color: styles.messageColor,

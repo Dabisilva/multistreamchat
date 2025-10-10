@@ -37,7 +37,8 @@ const Chat: React.FC = () => {
     borderRadius: '10',
     usernameFontSize: '20',
     messageFontSize: '20',
-    messagePadding: '0'
+    messagePadding: '0',
+    fullWidthMessages: 'false'
   });
 
   // Message delay in milliseconds (default 5s, max 6s)
@@ -102,6 +103,7 @@ const Chat: React.FC = () => {
     const usernameFontSize = urlParams.get('usernameFontSize') || '20';
     const messageFontSize = urlParams.get('messageFontSize') || '20';
     const messagePadding = urlParams.get('messagePadding') || '0';
+    const fullWidthMessages = urlParams.get('fullWidthMessages') || 'false';
 
     // Get message delay parameter (in seconds, default 5, max 6)
     const delayParam = urlParams.get('messageDelay');
@@ -120,7 +122,8 @@ const Chat: React.FC = () => {
       borderRadius,
       usernameFontSize,
       messageFontSize,
-      messagePadding
+      messagePadding,
+      fullWidthMessages
     });
 
     // If we have URL params, use them (widget URL - takes priority)

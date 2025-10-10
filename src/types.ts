@@ -60,6 +60,7 @@ export interface MessageRowProps {
     usernameFontSize: string;
     messageFontSize: string;
     messagePadding: string;
+    fullWidthMessages?: string;
   };
 }
 
