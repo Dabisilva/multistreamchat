@@ -64,7 +64,15 @@ const App: React.FC<LoginProps> = () => {
 
       // Generate widget URL with all necessary parameters
       const broadcasterId = userData.broadcasterId || userData.id;
-      const widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${clientId}${getCustomizationParams()}`;
+      let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${clientId}`;
+
+      // Include refresh token in URL for OBS compatibility (OBS has separate localStorage)
+      if (tokenResponse.refresh_token) {
+        widget += `&refreshToken=${encodeURIComponent(tokenResponse.refresh_token)}`;
+      }
+
+      // Include expiration time
+      widget += `&expiresAt=${expiresAt}${getCustomizationParams()}`;
 
       setTwitchWidgetUrl(widget);
       setTwitchAuthenticated(true);
@@ -111,7 +119,15 @@ const App: React.FC<LoginProps> = () => {
           const broadcasterId = userData.broadcasterId || userData.id;
           const savedKickChannel = localStorage.getItem('kickChannel');
 
-          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
+
+          // Include refresh token in URL for OBS compatibility
+          if (tokenResponse.refresh_token) {
+            widget += `&refreshToken=${encodeURIComponent(tokenResponse.refresh_token)}`;
+          }
+
+          // Include expiration time
+          widget += `&expiresAt=${newExpiresAt}${getCustomizationParams()}`;
 
           if (savedKickChannel) {
             widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
@@ -175,8 +191,22 @@ const App: React.FC<LoginProps> = () => {
           const userData = JSON.parse(twitchUser);
           const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
           const broadcasterId = userData.broadcasterId || userData.id;
+          const storedRefreshToken = localStorage.getItem('twitchRefreshToken');
+          const storedExpiresAt = localStorage.getItem('twitchTokenExpiresAt');
 
-          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${validToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${validToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
+
+          // Include refresh token in URL for OBS compatibility
+          if (storedRefreshToken) {
+            widget += `&refreshToken=${encodeURIComponent(storedRefreshToken)}`;
+          }
+
+          // Include expiration time
+          if (storedExpiresAt) {
+            widget += `&expiresAt=${storedExpiresAt}`;
+          }
+
+          widget += getCustomizationParams();
 
           // If there's a saved Kick channel, append it
           if (savedKickChannel) {
@@ -221,7 +251,22 @@ const App: React.FC<LoginProps> = () => {
       if (twitchToken && twitchUser) {
         const userData = JSON.parse(twitchUser);
         const broadcasterId = userData.broadcasterId || userData.id;
-        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}${getCustomizationParams()}`;
+        const storedRefreshToken = localStorage.getItem('twitchRefreshToken');
+        const storedExpiresAt = localStorage.getItem('twitchTokenExpiresAt');
+
+        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
+
+        // Include refresh token in URL for OBS compatibility
+        if (storedRefreshToken) {
+          widget += `&refreshToken=${encodeURIComponent(storedRefreshToken)}`;
+        }
+
+        // Include expiration time
+        if (storedExpiresAt) {
+          widget += `&expiresAt=${storedExpiresAt}`;
+        }
+
+        widget += getCustomizationParams();
 
         if (savedKickChannel) {
           widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;

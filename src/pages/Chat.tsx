@@ -93,6 +93,8 @@ const Chat: React.FC = () => {
     const twitchTokenParam = urlParams.get('twitchToken');
     const broadcasterIdParam = urlParams.get('broadcasterId');
     const clientIdParam = urlParams.get('clientId');
+    const refreshTokenParam = urlParams.get('refreshToken');
+    const expiresAtParam = urlParams.get('expiresAt');
     const kickChannelParam = urlParams.get('kickChannel');
 
     // Get customization parameters
@@ -136,6 +138,29 @@ const Chat: React.FC = () => {
         setTwitchOauthToken(twitchTokenParam);
         if (broadcasterIdParam) setBroadcasterId(broadcasterIdParam);
         if (clientIdParam) setClientId(clientIdParam);
+
+        // Store token in localStorage so refresh mechanism can work
+        // Always update tokens from URL parameters to ensure OBS has latest tokens
+        localStorage.setItem('twitchToken', twitchTokenParam);
+        localStorage.setItem('twitchChannelInfo', JSON.stringify({
+          username: twitchChannelParam,
+          id: broadcasterIdParam,
+          platform: 'twitch'
+        }));
+
+        if (clientIdParam) {
+          localStorage.setItem('twitchClientId', clientIdParam);
+        }
+
+        // Store refresh token if provided (needed for OBS token refresh)
+        if (refreshTokenParam) {
+          localStorage.setItem('twitchRefreshToken', refreshTokenParam);
+        }
+
+        // Store expiration time if provided
+        if (expiresAtParam) {
+          localStorage.setItem('twitchTokenExpiresAt', expiresAtParam);
+        }
       }
 
       // Initialize Kick from URL params (no OAuth needed)
@@ -351,13 +376,14 @@ const Chat: React.FC = () => {
           oauthToken: twitchOauthToken || undefined,
           userInfo: userInfo,
           onMessageDelete: removeMessageByMsgId,
-          onUserBanned: removeMessagesByUser
+          onUserBanned: removeMessagesByUser,
+          onTokenRefresh: refreshTwitchTokenIfNeeded
         }
       );
       service.connect();
       setTwitchService(service);
     }
-  }, [twitchChannel, twitchService, twitchOauthToken, broadcasterId, clientId, handleNewMessage, removeMessageByMsgId, removeMessagesByUser]);
+  }, [twitchChannel, twitchService, twitchOauthToken, broadcasterId, clientId, handleNewMessage, removeMessageByMsgId, removeMessagesByUser, refreshTwitchTokenIfNeeded]);
 
   useEffect(() => {
     if (kickChannel && !kickService) {

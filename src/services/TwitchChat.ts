@@ -28,6 +28,7 @@ export class TwitchChatService implements ChatProvider {
   private onMessage: (message: ChatMessage) => void;
   private onMessageDelete?: (msgId: string) => void;
   private onUserBanned?: (username: string) => void;
+  private onTokenRefresh?: () => Promise<string | null>;
   private connected: boolean = false;
   private globalBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
   private channelBadges: Map<string, Map<string, TwitchBadgeVersion>> = new Map();
@@ -39,7 +40,7 @@ export class TwitchChatService implements ChatProvider {
   constructor(
     channel: string, 
     onMessage: (message: ChatMessage) => void,
-    options?: { clientId?: string; oauthToken?: string; userInfo?: any; onMessageDelete?: (msgId: string) => void; onUserBanned?: (username: string) => void }
+    options?: { clientId?: string; oauthToken?: string; userInfo?: any; onMessageDelete?: (msgId: string) => void; onUserBanned?: (username: string) => void; onTokenRefresh?: () => Promise<string | null> }
   ) {
     this.channel = channel;
     this.onMessage = onMessage;
@@ -47,6 +48,7 @@ export class TwitchChatService implements ChatProvider {
     if (options?.oauthToken) this.oauthToken = options.oauthToken;
     if (options?.onMessageDelete) this.onMessageDelete = options.onMessageDelete;
     if (options?.onUserBanned) this.onUserBanned = options.onUserBanned;
+    if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
     
     // Store user info for enhanced badge fetching
     if (options?.userInfo) {
@@ -331,7 +333,7 @@ export class TwitchChatService implements ChatProvider {
     }
   }
 
-  private async fetchGlobalBadges(): Promise<void> {
+  private async fetchGlobalBadges(retryCount: number = 0): Promise<void> {
     try {
       // Use Twitch Helix API to get global badges
       const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
@@ -351,15 +353,24 @@ export class TwitchChatService implements ChatProvider {
             this.globalBadges.set(badgeSet.set_id, versionMap);
           });
         }
-      } else if (response.status === 401) {
-        console.warn('⚠️ Token expired while fetching global badges. Token needs refresh.');
+      } else if (response.status === 401 && retryCount === 0) {
+        console.warn('⚠️ Token expired while fetching global badges. Attempting to refresh...');
+        // Try to refresh token
+        if (this.onTokenRefresh) {
+          const newToken = await this.onTokenRefresh();
+          if (newToken) {
+            this.oauthToken = newToken;
+            // Retry once with new token
+            await this.fetchGlobalBadges(1);
+          }
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching global badges:', error);
     }
   }
 
-  private async fetchChannelBadges(): Promise<void> {
+  private async fetchChannelBadges(retryCount: number = 0): Promise<void> {
     if (!this.broadcasterId) {
       return;
     }
@@ -385,8 +396,17 @@ export class TwitchChatService implements ChatProvider {
             this.channelBadges.set(badgeSet.set_id, versionMap);
           });
         }
-      } else if (response.status === 401) {
-        console.warn('⚠️ Token expired while fetching channel badges. Token needs refresh.');
+      } else if (response.status === 401 && retryCount === 0) {
+        console.warn('⚠️ Token expired while fetching channel badges. Attempting to refresh...');
+        // Try to refresh token
+        if (this.onTokenRefresh) {
+          const newToken = await this.onTokenRefresh();
+          if (newToken) {
+            this.oauthToken = newToken;
+            // Retry once with new token
+            await this.fetchChannelBadges(1);
+          }
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching channel badges:', error);
