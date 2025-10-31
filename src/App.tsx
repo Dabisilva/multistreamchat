@@ -764,7 +764,7 @@ const App: React.FC<LoginProps> = () => {
                       message={{
                         id: 'preview-3',
                         userId: 'user3',
-                        displayName: 'Mahmoojen',
+                        displayName: 'Alanzoka',
                         displayColor: '#b927e6',
                         text: 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
                         badges: [],
