@@ -84,7 +84,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
                 key={`${badge.type}-${badge.version}-${index}`}
                 alt=""
                 src={badge.url}
-                className="w-4 h-4 object-contain align-middle border-0 rounded-sm mr-0.5 inline-block transition-all duration-200 ease-in-out"
+                className="object-contain align-middle border-0 rounded-sm mr-0.5 inline-block transition-all duration-200 ease-in-out"
                 title={badge.description || `${badge.type} badge`}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -94,7 +94,11 @@ export const MessageRow: React.FC<MessageRowProps> = ({
                   const target = e.target as HTMLImageElement;
                   target.style.opacity = '1';
                 }}
-                style={{ opacity: 0 }}
+                style={{
+                  opacity: 0,
+                  width: `${styles.usernameFontSize}px`,
+                  height: `${styles.usernameFontSize}px`
+                }}
               />
             ))}
           </div>
