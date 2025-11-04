@@ -68,7 +68,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       id={`msg-${message.id}`}
     >
       <div
-        className={`flex items-center gap-1.5 font-bold py-1 ${isFullWidth ? 'w-full' : 'w-fit'} ${actionClass}`}
+        className={`flex items-center gap-1.5 font-bold ${isFullWidth ? 'w-full' : 'w-fit'} ${actionClass}`}
         style={{
           backgroundColor: isTransparent(styles.usernameBg) ? 'transparent' : styles.usernameBg,
           fontSize: `${styles.usernameFontSize}px`,
@@ -96,8 +96,8 @@ export const MessageRow: React.FC<MessageRowProps> = ({
                 }}
                 style={{
                   opacity: 0,
-                  width: `${styles.usernameFontSize}px`,
-                  height: `${styles.usernameFontSize}px`
+                  width: `${Number(styles.usernameFontSize) + 4}px`,
+                  height: `${Number(styles.usernameFontSize) + 4}px`
                 }}
               />
             ))}
