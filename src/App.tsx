@@ -411,7 +411,7 @@ const App: React.FC<LoginProps> = () => {
         <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStreamDB Chat</h1>
         <p className="text-center text-dark-text-secondary m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
 
-        <div className="flex gap-8">
+        <div className="flex flex-col gap-8 xl:flex-row">
           <div className="bg-dark-bg-card rounded-xl p-6 border border-dark-border">
             {error && (
               <div className="bg-red-900/20 text-red-400 p-4 rounded-lg mb-5 border border-red-800">
