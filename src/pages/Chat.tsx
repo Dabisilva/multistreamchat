@@ -229,6 +229,7 @@ const Chat: React.FC = () => {
     const hasPrivilegedBadge = message.badges.some(badge => {
       const badgeType = badge.type?.toLowerCase() || '';
       return (
+        badgeType === 'lead_moderator' ||
         badgeType === 'moderator' ||
         badgeType === 'vip' ||
         badgeType === 'broadcaster' ||

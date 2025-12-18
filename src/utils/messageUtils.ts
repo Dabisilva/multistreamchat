@@ -206,6 +206,7 @@ export function validateBadges(badges: any[]): any[] {
 export function sortBadgesByPriority(badges: any[]): any[] {
   const priorityOrder = [
     'broadcaster',
+    'lead_moderator',
     'moderator', 
     'vip',
     'subscriber',
