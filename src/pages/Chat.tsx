@@ -346,60 +346,70 @@ const Chat: React.FC = () => {
     }, 100);
   }, [scrollToBottom]);
 
-  // Auto-connect when channels are available
+  // Auto-connect when channels are available or callback changes
   useEffect(() => {
-    if (twitchChannel && !twitchService) {
-      // Get user info and client ID from localStorage or URL params
-      const twitchUserInfo = localStorage.getItem('twitchUserInfo');
-      const twitchClientId = clientId || localStorage.getItem('twitchClientId');
-      let userInfo = null;
+    if (!twitchChannel) return;
 
-      if (twitchUserInfo) {
-        try {
-          userInfo = JSON.parse(twitchUserInfo);
-        } catch (e) {
-          // Error parsing user info
-        }
+    // Get user info and client ID from localStorage or URL params
+    const twitchUserInfo = localStorage.getItem('twitchUserInfo');
+    const twitchClientId = clientId || localStorage.getItem('twitchClientId');
+    let userInfo = null;
+
+    if (twitchUserInfo) {
+      try {
+        userInfo = JSON.parse(twitchUserInfo);
+      } catch (e) {
+        // Error parsing user info
       }
-
-      // If broadcasterId from URL, use it to override userInfo
-      if (broadcasterId && userInfo) {
-        userInfo.broadcasterId = broadcasterId;
-      } else if (broadcasterId && !userInfo) {
-        userInfo = { broadcasterId };
-      }
-
-      const service = new TwitchChatService(
-        twitchChannel,
-        handleNewMessage,
-        {
-          clientId: twitchClientId || undefined,
-          oauthToken: twitchOauthToken || undefined,
-          userInfo: userInfo,
-          onMessageDelete: removeMessageByMsgId,
-          onUserBanned: removeMessagesByUser,
-          onTokenRefresh: refreshTwitchTokenIfNeeded
-        }
-      );
-      service.connect();
-      setTwitchService(service);
     }
-  }, [twitchChannel, twitchService, twitchOauthToken, broadcasterId, clientId, handleNewMessage, removeMessageByMsgId, removeMessagesByUser, refreshTwitchTokenIfNeeded]);
+
+    // If broadcasterId from URL, use it to override userInfo
+    if (broadcasterId && userInfo) {
+      userInfo.broadcasterId = broadcasterId;
+    } else if (broadcasterId && !userInfo) {
+      userInfo = { broadcasterId };
+    }
+
+    const service = new TwitchChatService(
+      twitchChannel,
+      handleNewMessage,
+      {
+        clientId: twitchClientId || undefined,
+        oauthToken: twitchOauthToken || undefined,
+        userInfo: userInfo,
+        onMessageDelete: removeMessageByMsgId,
+        onUserBanned: removeMessagesByUser,
+        onTokenRefresh: refreshTwitchTokenIfNeeded
+      }
+    );
+    service.connect();
+    setTwitchService(service);
+
+    // Cleanup function - disconnects service when effect re-runs or component unmounts
+    return () => {
+      service.disconnect();
+    };
+  }, [twitchChannel, twitchOauthToken, broadcasterId, clientId, handleNewMessage, removeMessageByMsgId, removeMessagesByUser, refreshTwitchTokenIfNeeded]);
 
   useEffect(() => {
-    if (kickChannel && !kickService) {
-      const service = new KickChatService(
-        kickChannel,
-        handleNewMessage,
-        {
-          onMessageDelete: removeMessageByMsgId,
-          onUserBanned: removeMessagesByUser
-        }
-      );
-      service.connect();
-      setKickService(service);
-    }
-  }, [kickChannel, kickService, handleNewMessage, removeMessageByMsgId, removeMessagesByUser]);
+    if (!kickChannel) return;
+
+    const service = new KickChatService(
+      kickChannel,
+      handleNewMessage,
+      {
+        onMessageDelete: removeMessageByMsgId,
+        onUserBanned: removeMessagesByUser
+      }
+    );
+    service.connect();
+    setKickService(service);
+
+    // Cleanup function - disconnects service when effect re-runs or component unmounts
+    return () => {
+      service.disconnect();
+    };
+  }, [kickChannel, handleNewMessage, removeMessageByMsgId, removeMessagesByUser]);
 
   // Cleanup on unmount
   useEffect(() => {
