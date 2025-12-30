@@ -23,8 +23,6 @@ const Chat: React.FC = () => {
   const [twitchOauthToken, setTwitchOauthToken] = useState<string>('');
   const [broadcasterId, setBroadcasterId] = useState<string>('');
   const [clientId, setClientId] = useState<string>('');
-  const [twitchService, setTwitchService] = useState<TwitchChatService | null>(null);
-  const [kickService, setKickService] = useState<KickChatService | null>(null);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
   const pendingTimeoutsRef = React.useRef<Map<string, { timeout: NodeJS.Timeout; message: ChatMessage }>>(new Map());
@@ -355,7 +353,6 @@ const Chat: React.FC = () => {
       if (twitchServiceRef.current) {
         twitchServiceRef.current.disconnect();
         twitchServiceRef.current = null;
-        setTwitchService(null);
       }
       return;
     }
@@ -400,7 +397,6 @@ const Chat: React.FC = () => {
     );
     service.connect();
     twitchServiceRef.current = service;
-    setTwitchService(service);
 
     // Cleanup function - disconnects service when effect re-runs or component unmounts
     return () => {
@@ -417,7 +413,6 @@ const Chat: React.FC = () => {
       if (kickServiceRef.current) {
         kickServiceRef.current.disconnect();
         kickServiceRef.current = null;
-        setKickService(null);
       }
       return;
     }
@@ -438,7 +433,6 @@ const Chat: React.FC = () => {
     );
     service.connect();
     kickServiceRef.current = service;
-    setKickService(service);
 
     // Cleanup function - disconnects service when effect re-runs or component unmounts
     return () => {
