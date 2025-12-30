@@ -28,6 +28,8 @@ const Chat: React.FC = () => {
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
   const chatContainerRef = React.useRef<HTMLDivElement>(null);
   const pendingTimeoutsRef = React.useRef<Map<string, { timeout: NodeJS.Timeout; message: ChatMessage }>>(new Map());
+  const twitchServiceRef = React.useRef<TwitchChatService | null>(null);
+  const kickServiceRef = React.useRef<KickChatService | null>(null);
 
   // Customization options from URL
   const [customStyles, setCustomStyles] = useState({
@@ -348,7 +350,21 @@ const Chat: React.FC = () => {
 
   // Auto-connect when channels are available or callback changes
   useEffect(() => {
-    if (!twitchChannel) return;
+    if (!twitchChannel) {
+      // Disconnect if channel is cleared
+      if (twitchServiceRef.current) {
+        twitchServiceRef.current.disconnect();
+        twitchServiceRef.current = null;
+        setTwitchService(null);
+      }
+      return;
+    }
+
+    // Disconnect existing service BEFORE creating a new one to prevent duplicates
+    if (twitchServiceRef.current) {
+      twitchServiceRef.current.disconnect();
+      twitchServiceRef.current = null;
+    }
 
     // Get user info and client ID from localStorage or URL params
     const twitchUserInfo = localStorage.getItem('twitchUserInfo');
@@ -383,16 +399,34 @@ const Chat: React.FC = () => {
       }
     );
     service.connect();
+    twitchServiceRef.current = service;
     setTwitchService(service);
 
     // Cleanup function - disconnects service when effect re-runs or component unmounts
     return () => {
-      service.disconnect();
+      if (twitchServiceRef.current === service) {
+        service.disconnect();
+        twitchServiceRef.current = null;
+      }
     };
   }, [twitchChannel, twitchOauthToken, broadcasterId, clientId, handleNewMessage, removeMessageByMsgId, removeMessagesByUser, refreshTwitchTokenIfNeeded]);
 
   useEffect(() => {
-    if (!kickChannel) return;
+    if (!kickChannel) {
+      // Disconnect if channel is cleared
+      if (kickServiceRef.current) {
+        kickServiceRef.current.disconnect();
+        kickServiceRef.current = null;
+        setKickService(null);
+      }
+      return;
+    }
+
+    // Disconnect existing service BEFORE creating a new one to prevent duplicates
+    if (kickServiceRef.current) {
+      kickServiceRef.current.disconnect();
+      kickServiceRef.current = null;
+    }
 
     const service = new KickChatService(
       kickChannel,
@@ -403,11 +437,15 @@ const Chat: React.FC = () => {
       }
     );
     service.connect();
+    kickServiceRef.current = service;
     setKickService(service);
 
     // Cleanup function - disconnects service when effect re-runs or component unmounts
     return () => {
-      service.disconnect();
+      if (kickServiceRef.current === service) {
+        service.disconnect();
+        kickServiceRef.current = null;
+      }
     };
   }, [kickChannel, handleNewMessage, removeMessageByMsgId, removeMessagesByUser]);
 
@@ -420,11 +458,13 @@ const Chat: React.FC = () => {
       });
       pendingTimeoutsRef.current.clear();
 
-      if (twitchService) {
-        twitchService.disconnect();
+      if (twitchServiceRef.current) {
+        twitchServiceRef.current.disconnect();
+        twitchServiceRef.current = null;
       }
-      if (kickService) {
-        kickService.disconnect();
+      if (kickServiceRef.current) {
+        kickServiceRef.current.disconnect();
+        kickServiceRef.current = null;
       }
     };
   }, []); // Remove service dependencies to prevent cleanup on service changes
