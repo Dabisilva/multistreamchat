@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   nickColor: 'user',
   customNickColor: '#ffffff',
   hideCommands: true,
-  ignoredUsers: ['streamelements', '@streamelements', 'CuscuzBot'],
+  ignoredUsers: ['streamelements', '@streamelements', 'cuscuzbot'],
   alignMessages: 'bottom'
 };
 
