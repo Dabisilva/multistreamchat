@@ -1,65 +1,84 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import OAuthService from './services/OAuthService';
-import CustomRangeInput from './components/CustomRangeInput';
-import { MessageRow } from './components/MessageRow';
+import React, { useState, useEffect, useRef } from "react";
+import OAuthService from "./services/OAuthService";
+import CustomRangeInput from "./components/CustomRangeInput";
+import { MessageRow } from "./components/MessageRow";
 
-import './style.css';
+import "./style.css";
 
 const baseUrl = window.location.origin;
 interface LoginProps {
-  onLogin?: (twitchToken: string, twitchChannel: string, kickChannel?: string) => void;
+  onLogin?: (
+    twitchToken: string,
+    twitchChannel: string,
+    kickChannel?: string,
+  ) => void;
 }
 
 const App: React.FC<LoginProps> = () => {
   const [isLoadingTwitch, setIsLoadingTwitch] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [twitchAuthenticated, setTwitchAuthenticated] = useState(false);
-  const [kickChannel, setKickChannel] = useState(localStorage.getItem('kickChannel') || '');
-  const [kickChannelSaved, setKickChannelSaved] = useState(!!localStorage.getItem('kickChannel'));
-  const [twitchWidgetUrl, setTwitchWidgetUrl] = useState('');
-  const [kickWidgetUrl, setKickWidgetUrl] = useState('');
+  const [kickChannel, setKickChannel] = useState(
+    localStorage.getItem("kickChannel") || "",
+  );
+  const [kickChannelSaved, setKickChannelSaved] = useState(
+    !!localStorage.getItem("kickChannel"),
+  );
+  const [twitchWidgetUrl, setTwitchWidgetUrl] = useState("");
+  const [kickWidgetUrl, setKickWidgetUrl] = useState("");
   const [showCustomization, setShowCustomization] = useState(false);
 
   // Customization options
-  const [usernameBgColor, setUsernameBgColor] = useState('#30034d');
-  const [messageBgColor, setMessageBgColor] = useState('#8b5cf6');
-  const [messageTextColor, setMessageTextColor] = useState('#ffffff');
-  const [usernameBgAlpha, setUsernameBgAlpha] = useState('0');
-  const [messageBgAlpha, setMessageBgAlpha] = useState('0');
-  const [messageTextAlpha, setMessageTextAlpha] = useState('1');
-  const [borderRadius, setBorderRadius] = useState('4');
-  const [usernameFontSize, setUsernameFontSize] = useState('20');
-  const [messageFontSize, setMessageFontSize] = useState('20');
-  const [messagePadding, setMessagePadding] = useState('0');
-  const [messageDelay, setMessageDelay] = useState('5');
+  const [usernameBgColor, setUsernameBgColor] = useState("#30034d");
+  const [messageBgColor, setMessageBgColor] = useState("#8b5cf6");
+  const [messageTextColor, setMessageTextColor] = useState("#ffffff");
+  const [usernameBgAlpha, setUsernameBgAlpha] = useState("0");
+  const [messageBgAlpha, setMessageBgAlpha] = useState("0");
+  const [messageTextAlpha, setMessageTextAlpha] = useState("1");
+  const [borderRadius, setBorderRadius] = useState("4");
+  const [usernameFontSize, setUsernameFontSize] = useState("20");
+  const [messageFontSize, setMessageFontSize] = useState("20");
+  const [messagePadding, setMessagePadding] = useState("0");
+  const [messageDelay, setMessageDelay] = useState("5");
   const [fullWidthMessages, setFullWidthMessages] = useState(false);
 
   // Process Twitch OAuth callback
-  const processTwitchOAuthCallback = useCallback(async (code: string, state: string) => {
+  const processTwitchOAuthCallback = async (code: string, state: string) => {
     try {
-      const tokenResponse = await OAuthService.handleOAuthCallback('twitch', code, state);
-      const userData = await OAuthService.getTwitchUserInfo(tokenResponse.access_token);
+      const tokenResponse = await OAuthService.handleOAuthCallback(
+        "twitch",
+        code,
+        state,
+      );
+      const userData = await OAuthService.getTwitchUserInfo(
+        tokenResponse.access_token,
+      );
 
       // Get the client ID that was used for OAuth
-      const clientId = (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+      const clientId =
+        (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
+        "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
       // Calculate token expiration time (expires_in is in seconds)
-      const expiresAt = Date.now() + (tokenResponse.expires_in * 1000);
+      const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
       // Store tokens, client ID, expiration time, and user info
-      localStorage.setItem('twitchToken', tokenResponse.access_token);
-      localStorage.setItem('twitchClientId', clientId);
-      localStorage.setItem('twitchTokenExpiresAt', expiresAt.toString());
-      localStorage.setItem('twitchUserInfo', JSON.stringify(userData));
-      localStorage.setItem('twitchChannelInfo', JSON.stringify({
-        username: userData.username,
-        displayName: userData.displayName,
-        id: userData.id,
-        platform: 'twitch'
-      }));
+      localStorage.setItem("twitchToken", tokenResponse.access_token);
+      localStorage.setItem("twitchClientId", clientId);
+      localStorage.setItem("twitchTokenExpiresAt", expiresAt.toString());
+      localStorage.setItem("twitchUserInfo", JSON.stringify(userData));
+      localStorage.setItem(
+        "twitchChannelInfo",
+        JSON.stringify({
+          username: userData.username,
+          displayName: userData.displayName,
+          id: userData.id,
+          platform: "twitch",
+        }),
+      );
 
       if (tokenResponse.refresh_token) {
-        localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
+        localStorage.setItem("twitchRefreshToken", tokenResponse.refresh_token);
       }
 
       // Generate widget URL with all necessary parameters
@@ -76,48 +95,59 @@ const App: React.FC<LoginProps> = () => {
 
       setTwitchWidgetUrl(widget);
       setTwitchAuthenticated(true);
-
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao processar autenticação da Twitch');
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao processar autenticação da Twitch",
+      );
       throw err;
     }
-  }, []);
+  };
 
   // Refresh Twitch token if expired or about to expire
-  const refreshTwitchTokenIfNeeded = useCallback(async (): Promise<string | null> => {
-    const twitchToken = localStorage.getItem('twitchToken');
-    const refreshToken = localStorage.getItem('twitchRefreshToken');
-    const expiresAt = localStorage.getItem('twitchTokenExpiresAt');
+  const refreshTwitchTokenIfNeeded = async (): Promise<string | null> => {
+    const twitchToken = localStorage.getItem("twitchToken");
+    const refreshToken = localStorage.getItem("twitchRefreshToken");
+    const expiresAt = localStorage.getItem("twitchTokenExpiresAt");
 
     if (!twitchToken || !refreshToken) {
       return null;
     }
 
     // Check if token expires within the next 10 minutes (600000 ms)
-    const shouldRefresh = !expiresAt || (parseInt(expiresAt) - Date.now()) < 600000;
+    const shouldRefresh =
+      !expiresAt || parseInt(expiresAt) - Date.now() < 600000;
 
     if (shouldRefresh) {
       try {
-        const tokenResponse = await OAuthService.refreshTwitchToken(refreshToken);
+        const tokenResponse =
+          await OAuthService.refreshTwitchToken(refreshToken);
 
         // Calculate new expiration time
-        const newExpiresAt = Date.now() + (tokenResponse.expires_in * 1000);
+        const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
         // Update stored tokens
-        localStorage.setItem('twitchToken', tokenResponse.access_token);
-        localStorage.setItem('twitchTokenExpiresAt', newExpiresAt.toString());
+        localStorage.setItem("twitchToken", tokenResponse.access_token);
+        localStorage.setItem("twitchTokenExpiresAt", newExpiresAt.toString());
 
         if (tokenResponse.refresh_token) {
-          localStorage.setItem('twitchRefreshToken', tokenResponse.refresh_token);
+          localStorage.setItem(
+            "twitchRefreshToken",
+            tokenResponse.refresh_token,
+          );
         }
 
         // Update widget URL with new token
-        const twitchUser = localStorage.getItem('twitchUserInfo');
+        const twitchUser = localStorage.getItem("twitchUserInfo");
         if (twitchUser) {
           const userData = JSON.parse(twitchUser);
-          const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+          const storedClientId =
+            localStorage.getItem("twitchClientId") ||
+            (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
+            "kimne78kx3ncx6brgo4mv6wki5h1ko";
           const broadcasterId = userData.broadcasterId || userData.id;
-          const savedKickChannel = localStorage.getItem('kickChannel');
+          const savedKickChannel = localStorage.getItem("kickChannel");
 
           let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
 
@@ -140,29 +170,32 @@ const App: React.FC<LoginProps> = () => {
       } catch (err) {
         // Token refresh failed - user needs to re-authenticate
         handleTwitchSignOut();
-        setError('Sua sessão expirou. Por favor, faça login novamente.');
+        setError("Sua sessão expirou. Por favor, faça login novamente.");
         return null;
       }
     }
 
     return twitchToken;
-  }, []);
+  };
+
+  const refreshTwitchTokenRef = useRef(refreshTwitchTokenIfNeeded);
+  refreshTwitchTokenRef.current = refreshTwitchTokenIfNeeded;
 
   // Initialize on component mount
   useEffect(() => {
     const init = async () => {
       // First, process OAuth callback if present (new authentication)
       const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const state = urlParams.get('state');
-      const urlError = urlParams.get('error');
+      const code = urlParams.get("code");
+      const state = urlParams.get("state");
+      const urlError = urlParams.get("error");
 
       if (urlError) {
         setError(`Erro de autenticação: ${urlError}`);
       }
 
       if (code && state) {
-        const twitchState = localStorage.getItem('twitch_oauth_state');
+        const twitchState = localStorage.getItem("twitch_oauth_state");
 
         if (state === twitchState) {
           setIsLoadingTwitch(true);
@@ -173,15 +206,13 @@ const App: React.FC<LoginProps> = () => {
           } finally {
             setIsLoadingTwitch(false);
           }
-        } else {
-          setError('Estado de autenticação inválido. Por favor, tente novamente.');
         }
       }
 
       // Check for existing Twitch authentication and refresh if needed
-      const twitchToken = localStorage.getItem('twitchToken');
-      const twitchUser = localStorage.getItem('twitchUserInfo');
-      const savedKickChannel = localStorage.getItem('kickChannel');
+      const twitchToken = localStorage.getItem("twitchToken");
+      const twitchUser = localStorage.getItem("twitchUserInfo");
+      const savedKickChannel = localStorage.getItem("kickChannel");
 
       if (twitchToken && twitchUser) {
         // Validate and refresh token if needed
@@ -189,10 +220,13 @@ const App: React.FC<LoginProps> = () => {
 
         if (validToken) {
           const userData = JSON.parse(twitchUser);
-          const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+          const storedClientId =
+            localStorage.getItem("twitchClientId") ||
+            (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
+            "kimne78kx3ncx6brgo4mv6wki5h1ko";
           const broadcasterId = userData.broadcasterId || userData.id;
-          const storedRefreshToken = localStorage.getItem('twitchRefreshToken');
-          const storedExpiresAt = localStorage.getItem('twitchTokenExpiresAt');
+          const storedRefreshToken = localStorage.getItem("twitchRefreshToken");
+          const storedExpiresAt = localStorage.getItem("twitchTokenExpiresAt");
 
           let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${validToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
 
@@ -216,43 +250,51 @@ const App: React.FC<LoginProps> = () => {
 
           setTwitchWidgetUrl(widget);
           setTwitchAuthenticated(true);
-          setError('')
+          setError("");
         }
       } else if (savedKickChannel) {
         // If only Kick channel is saved (no Twitch)
         setKickChannel(savedKickChannel);
-        setKickWidgetUrl(`${baseUrl}/chat?kickChannel=${encodeURIComponent(savedKickChannel)}`);
+        setKickWidgetUrl(
+          `${baseUrl}/chat?kickChannel=${encodeURIComponent(savedKickChannel)}`,
+        );
       }
     };
 
-    init();
-  }, [processTwitchOAuthCallback, refreshTwitchTokenIfNeeded]);
+    void init();
+  }, []);
 
-  // Set up periodic token refresh check (every 5 minutes)
+  // Set up periodic token refresh check (every 1 hour)
   useEffect(() => {
     if (!twitchAuthenticated) return;
 
-    const intervalId = setInterval(async () => {
-      await refreshTwitchTokenIfNeeded();
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    const intervalId = setInterval(
+      () => {
+        void refreshTwitchTokenRef.current();
+      },
+      60 * 60 * 1000,
+    ); // Check every 1 hour
 
     return () => clearInterval(intervalId);
-  }, [twitchAuthenticated, refreshTwitchTokenIfNeeded]);
+  }, [twitchAuthenticated]);
 
   // Update widget URL when customization changes
   useEffect(() => {
     if (twitchWidgetUrl || kickWidgetUrl) {
       const baseUrl = window.location.origin;
-      const twitchToken = localStorage.getItem('twitchToken');
-      const twitchUser = localStorage.getItem('twitchUserInfo');
-      const storedClientId = localStorage.getItem('twitchClientId') || (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko';
-      const savedKickChannel = localStorage.getItem('kickChannel');
+      const twitchToken = localStorage.getItem("twitchToken");
+      const twitchUser = localStorage.getItem("twitchUserInfo");
+      const storedClientId =
+        localStorage.getItem("twitchClientId") ||
+        (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
+        "kimne78kx3ncx6brgo4mv6wki5h1ko";
+      const savedKickChannel = localStorage.getItem("kickChannel");
 
       if (twitchToken && twitchUser) {
         const userData = JSON.parse(twitchUser);
         const broadcasterId = userData.broadcasterId || userData.id;
-        const storedRefreshToken = localStorage.getItem('twitchRefreshToken');
-        const storedExpiresAt = localStorage.getItem('twitchTokenExpiresAt');
+        const storedRefreshToken = localStorage.getItem("twitchRefreshToken");
+        const storedExpiresAt = localStorage.getItem("twitchTokenExpiresAt");
 
         let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
 
@@ -278,34 +320,47 @@ const App: React.FC<LoginProps> = () => {
         setKickWidgetUrl(url);
       }
     }
-  }, [usernameBgColor, messageBgColor, messageTextColor, usernameBgAlpha, messageBgAlpha, messageTextAlpha, borderRadius, usernameFontSize, messageFontSize, messagePadding, messageDelay, fullWidthMessages]);
+  }, [
+    usernameBgColor,
+    messageBgColor,
+    messageTextColor,
+    usernameBgAlpha,
+    messageBgAlpha,
+    messageTextAlpha,
+    borderRadius,
+    usernameFontSize,
+    messageFontSize,
+    messagePadding,
+    messageDelay,
+    fullWidthMessages,
+  ]);
 
   const handleTwitchOAuth = async () => {
     setIsLoadingTwitch(true);
-    setError('');
+    setError("");
 
     try {
       await OAuthService.initiateTwitchOAuth();
     } catch (error) {
-      setError('Erro ao iniciar autenticação com Twitch');
+      setError("Erro ao iniciar autenticação com Twitch");
       setIsLoadingTwitch(false);
     }
   };
 
   const handleTwitchSignOut = () => {
-    localStorage.removeItem('twitchToken');
-    localStorage.removeItem('twitchClientId');
-    localStorage.removeItem('twitchUserInfo');
-    localStorage.removeItem('twitchChannelInfo');
-    localStorage.removeItem('twitchRefreshToken');
-    localStorage.removeItem('twitchTokenExpiresAt');
+    localStorage.removeItem("twitchToken");
+    localStorage.removeItem("twitchClientId");
+    localStorage.removeItem("twitchUserInfo");
+    localStorage.removeItem("twitchChannelInfo");
+    localStorage.removeItem("twitchRefreshToken");
+    localStorage.removeItem("twitchTokenExpiresAt");
     setTwitchAuthenticated(false);
-    setTwitchWidgetUrl('');
+    setTwitchWidgetUrl("");
   };
 
   const handleKickChannelSubmit = () => {
     if (kickChannel.length < 3) {
-      setError('Por favor, insira um nome de canal do Kick');
+      setError("Por favor, insira um nome de canal do Kick");
       return;
     }
 
@@ -313,7 +368,7 @@ const App: React.FC<LoginProps> = () => {
     setKickChannel(trimmedChannel);
 
     // Save to localStorage
-    localStorage.setItem('kickChannel', trimmedChannel);
+    localStorage.setItem("kickChannel", trimmedChannel);
     setKickChannelSaved(true);
 
     const baseUrl = window.location.origin;
@@ -323,7 +378,7 @@ const App: React.FC<LoginProps> = () => {
       let url = twitchWidgetUrl;
 
       // Remove existing kickChannel parameter if present
-      url = url.replace(/&kickChannel=[^&]*/, '');
+      url = url.replace(/&kickChannel=[^&]*/, "");
 
       // Add the new kickChannel parameter
       url = `${url}&kickChannel=${encodeURIComponent(trimmedChannel)}`;
@@ -335,25 +390,24 @@ const App: React.FC<LoginProps> = () => {
       setKickWidgetUrl(url);
     }
 
-    setError('');
+    setError("");
   };
 
   const handleKickChannelClear = () => {
-    setKickChannel('');
+    setKickChannel("");
 
     // Remove from localStorage
-    localStorage.removeItem('kickChannel');
+    localStorage.removeItem("kickChannel");
     setKickChannelSaved(false);
 
     // If Twitch URL exists, remove kickChannel parameter from it
-    if (twitchWidgetUrl && twitchWidgetUrl.includes('kickChannel=')) {
-      const url = twitchWidgetUrl.replace(/&kickChannel=[^&]*/, '');
+    if (twitchWidgetUrl && twitchWidgetUrl.includes("kickChannel=")) {
+      const url = twitchWidgetUrl.replace(/&kickChannel=[^&]*/, "");
       setTwitchWidgetUrl(url);
     } else {
-      setKickWidgetUrl('');
+      setKickWidgetUrl("");
     }
   };
-
 
   const openChatPopup = () => {
     const url = twitchWidgetUrl || kickWidgetUrl;
@@ -362,11 +416,13 @@ const App: React.FC<LoginProps> = () => {
     const left = window.screen.width - width;
     const top = 400;
 
-    window.open(
-      url,
-      'ChatWidget',
-      `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,addressbar=no`
-    )?.focus();
+    window
+      .open(
+        url,
+        "ChatWidget",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,addressbar=no`,
+      )
+      ?.focus();
   };
 
   // Helper function to convert hex to RGBA
@@ -388,7 +444,7 @@ const App: React.FC<LoginProps> = () => {
   const copyChatUrl = () => {
     const url = twitchWidgetUrl || kickWidgetUrl;
     navigator.clipboard.writeText(url).catch(() => {
-      const textArea = document.createElement('textarea');
+      const textArea = document.createElement("textarea");
       textArea.value = url;
       document.body.appendChild(textArea);
       textArea.select();
@@ -398,17 +454,21 @@ const App: React.FC<LoginProps> = () => {
 
   const twitchButtonText = () => {
     return isLoadingTwitch
-      ? 'Carregando...'
+      ? "Carregando..."
       : twitchAuthenticated
-        ? 'Conectado'
-        : 'Login Twitch'
+        ? "Conectado"
+        : "Login Twitch";
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-5 font-sans">
       <div className="bg-dark-bg-secondary rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-10 md:p-6 border border-dark-border">
-        <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">MultiStreamDB Chat</h1>
-        <p className="text-center text-dark-text-secondary m-0 mb-10 text-base">Conecte-se aos chats da Twitch e Kick</p>
+        <h1 className="text-4xl md:text-3xl font-bold text-center m-0 mb-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+          MultiStreamDB Chat
+        </h1>
+        <p className="text-center text-dark-text-secondary m-0 mb-10 text-base">
+          Conecte-se aos chats da Twitch e Kick
+        </p>
 
         <div className="flex flex-col gap-8 xl:flex-row">
           <div className="bg-dark-bg-card rounded-xl p-6 border border-dark-border">
@@ -425,7 +485,11 @@ const App: React.FC<LoginProps> = () => {
                   onClick={handleTwitchOAuth}
                   disabled={isLoadingTwitch || twitchAuthenticated}
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
                     <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
                   </svg>
                   {twitchButtonText()}
@@ -453,7 +517,9 @@ const App: React.FC<LoginProps> = () => {
                   type="text"
                   value={kickChannel}
                   onChange={(e) => setKickChannel(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleKickChannelSubmit()}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && handleKickChannelSubmit()
+                  }
                   placeholder="Digite o nome do canal"
                   className="flex-1 px-4 py-3 bg-dark-bg-primary border-2 border-dark-border focus:border-green-500 rounded-lg text-base text-dark-text-primary placeholder-dark-text-muted outline-none transition-colors duration-300"
                 />
@@ -490,7 +556,10 @@ const App: React.FC<LoginProps> = () => {
                     readOnly
                     className="flex-1 px-4 py-3 border-2 border-dark-border focus:border-green-500 rounded-lg text-sm bg-dark-bg-primary text-dark-text-primary font-mono outline-none"
                   />
-                  <button onClick={copyChatUrl} className="w-[120px] bg-green-500 text-white border-0 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap hover:bg-green-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(46,204,113,0.3)]">
+                  <button
+                    onClick={copyChatUrl}
+                    className="w-[120px] bg-green-500 text-white border-0 rounded-lg px-4 py-3 text-sm font-semibold cursor-pointer transition-all duration-300 whitespace-nowrap hover:bg-green-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(46,204,113,0.3)]"
+                  >
                     Copiar
                   </button>
                 </div>
@@ -505,7 +574,7 @@ const App: React.FC<LoginProps> = () => {
                     onClick={() => setShowCustomization(!showCustomization)}
                     className="flex-1 bg-purple-500 text-white border-0 rounded-lg px-8 py-3.5 text-base font-semibold cursor-pointer transition-all duration-300 hover:bg-purple-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(139,92,246,0.3)] mt-2.5"
                   >
-                    {showCustomization ? 'Fechar Edição' : 'Editar Chat'}
+                    {showCustomization ? "Fechar Edição" : "Editar Chat"}
                   </button>
                 </div>
               </div>
@@ -515,7 +584,9 @@ const App: React.FC<LoginProps> = () => {
           {showCustomization && (twitchWidgetUrl || kickWidgetUrl) && (
             <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
               <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border">
-                <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Opções de Personalização</h3>
+                <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">
+                  Opções de Personalização
+                </h3>
 
                 <div className="flex flex-col gap-4">
                   {/* Username Background Color */}
@@ -542,11 +613,12 @@ const App: React.FC<LoginProps> = () => {
                       max={1}
                       step={0.01}
                       value={1 - parseFloat(usernameBgAlpha)}
-                      onChange={(value) => setUsernameBgAlpha((1 - value).toString())}
+                      onChange={(value) =>
+                        setUsernameBgAlpha((1 - value).toString())
+                      }
                       label={`Transparência: ${Math.round((1 - parseFloat(usernameBgAlpha)) * 100)}%`}
                     />
                   </div>
-
 
                   {/* Message Background Color */}
                   <div>
@@ -572,7 +644,9 @@ const App: React.FC<LoginProps> = () => {
                       max={1}
                       step={0.01}
                       value={1 - parseFloat(messageBgAlpha)}
-                      onChange={(value) => setMessageBgAlpha((1 - value).toString())}
+                      onChange={(value) =>
+                        setMessageBgAlpha((1 - value).toString())
+                      }
                       label={`Transparência: ${Math.round((1 - parseFloat(messageBgAlpha)) * 100)}%`}
                     />
                     {/* Full Width Messages */}
@@ -581,7 +655,9 @@ const App: React.FC<LoginProps> = () => {
                         <input
                           type="checkbox"
                           checked={fullWidthMessages}
-                          onChange={(e) => setFullWidthMessages(e.target.checked)}
+                          onChange={(e) =>
+                            setFullWidthMessages(e.target.checked)
+                          }
                           className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-purple-500"
                         />
                         <span className="text-sm font-medium text-dark-text-secondary">
@@ -615,7 +691,9 @@ const App: React.FC<LoginProps> = () => {
                       max={1}
                       step={0.01}
                       value={1 - parseFloat(messageTextAlpha)}
-                      onChange={(value) => setMessageTextAlpha((1 - value).toString())}
+                      onChange={(value) =>
+                        setMessageTextAlpha((1 - value).toString())
+                      }
                       label={`Transparência: ${Math.round((1 - parseFloat(messageTextAlpha)) * 100)}%`}
                     />
                   </div>
@@ -665,7 +743,6 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
-
                   {/* Message Padding */}
                   <div>
                     <label className="block text-sm font-medium text-dark-text-secondary mb-2">
@@ -681,8 +758,6 @@ const App: React.FC<LoginProps> = () => {
                     />
                   </div>
 
-
-
                   {/* Message Delay */}
                   <div>
                     <CustomRangeInput
@@ -694,97 +769,106 @@ const App: React.FC<LoginProps> = () => {
                       label={`Delay: ${messageDelay}s (Mods, VIPs e dono do canal não são afetados)`}
                     />
                   </div>
-
-
                 </div>
               </div>
               {/* Preview */}
               <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border h-[360px]">
-                <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">Preview</h3>
+                <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">
+                  Preview
+                </h3>
                 <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-lg p-4">
                   <div className="space-y-3 w-[400px]">
                     <MessageRow
                       message={{
-                        id: 'preview-1',
-                        userId: 'user1',
-                        displayName: 'Jorge',
-                        displayColor: '#FF6B6B',
-                        text: 'O maior de todos os tempos',
+                        id: "preview-1",
+                        userId: "user1",
+                        displayName: "Jorge",
+                        displayColor: "#FF6B6B",
+                        text: "O maior de todos os tempos",
                         badges: [],
                         emotes: [],
                         isAction: false,
                         timestamp: Date.now(),
-                        provider: 'twitch',
-                        channel: 'example',
-                        msgId: 'msg1'
+                        provider: "twitch",
+                        channel: "example",
+                        msgId: "msg1",
                       }}
                       hideAfter={180}
-                      onRemove={() => { }}
+                      onRemove={() => {}}
                       customStyles={{
                         usernameBg: hexToRgba(usernameBgColor, usernameBgAlpha),
                         messageBg: hexToRgba(messageBgColor, messageBgAlpha),
-                        messageColor: hexToRgba(messageTextColor, messageTextAlpha),
+                        messageColor: hexToRgba(
+                          messageTextColor,
+                          messageTextAlpha,
+                        ),
                         borderRadius: borderRadius,
                         usernameFontSize: usernameFontSize,
                         messageFontSize: messageFontSize,
                         messagePadding: messagePadding,
-                        fullWidthMessages: fullWidthMessages.toString()
+                        fullWidthMessages: fullWidthMessages.toString(),
                       }}
                     />
                     <MessageRow
                       message={{
-                        id: 'preview-2',
-                        userId: 'user2',
-                        displayName: 'Bruno',
-                        displayColor: '#4ECDC4',
-                        text: 'A que não sei oq não sei oq lá',
+                        id: "preview-2",
+                        userId: "user2",
+                        displayName: "Bruno",
+                        displayColor: "#4ECDC4",
+                        text: "A que não sei oq não sei oq lá",
                         badges: [],
                         emotes: [],
                         isAction: false,
                         timestamp: Date.now(),
-                        provider: 'twitch',
-                        channel: 'example',
-                        msgId: 'msg2'
+                        provider: "twitch",
+                        channel: "example",
+                        msgId: "msg2",
                       }}
                       hideAfter={180}
-                      onRemove={() => { }}
+                      onRemove={() => {}}
                       customStyles={{
                         usernameBg: hexToRgba(usernameBgColor, usernameBgAlpha),
                         messageBg: hexToRgba(messageBgColor, messageBgAlpha),
-                        messageColor: hexToRgba(messageTextColor, messageTextAlpha),
+                        messageColor: hexToRgba(
+                          messageTextColor,
+                          messageTextAlpha,
+                        ),
                         borderRadius: borderRadius,
                         usernameFontSize: usernameFontSize,
                         messageFontSize: messageFontSize,
                         messagePadding: messagePadding,
-                        fullWidthMessages: fullWidthMessages.toString()
+                        fullWidthMessages: fullWidthMessages.toString(),
                       }}
                     />
                     <MessageRow
                       message={{
-                        id: 'preview-3',
-                        userId: 'user3',
-                        displayName: 'Alanzoka',
-                        displayColor: '#b927e6',
-                        text: 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+                        id: "preview-3",
+                        userId: "user3",
+                        displayName: "Alanzoka",
+                        displayColor: "#b927e6",
+                        text: "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
                         badges: [],
                         emotes: [],
                         isAction: false,
                         timestamp: Date.now(),
-                        provider: 'kick',
-                        channel: 'example',
-                        msgId: 'msg3'
+                        provider: "kick",
+                        channel: "example",
+                        msgId: "msg3",
                       }}
                       hideAfter={180}
-                      onRemove={() => { }}
+                      onRemove={() => {}}
                       customStyles={{
                         usernameBg: hexToRgba(usernameBgColor, usernameBgAlpha),
                         messageBg: hexToRgba(messageBgColor, messageBgAlpha),
-                        messageColor: hexToRgba(messageTextColor, messageTextAlpha),
+                        messageColor: hexToRgba(
+                          messageTextColor,
+                          messageTextAlpha,
+                        ),
                         borderRadius: borderRadius,
                         usernameFontSize: usernameFontSize,
                         messageFontSize: messageFontSize,
                         messagePadding: messagePadding,
-                        fullWidthMessages: fullWidthMessages.toString()
+                        fullWidthMessages: fullWidthMessages.toString(),
                       }}
                     />
                   </div>

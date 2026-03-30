@@ -12,10 +12,11 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.1.14",
     "@types/node": "20.8.0",
-    "@types/react": "18.2.37",
-    "@types/react-dom": "18.2.15",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@types/tmi.js": "1.8.6",
     "@vitejs/plugin-react": "4.3.4",
+    "babel-plugin-react-compiler": "^1.0.0",
     "typescript": "5.2.2",
     "vite": "5.4.11"
   },
@@ -24,8 +25,8 @@
     "@twurple/auth": "7.4.0",
     "kick_live_ws": "1.4.7",
     "pusher-js": "8.4.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "react-router-dom": "7.9.3",
     "tmi.js": "1.8.5"
   }
