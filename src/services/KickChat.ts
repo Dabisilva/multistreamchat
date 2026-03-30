@@ -161,8 +161,12 @@ export class KickChatService implements ChatProvider {
   private handleMessageDeleted(data: any): void {
     try {
       const messageData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-      const msgId = messageData?.id?.toString() || messageData?.message?.id?.toString();
-      
+      // Payload matches TMessageDelete: top-level `id` is often the deletion record id;
+      // `message.id` is the chat message id (same as ChatMessage.msgId from ChatMessageEvent).
+      const raw =
+        messageData?.message?.id ?? messageData?.message_id ?? messageData?.id;
+      const msgId = raw != null ? String(raw) : '';
+
       if (msgId && this.onMessageDelete) {
         this.onMessageDelete(msgId);
       }
