@@ -16,7 +16,6 @@ A real-time chat overlay that combines messages from both Twitch and Kick platfo
 - **Persistent Login**: OAuth tokens are saved locally for seamless reconnection
 - **Modern UI**: Beautiful login screen with gradient design
 - **Message Delay**: Configurable delay for non-privileged users (moderators, VIPs, and broadcasters show immediately)
-- **React**: Modern React 18 with hooks and functional components
 - **TypeScript**: Full type safety and better developer experience
 
 ## Customization Options
