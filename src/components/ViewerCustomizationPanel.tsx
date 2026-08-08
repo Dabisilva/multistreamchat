@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import CustomRangeInput from "./CustomRangeInput";
 import { ColorField } from "./ColorField";
 import { PlatformIcon } from "./PlatformIcon";
@@ -11,6 +11,9 @@ interface ViewerCustomizationPanelProps {
     key: K,
     value: ViewerCustomizationSettings[K],
   ) => void;
+  twitchAuthenticated: boolean;
+  youtubeAuthenticated: boolean;
+  kickConnected: boolean;
 }
 
 const PreviewCount: React.FC<{
@@ -39,18 +42,57 @@ const PreviewCount: React.FC<{
   );
 };
 
+type PlatformKey = "twitch" | "youtube" | "kick";
+
+const LOGIN_MESSAGES: Record<PlatformKey, string> = {
+  twitch: "Faça login na Twitch para usar essa opção.",
+  youtube: "Faça login no YouTube para usar essa opção.",
+  kick: "Conecte um canal da Kick para usar essa opção.",
+};
+
 export const ViewerCustomizationPanel: React.FC<
   ViewerCustomizationPanelProps
-> = ({ settings, onChange }) => {
+> = ({
+  settings,
+  onChange,
+  twitchAuthenticated,
+  youtubeAuthenticated,
+  kickConnected,
+}) => {
+  const [platformHint, setPlatformHint] = useState("");
+
   const iconSize = Math.max(
     Math.round(parseInt(settings.viewerFontSize, 10) * 0.7) || 22,
     16,
   );
 
+  const connected: Record<PlatformKey, boolean> = {
+    twitch: twitchAuthenticated,
+    youtube: youtubeAuthenticated,
+    kick: kickConnected,
+  };
+
+  const handlePlatformToggle = (
+    platform: PlatformKey,
+    key: "showTwitchViews" | "showYoutubeViews" | "showKickViews",
+    checked: boolean,
+  ) => {
+    if (checked && !connected[platform]) {
+      setPlatformHint(LOGIN_MESSAGES[platform]);
+      onChange(key, false);
+      return;
+    }
+
+    setPlatformHint("");
+    onChange(key, checked);
+  };
+
+  const showTwitch = settings.showTwitchViews && twitchAuthenticated;
+  const showYoutube = settings.showYoutubeViews && youtubeAuthenticated;
+  const showKick = settings.showKickViews && kickConnected;
+
   const sumPreviewCount =
-    (settings.showTwitchViews ? 1200 : 0) +
-    (settings.showYoutubeViews ? 850 : 0) +
-    (settings.showKickViews ? 340 : 0);
+    (showTwitch ? 1200 : 0) + (showYoutube ? 850 : 0) + (showKick ? 340 : 0);
 
   return (
     <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
@@ -95,44 +137,96 @@ export const ViewerCustomizationPanel: React.FC<
               Plataformas
             </p>
             <div className="flex flex-col gap-3">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label
+                className={`flex items-center gap-2 cursor-pointer ${
+                  !twitchAuthenticated ? "opacity-60" : ""
+                }`}
+              >
                 <input
                   type="checkbox"
-                  checked={settings.showTwitchViews}
+                  checked={showTwitch}
                   onChange={(e) =>
-                    onChange("showTwitchViews", e.target.checked)
+                    handlePlatformToggle(
+                      "twitch",
+                      "showTwitchViews",
+                      e.target.checked,
+                    )
                   }
                   className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-purple-500"
                 />
                 <span className="text-sm font-medium text-dark-text-secondary">
                   Twitch
+                  {!twitchAuthenticated && (
+                    <span className="text-dark-text-muted font-normal">
+                      {" "}
+                      (não conectado)
+                    </span>
+                  )}
                 </span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label
+                className={`flex items-center gap-2 cursor-pointer ${
+                  !youtubeAuthenticated ? "opacity-60" : ""
+                }`}
+              >
                 <input
                   type="checkbox"
-                  checked={settings.showYoutubeViews}
+                  checked={showYoutube}
                   onChange={(e) =>
-                    onChange("showYoutubeViews", e.target.checked)
+                    handlePlatformToggle(
+                      "youtube",
+                      "showYoutubeViews",
+                      e.target.checked,
+                    )
                   }
                   className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-red-500"
                 />
                 <span className="text-sm font-medium text-dark-text-secondary">
                   YouTube
+                  {!youtubeAuthenticated && (
+                    <span className="text-dark-text-muted font-normal">
+                      {" "}
+                      (não conectado)
+                    </span>
+                  )}
                 </span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label
+                className={`flex items-center gap-2 cursor-pointer ${
+                  !kickConnected ? "opacity-60" : ""
+                }`}
+              >
                 <input
                   type="checkbox"
-                  checked={settings.showKickViews}
-                  onChange={(e) => onChange("showKickViews", e.target.checked)}
+                  checked={showKick}
+                  onChange={(e) =>
+                    handlePlatformToggle(
+                      "kick",
+                      "showKickViews",
+                      e.target.checked,
+                    )
+                  }
                   className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-green-500"
                 />
                 <span className="text-sm font-medium text-dark-text-secondary">
                   Kick
+                  {!kickConnected && (
+                    <span className="text-dark-text-muted font-normal">
+                      {" "}
+                      (não conectado)
+                    </span>
+                  )}
                 </span>
               </label>
             </div>
+            {platformHint && (
+              <p
+                className="mt-3 text-sm text-amber-400 bg-amber-900/20 border border-amber-800/50 rounded-lg px-3 py-2 cursor-pointer"
+                onClick={() => setPlatformHint("")}
+              >
+                {platformHint}
+              </p>
+            )}
           </div>
 
           <div className="pt-2 border-t border-dark-border">
@@ -162,13 +256,13 @@ export const ViewerCustomizationPanel: React.FC<
               style={{ color: settings.viewerTextColor }}
             >
               <div className="flex items-center gap-2">
-                {settings.showTwitchViews && (
+                {showTwitch && (
                   <PlatformIcon platform="twitch" size={iconSize} branded />
                 )}
-                {settings.showYoutubeViews && (
+                {showYoutube && (
                   <PlatformIcon platform="youtube" size={iconSize} branded />
                 )}
-                {settings.showKickViews && (
+                {showKick && (
                   <PlatformIcon platform="kick" size={iconSize} branded />
                 )}
               </div>
@@ -186,7 +280,7 @@ export const ViewerCustomizationPanel: React.FC<
             </div>
           ) : (
             <div className="flex items-center gap-5 flex-wrap justify-center">
-              {settings.showTwitchViews && (
+              {showTwitch && (
                 <PreviewCount
                   platform="twitch"
                   count="1.200"
@@ -194,7 +288,7 @@ export const ViewerCustomizationPanel: React.FC<
                   textColor={settings.viewerTextColor}
                 />
               )}
-              {settings.showYoutubeViews && (
+              {showYoutube && (
                 <PreviewCount
                   platform="youtube"
                   count="850"
@@ -202,7 +296,7 @@ export const ViewerCustomizationPanel: React.FC<
                   textColor={settings.viewerTextColor}
                 />
               )}
-              {settings.showKickViews && (
+              {showKick && (
                 <PreviewCount
                   platform="kick"
                   count="340"

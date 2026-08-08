@@ -97,6 +97,9 @@ const App: React.FC = () => {
                 <ViewerCustomizationPanel
                   settings={viewerSettings}
                   onChange={updateViewerSetting}
+                  twitchAuthenticated={twitchAuthenticated}
+                  youtubeAuthenticated={youtubeAuthenticated}
+                  kickConnected={kickChannelSaved}
                 />
               )}
           </div>

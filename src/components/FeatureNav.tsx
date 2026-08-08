@@ -19,7 +19,7 @@ export const FeatureNav: React.FC<FeatureNavProps> = ({
   onChange,
 }) => {
   return (
-    <div className="flex items-center justify-center gap-3 self-stretch min-w-[160px]">
+    <div className="flex items-center justify-center gap-3 self-stretch min-w-[160px] max-w-[405px]">
       <button
         type="button"
         onClick={() => onChange("chat")}

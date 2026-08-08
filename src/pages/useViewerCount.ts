@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: ViewerCountConfig = {
   showTwitch: true,
   showKick: true,
   showYoutube: true,
-  sumViews: false,
+  sumViews: true,
   textColor: "#ffffff",
 };
 
@@ -143,7 +143,10 @@ export const useViewerCount = () => {
         urlParams.showYoutube !== null
           ? urlParams.showYoutube !== "false"
           : DEFAULT_CONFIG.showYoutube,
-      sumViews: urlParams.sumViews === "true",
+      sumViews:
+        urlParams.sumViews !== null
+          ? urlParams.sumViews !== "false"
+          : DEFAULT_CONFIG.sumViews,
       textColor: urlParams.textColor || DEFAULT_CONFIG.textColor,
     });
 

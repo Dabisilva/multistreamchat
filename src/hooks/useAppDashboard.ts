@@ -31,7 +31,7 @@ const DEFAULT_VIEWER_SETTINGS: ViewerCustomizationSettings = {
   showTwitchViews: true,
   showKickViews: true,
   showYoutubeViews: true,
-  sumViews: false,
+  sumViews: true,
 };
 
 export function useAppDashboard() {
@@ -476,7 +476,7 @@ export function useAppDashboard() {
 
   const switchFeature = (feature: AppFeature) => {
     setActiveFeature(feature);
-    setShowCustomization(false);
+    setShowCustomization(true);
   };
 
   return {
