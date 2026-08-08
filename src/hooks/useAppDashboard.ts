@@ -58,7 +58,14 @@ export function useAppDashboard() {
     nextViewer = viewerSettings,
   ) => {
     setWidgetUrl(buildChatWidgetUrl(baseUrl, nextChat));
-    setViewerWidgetUrl(buildViewerWidgetUrl(baseUrl, nextViewer));
+    setViewerWidgetUrl(
+      buildViewerWidgetUrl(baseUrl, {
+        ...nextViewer,
+        showTwitchViews: nextViewer.showTwitchViews && twitchAuthenticated,
+        showYoutubeViews: nextViewer.showYoutubeViews && youtubeAuthenticated,
+        showKickViews: nextViewer.showKickViews && kickChannelSaved,
+      }),
+    );
   };
 
   const updateChatSetting = <K extends keyof ChatCustomizationSettings>(

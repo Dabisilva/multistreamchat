@@ -30,6 +30,9 @@ export const useViewerCount = () => {
   const [viewers, setViewers] = useState<PlatformViewers[]>([]);
   const [config, setConfig] = useState<ViewerCountConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
+  const [twitchAuthenticated, setTwitchAuthenticated] = useState(false);
+  const [youtubeAuthenticated, setYoutubeAuthenticated] = useState(false);
+  const [kickConnected, setKickConnected] = useState(false);
 
   const serviceRef = useRef<ViewerCountService | null>(null);
   const credentialsRef = useRef({
@@ -209,6 +212,15 @@ export const useViewerCount = () => {
         localStorage.getItem("youtubeChannelId") || "";
     }
 
+    setTwitchAuthenticated(
+      !!(
+        credentialsRef.current.twitchChannel &&
+        credentialsRef.current.twitchToken
+      ),
+    );
+    setYoutubeAuthenticated(!!credentialsRef.current.youtubeToken);
+    setKickConnected(!!credentialsRef.current.kickChannel);
+
     serviceRef.current = new ViewerCountService({
       ...credentialsRef.current,
       onTwitchTokenRefresh: refreshTwitchTokenIfNeeded,
@@ -259,5 +271,8 @@ export const useViewerCount = () => {
     config,
     loading,
     totalViewers,
+    twitchAuthenticated,
+    youtubeAuthenticated,
+    kickConnected,
   };
 };

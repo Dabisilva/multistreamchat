@@ -9,7 +9,15 @@ import { PlatformIcon } from "../components/PlatformIcon";
 const PLATFORM_ORDER: ViewerPlatform[] = ["twitch", "youtube", "kick"];
 
 const ViewerCount: React.FC = () => {
-  const { viewers, config, loading, totalViewers } = useViewerCount();
+  const {
+    viewers,
+    config,
+    loading,
+    totalViewers,
+    twitchAuthenticated,
+    youtubeAuthenticated,
+    kickConnected,
+  } = useViewerCount();
 
   const textStyle: React.CSSProperties = {
     fontSize: `${config.fontSize}px`,
@@ -24,9 +32,11 @@ const ViewerCount: React.FC = () => {
   const iconSize = Math.max(Math.round(config.fontSize * 0.9), 16);
 
   const enabledPlatforms = PLATFORM_ORDER.filter((platform) => {
-    if (platform === "twitch") return config.showTwitch;
-    if (platform === "youtube") return config.showYoutube;
-    return config.showKick;
+    if (platform === "twitch")
+      return config.showTwitch && twitchAuthenticated;
+    if (platform === "youtube")
+      return config.showYoutube && youtubeAuthenticated;
+    return config.showKick && kickConnected;
   });
 
   const renderSummed = (count: number) => (
