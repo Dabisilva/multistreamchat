@@ -1,15 +1,19 @@
-import React, { useEffect, useRef } from 'react';
-import { MessageRowProps } from '../types';
-import { attachEmotes, createUsernameHtml, getValidBadges } from '../utils/messageUtils';
+import React, { useEffect, useRef } from "react";
+import { MessageRowProps } from "../types";
+import {
+  attachEmotes,
+  createUsernameHtml,
+  getValidBadges,
+} from "../utils/messageUtils";
 
 export const MessageRow: React.FC<MessageRowProps> = ({
   message,
   hideAfter,
   onRemove,
-  customStyles
+  customStyles,
 }) => {
   const messageRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Set up auto-hide if hideAfter is not 120 (infinite)
@@ -30,27 +34,27 @@ export const MessageRow: React.FC<MessageRowProps> = ({
   const usernameHtml = createUsernameHtml(
     message.displayName,
     message.displayColor,
-    'user'
+    "user",
   );
 
-  const actionClass = message.isAction ? 'action' : '';
+  const actionClass = message.isAction ? "action" : "";
 
   const styles = customStyles || {
-    usernameBg: '#30034d',
-    messageBg: '#8b5cf6',
-    messageColor: '#ffffff',
-    borderRadius: '4',
-    usernameFontSize: '20',
-    messageFontSize: '20',
-    messagePadding: '0',
-    fullWidthMessages: 'false'
+    usernameBg: "",
+    messageBg: "",
+    messageColor: "#ffffff",
+    borderRadius: "4",
+    usernameFontSize: "20",
+    messageFontSize: "20",
+    messagePadding: "0",
+    fullWidthMessages: "false",
   };
 
-  const isFullWidth = styles.fullWidthMessages === 'true';
+  const isFullWidth = styles.fullWidthMessages === "true";
 
   // Helper function to check if color is transparent (alpha = 0)
   const isTransparent = (color: string): boolean => {
-    if (color.startsWith('rgba')) {
+    if (color.startsWith("rgba")) {
       const alphaMatch = color.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([0-9.]+)\)/);
       if (alphaMatch && parseFloat(alphaMatch[1]) === 0) {
         return true;
@@ -64,17 +68,19 @@ export const MessageRow: React.FC<MessageRowProps> = ({
       ref={messageRef}
       data-sender={message.userId}
       data-msgid={message.msgId}
-      className={`my-1 p-0 rounded-none ${isFullWidth ? 'w-full' : 'max-w-[90%]'} break-words bg-transparent border-0 overflow-hidden flex-shrink-0`}
+      className={`my-1 p-0 rounded-none ${isFullWidth ? "w-full" : "max-w-[90%]"} break-words bg-transparent border-0 overflow-hidden flex-shrink-0`}
       id={`msg-${message.id}`}
     >
       <div
-        className={`flex items-center gap-1.5 font-bold ${isFullWidth ? 'w-full' : 'w-fit'} ${actionClass}`}
+        className={`flex items-center gap-1.5 font-bold ${isFullWidth ? "w-full" : "w-fit"} ${actionClass}`}
         style={{
-          backgroundColor: isTransparent(styles.usernameBg) ? 'transparent' : styles.usernameBg,
+          backgroundColor: isTransparent(styles.usernameBg)
+            ? "transparent"
+            : styles.usernameBg,
           fontSize: `${styles.usernameFontSize}px`,
           borderRadius: `${styles.borderRadius}px`,
-          wordBreak: 'break-word',
-          maxWidth: '100%'
+          wordBreak: "break-word",
+          maxWidth: "100%",
         }}
       >
         {getValidBadges(message.badges).length > 0 && (
@@ -88,16 +94,16 @@ export const MessageRow: React.FC<MessageRowProps> = ({
                 title={badge.description || `${badge.type} badge`}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+                  target.style.display = "none";
                 }}
                 onLoad={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.style.opacity = '1';
+                  target.style.opacity = "1";
                 }}
                 style={{
                   opacity: 0,
                   width: `${Number(styles.usernameFontSize) + 4}px`,
-                  height: `${Number(styles.usernameFontSize) + 4}px`
+                  height: `${Number(styles.usernameFontSize) + 4}px`,
                 }}
               />
             ))}
@@ -109,16 +115,18 @@ export const MessageRow: React.FC<MessageRowProps> = ({
         />
       </div>
       <div
-        className={`leading-[1.4] m-0 ${isFullWidth ? 'w-full' : 'w-auto'} ${actionClass}`}
+        className={`leading-[1.4] m-0 ${isFullWidth ? "w-full" : "w-auto"} ${actionClass}`}
         style={{
-          backgroundColor: isTransparent(styles.messageBg) ? 'transparent' : styles.messageBg,
+          backgroundColor: isTransparent(styles.messageBg)
+            ? "transparent"
+            : styles.messageBg,
           color: styles.messageColor,
           fontSize: `${styles.messageFontSize}px`,
           borderRadius: `${styles.borderRadius}px`,
           padding: `${styles.messagePadding}px`,
-          wordBreak: 'break-word',
-          overflowWrap: 'break-word',
-          maxWidth: '100%'
+          wordBreak: "break-word",
+          overflowWrap: "break-word",
+          maxWidth: "100%",
         }}
         dangerouslySetInnerHTML={{ __html: processedText }}
       />

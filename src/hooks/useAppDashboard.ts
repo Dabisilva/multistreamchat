@@ -48,7 +48,7 @@ export function useAppDashboard() {
   );
   const [widgetUrl, setWidgetUrl] = useState("");
   const [viewerWidgetUrl, setViewerWidgetUrl] = useState("");
-  const [showCustomization, setShowCustomization] = useState(false);
+  const [showCustomization, setShowCustomization] = useState(true);
   const [activeFeature, setActiveFeature] = useState<AppFeature>("chat");
   const [chatSettings, setChatSettings] = useState(DEFAULT_CHAT_SETTINGS);
   const [viewerSettings, setViewerSettings] = useState(DEFAULT_VIEWER_SETTINGS);
@@ -298,7 +298,7 @@ export function useAppDashboard() {
             OAuthService.detectOAuthPlatform(state) ||
             (scope.includes("youtube") ? "youtube" : null);
 
-          window.history.replaceState({}, document.title, "/");
+          window.history.replaceState({}, document.title, "/home");
 
           if (platform === "twitch") {
             setIsLoadingTwitch(true);

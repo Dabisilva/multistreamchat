@@ -6,6 +6,7 @@ const Chat = lazy(() => import('../pages/Chat'));
 const ViewerCount = lazy(() => import('../pages/ViewerCount'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('../pages/TermsOfService'));
+const Home = lazy(() => import('../pages/Home'));
 const App = lazy(() => import('../App'));
 
 // Loading component
@@ -44,24 +45,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   };
 
   if (!isAuthenticated()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return children;
 };
-
-// Note: Login page doesn't need a route guard
-// It handles its own authentication state and shows widget URL when authenticated
 
 // Main routes component
 export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        {/* Login route - no guard needed, handles its own state */}
         <Route path="/" element={<App />} />
+        <Route path="/home" element={<Home />} />
 
-        {/* Protected route - requires authentication */}
         <Route
           path="/chat"
           element={
@@ -83,7 +80,6 @@ export const AppRoutes: React.FC = () => {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
 
-        {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
@@ -91,4 +87,3 @@ export const AppRoutes: React.FC = () => {
 };
 
 export default AppRoutes;
-
