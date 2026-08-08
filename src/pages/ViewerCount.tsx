@@ -21,7 +21,7 @@ const ViewerCount: React.FC = () => {
     letterSpacing: "0.02em",
   };
 
-  const iconSize = Math.max(Math.round(config.fontSize * 0.7), 16);
+  const iconSize = Math.max(Math.round(config.fontSize * 0.9), 16);
 
   const enabledPlatforms = PLATFORM_ORDER.filter((platform) => {
     if (platform === "twitch") return config.showTwitch;

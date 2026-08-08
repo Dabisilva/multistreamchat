@@ -62,7 +62,7 @@ export const ViewerCustomizationPanel: React.FC<
   const [platformHint, setPlatformHint] = useState("");
 
   const iconSize = Math.max(
-    Math.round(parseInt(settings.viewerFontSize, 10) * 0.7) || 22,
+    Math.round(parseInt(settings.viewerFontSize, 10) * 0.9) || 22,
     16,
   );
 
