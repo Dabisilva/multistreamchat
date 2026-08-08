@@ -287,9 +287,5 @@ export class ViewerCountService {
 }
 
 export function formatViewerCount(count: number): string {
-  if (count < 1000) return String(count);
-  if (count < 10000) return `${(count / 1000).toFixed(1).replace(/\.0$/, "")}K`;
-  if (count < 1000000)
-    return `${Math.round(count / 1000)}K`;
-  return `${(count / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  return Math.max(0, Math.floor(count)).toLocaleString("pt-BR");
 }

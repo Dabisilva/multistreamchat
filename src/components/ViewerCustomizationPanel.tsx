@@ -3,6 +3,7 @@ import CustomRangeInput from "./CustomRangeInput";
 import { ColorField } from "./ColorField";
 import { PlatformIcon } from "./PlatformIcon";
 import type { ViewerCustomizationSettings } from "../utils/widgetUrl";
+import { formatViewerCount } from "../services/ViewerCountService";
 
 interface ViewerCustomizationPanelProps {
   settings: ViewerCustomizationSettings;
@@ -50,11 +51,6 @@ export const ViewerCustomizationPanel: React.FC<
     (settings.showTwitchViews ? 1200 : 0) +
     (settings.showYoutubeViews ? 850 : 0) +
     (settings.showKickViews ? 340 : 0);
-
-  const formatPreview = (n: number) => {
-    if (n < 1000) return String(n);
-    return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
-  };
 
   return (
     <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
@@ -185,7 +181,7 @@ export const ViewerCustomizationPanel: React.FC<
                   textShadow: "0 2px 8px rgba(0,0,0,0.45)",
                 }}
               >
-                {formatPreview(sumPreviewCount)}
+                {formatViewerCount(sumPreviewCount)}
               </span>
             </div>
           ) : (
@@ -193,7 +189,7 @@ export const ViewerCustomizationPanel: React.FC<
               {settings.showTwitchViews && (
                 <PreviewCount
                   platform="twitch"
-                  count="1.2K"
+                  count="1.200"
                   fontSize={settings.viewerFontSize}
                   textColor={settings.viewerTextColor}
                 />
