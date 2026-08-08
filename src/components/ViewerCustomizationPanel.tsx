@@ -1,0 +1,223 @@
+import React from "react";
+import CustomRangeInput from "./CustomRangeInput";
+import { ColorField } from "./ColorField";
+import { PlatformIcon } from "./PlatformIcon";
+import type { ViewerCustomizationSettings } from "../utils/widgetUrl";
+
+interface ViewerCustomizationPanelProps {
+  settings: ViewerCustomizationSettings;
+  onChange: <K extends keyof ViewerCustomizationSettings>(
+    key: K,
+    value: ViewerCustomizationSettings[K],
+  ) => void;
+}
+
+const PreviewCount: React.FC<{
+  platform: "twitch" | "youtube" | "kick";
+  count: string;
+  fontSize: string;
+  textColor: string;
+}> = ({ platform, count, fontSize, textColor }) => {
+  const iconSize = Math.max(Math.round(parseInt(fontSize, 10) * 0.7) || 22, 16);
+
+  return (
+    <div className="flex items-center gap-2" style={{ color: textColor }}>
+      <PlatformIcon platform={platform} size={iconSize} branded />
+      <span
+        style={{
+          fontSize: `${fontSize}px`,
+          fontWeight: 700,
+          color: textColor,
+          lineHeight: 1,
+          textShadow: "0 2px 8px rgba(0,0,0,0.45)",
+        }}
+      >
+        {count}
+      </span>
+    </div>
+  );
+};
+
+export const ViewerCustomizationPanel: React.FC<
+  ViewerCustomizationPanelProps
+> = ({ settings, onChange }) => {
+  const iconSize = Math.max(
+    Math.round(parseInt(settings.viewerFontSize, 10) * 0.7) || 22,
+    16,
+  );
+
+  const sumPreviewCount =
+    (settings.showTwitchViews ? 1200 : 0) +
+    (settings.showYoutubeViews ? 850 : 0) +
+    (settings.showKickViews ? 340 : 0);
+
+  const formatPreview = (n: number) => {
+    if (n < 1000) return String(n);
+    return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  };
+
+  return (
+    <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
+      <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border min-w-[280px]">
+        <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">
+          Opções do Contador
+        </h3>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium text-dark-text-secondary mb-2">
+              Tamanho da fonte
+            </label>
+            <input
+              type="number"
+              min="16"
+              max="96"
+              value={settings.viewerFontSize}
+              onChange={(e) => onChange("viewerFontSize", e.target.value)}
+              className="w-full px-3 py-2 bg-dark-bg-secondary border-2 border-dark-border rounded-lg text-sm text-dark-text-primary"
+            />
+            <CustomRangeInput
+              min={16}
+              max={96}
+              step={1}
+              value={parseInt(settings.viewerFontSize, 10) || 32}
+              onChange={(value) =>
+                onChange("viewerFontSize", String(Math.round(value)))
+              }
+              label={`${settings.viewerFontSize}px`}
+            />
+          </div>
+
+          <ColorField
+            label="Cor do texto"
+            color={settings.viewerTextColor}
+            onColorChange={(value) => onChange("viewerTextColor", value)}
+          />
+
+          <div className="pt-2 border-t border-dark-border">
+            <p className="text-sm font-medium text-dark-text-secondary mb-3">
+              Plataformas
+            </p>
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.showTwitchViews}
+                  onChange={(e) =>
+                    onChange("showTwitchViews", e.target.checked)
+                  }
+                  className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-purple-500"
+                />
+                <span className="text-sm font-medium text-dark-text-secondary">
+                  Twitch
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.showYoutubeViews}
+                  onChange={(e) =>
+                    onChange("showYoutubeViews", e.target.checked)
+                  }
+                  className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-red-500"
+                />
+                <span className="text-sm font-medium text-dark-text-secondary">
+                  YouTube
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.showKickViews}
+                  onChange={(e) => onChange("showKickViews", e.target.checked)}
+                  className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-green-500"
+                />
+                <span className="text-sm font-medium text-dark-text-secondary">
+                  Kick
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-dark-border">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.sumViews}
+                onChange={(e) => onChange("sumViews", e.target.checked)}
+                className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-indigo-500"
+              />
+              <span className="text-sm font-medium text-dark-text-secondary">
+                Somar todas as views
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border min-w-[320px]">
+        <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">
+          Preview
+        </h3>
+        <div className="bg-[repeating-conic-gradient(#2a2a2a_0%_25%,#1a1a1a_0%_50%)_50%/20px_20px] rounded-lg p-8 flex items-center justify-center min-h-[160px]">
+          {settings.sumViews ? (
+            <div
+              className="flex items-center gap-3"
+              style={{ color: settings.viewerTextColor }}
+            >
+              <div className="flex items-center gap-2">
+                {settings.showTwitchViews && (
+                  <PlatformIcon platform="twitch" size={iconSize} branded />
+                )}
+                {settings.showYoutubeViews && (
+                  <PlatformIcon platform="youtube" size={iconSize} branded />
+                )}
+                {settings.showKickViews && (
+                  <PlatformIcon platform="kick" size={iconSize} branded />
+                )}
+              </div>
+              <span
+                style={{
+                  fontSize: `${settings.viewerFontSize}px`,
+                  fontWeight: 700,
+                  color: settings.viewerTextColor,
+                  lineHeight: 1,
+                  textShadow: "0 2px 8px rgba(0,0,0,0.45)",
+                }}
+              >
+                {formatPreview(sumPreviewCount)}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-5 flex-wrap justify-center">
+              {settings.showTwitchViews && (
+                <PreviewCount
+                  platform="twitch"
+                  count="1.2K"
+                  fontSize={settings.viewerFontSize}
+                  textColor={settings.viewerTextColor}
+                />
+              )}
+              {settings.showYoutubeViews && (
+                <PreviewCount
+                  platform="youtube"
+                  count="850"
+                  fontSize={settings.viewerFontSize}
+                  textColor={settings.viewerTextColor}
+                />
+              )}
+              {settings.showKickViews && (
+                <PreviewCount
+                  platform="kick"
+                  count="340"
+                  fontSize={settings.viewerFontSize}
+                  textColor={settings.viewerTextColor}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

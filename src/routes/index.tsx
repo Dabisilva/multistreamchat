@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Lazy load components for better performance
 const Chat = lazy(() => import('../pages/Chat'));
+const ViewerCount = lazy(() => import('../pages/ViewerCount'));
 const App = lazy(() => import('../App'));
 
 // Loading component
@@ -64,6 +65,15 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute>
               <Chat />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/viewers"
+          element={
+            <ProtectedRoute>
+              <ViewerCount />
             </ProtectedRoute>
           }
         />
