@@ -31,29 +31,41 @@ const ViewerCount: React.FC = () => {
 
   const iconSize = Math.max(Math.round(config.fontSize * 0.9), 16);
 
-  const enabledPlatforms = PLATFORM_ORDER.filter((platform) => {
+  const isPlatformEnabled = (platform: ViewerPlatform) => {
     if (platform === "twitch")
       return config.showTwitch && twitchAuthenticated;
     if (platform === "youtube")
       return config.showYoutube && youtubeAuthenticated;
     return config.showKick && kickConnected;
-  });
+  };
 
-  const renderSummed = (count: number) => (
+  const isPlatformLive = (platform: ViewerPlatform) =>
+    viewers.some((v) => v.platform === platform && v.isLive);
+
+  // Ícones do modo soma: só plataformas autenticadas e ao vivo
+  const livePlatforms = PLATFORM_ORDER.filter(
+    (platform) => isPlatformEnabled(platform) && isPlatformLive(platform),
+  );
+
+  const visibleViewers = viewers.filter((v) => isPlatformEnabled(v.platform));
+
+  const renderSummed = (count: number, platforms: ViewerPlatform[]) => (
     <div
       className="flex items-center gap-3"
       style={{ color: config.textColor }}
     >
-      <div className="flex items-center gap-2">
-        {enabledPlatforms.map((platform) => (
-          <PlatformIcon
-            key={platform}
-            platform={platform}
-            size={iconSize}
-            branded
-          />
-        ))}
-      </div>
+      {platforms.length > 0 && (
+        <div className="flex items-center gap-2">
+          {platforms.map((platform) => (
+            <PlatformIcon
+              key={platform}
+              platform={platform}
+              size={iconSize}
+              branded
+            />
+          ))}
+        </div>
+      )}
       <span style={textStyle}>{formatViewerCount(count)}</span>
     </div>
   );
@@ -69,15 +81,15 @@ const ViewerCount: React.FC = () => {
   if (config.sumViews) {
     return (
       <div className="h-screen w-screen bg-transparent flex items-center justify-center">
-        {renderSummed(totalViewers)}
+        {renderSummed(totalViewers, livePlatforms)}
       </div>
     );
   }
 
-  if (viewers.length === 0) {
+  if (visibleViewers.length === 0) {
     return (
       <div className="h-screen w-screen bg-transparent flex items-center justify-center">
-        {renderSummed(0)}
+        {renderSummed(0, [])}
       </div>
     );
   }
@@ -85,20 +97,27 @@ const ViewerCount: React.FC = () => {
   return (
     <div className="h-screen w-screen bg-transparent flex items-center justify-center">
       <div className="flex items-center gap-6 flex-wrap justify-center">
-        {viewers.map((v) => (
-          <div
-            key={v.platform}
-            className="flex items-center gap-2"
-            style={{ color: config.textColor }}
-          >
-            <PlatformIcon
-              platform={v.platform as ViewerPlatform}
-              size={iconSize}
-              branded
-            />
-            <span style={textStyle}>{formatViewerCount(v.count ?? 0)}</span>
-          </div>
-        ))}
+        {visibleViewers.map((v) => {
+          const count = v.isLive ? (v.count ?? 0) : 0;
+
+          return (
+            <div
+              key={v.platform}
+              className="flex items-center gap-2"
+              style={{
+                color: config.textColor,
+                opacity: v.isLive ? 1 : 0.45,
+              }}
+            >
+              <PlatformIcon
+                platform={v.platform as ViewerPlatform}
+                size={iconSize}
+                branded
+              />
+              <span style={textStyle}>{formatViewerCount(count)}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

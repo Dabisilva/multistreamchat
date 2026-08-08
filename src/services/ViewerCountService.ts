@@ -146,20 +146,24 @@ export class ViewerCountService {
 
       const data = await response.json();
       const livestream = data.livestream;
+      const isLive =
+        !!livestream &&
+        livestream.is_live !== false &&
+        livestream.isLive !== false;
 
-      if (!livestream) {
+      if (!isLive) {
         return { platform: "kick", count: 0, isLive: false };
       }
 
       const count =
         livestream.viewer_count ??
         livestream.viewers ??
-        data.livestream?.viewer_count ??
+        livestream.viewerCount ??
         0;
 
       return {
         platform: "kick",
-        count: typeof count === "number" ? count : 0,
+        count: typeof count === "number" ? count : Number(count) || 0,
         isLive: true,
       };
     } catch {
@@ -261,10 +265,13 @@ export class ViewerCountService {
 
       const data = await response.json();
       const video = data.items?.[0];
-      const concurrent = video?.liveStreamingDetails?.concurrentViewers;
+      const details = video?.liveStreamingDetails;
+      const concurrent = details?.concurrentViewers;
+      const hasEnded = !!details?.actualEndTime;
+      const isLive = concurrent != null && !hasEnded;
 
-      if (concurrent == null) {
-        // Stream may have ended
+      if (!isLive) {
+        // Stream may have ended or never started
         this.youtubeVideoId = null;
         return { platform: "youtube", count: 0, isLive: false };
       }

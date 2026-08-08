@@ -264,7 +264,9 @@ export const useViewerCount = () => {
     };
   }, [config.showTwitch, config.showKick, config.showYoutube]);
 
-  const totalViewers = viewers.reduce((sum, v) => sum + (v.count ?? 0), 0);
+  const totalViewers = viewers
+    .filter((v) => v.isLive)
+    .reduce((sum, v) => sum + (v.count ?? 0), 0);
 
   return {
     viewers,
