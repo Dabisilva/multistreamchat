@@ -33,8 +33,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const urlParams = new URLSearchParams(window.location.search);
     const hasTwitchAuth = urlParams.has('twitchChannel') && urlParams.has('twitchToken');
     const hasKickChannel = urlParams.has('kickChannel'); // Kick doesn't need OAuth
+    const hasYoutubeAuth =
+      urlParams.has('youtubeChannel') && urlParams.has('youtubeToken');
+    const youtubeToken = localStorage.getItem('youtubeToken');
 
-    return (twitchToken || hasTwitchAuth || hasKickChannel);
+    return !!(twitchToken || hasTwitchAuth || hasKickChannel || youtubeToken || hasYoutubeAuth);
   };
 
   if (!isAuthenticated()) {

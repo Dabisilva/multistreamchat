@@ -17,6 +17,8 @@
   --color-twitch-dark: #7c3aed;
   --color-kick: #53fc18;
   --color-kick-dark: #42d914;
+  --color-youtube: #ff0000;
+  --color-youtube-dark: #cc0000;
 
   /* Responsive breakpoints */
   --breakpoint-xl: 88rem;

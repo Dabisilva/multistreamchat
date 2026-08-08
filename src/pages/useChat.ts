@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ChatMessage, ChatConfig } from "../types";
 import { TwitchChatService } from "../services/TwitchChat";
 import { KickChatService } from "../services/KickChat";
+import { YoutubeChatService } from "../services/YoutubeChat";
 import { shouldHideMessage } from "../utils/messageUtils";
 import OAuthService from "../services/OAuthService";
 
@@ -14,6 +15,8 @@ const SERVICE_RECONNECT_DELAY_MS = 100;
 const PROCESSED_MESSAGES_LIMIT = 1000;
 const PROCESSED_MESSAGES_KEEP = 500;
 const SCROLL_THRESHOLD = 100;
+
+type ChatService = TwitchChatService | KickChatService | YoutubeChatService;
 
 const PRIVILEGED_BADGES = [
   "lead_moderator",
@@ -48,11 +51,9 @@ const DEFAULT_STYLES = {
 };
 
 function manageService(
-  serviceRef: React.MutableRefObject<
-    TwitchChatService | KickChatService | null
-  >,
+  serviceRef: React.MutableRefObject<ChatService | null>,
   channel: string,
-  createService: () => TwitchChatService | KickChatService,
+  createService: () => ChatService,
 ) {
   if (!channel) {
     if (serviceRef.current) {
@@ -70,7 +71,7 @@ function manageService(
     const timeoutId = setTimeout(() => {
       const service = createService();
       service.connect();
-      serviceRef.current = service as TwitchChatService | KickChatService;
+      serviceRef.current = service;
     }, SERVICE_RECONNECT_DELAY_MS);
 
     return () => {
@@ -84,7 +85,7 @@ function manageService(
 
   const service = createService();
   service.connect();
-  serviceRef.current = service as TwitchChatService | KickChatService;
+  serviceRef.current = service;
 
   return () => {
     if (serviceRef.current) {
@@ -99,7 +100,11 @@ export const useChat = () => {
   const [config] = useState<ChatConfig>(DEFAULT_CONFIG);
   const [twitchChannel, setTwitchChannel] = useState<string>("");
   const [kickChannel, setKickChannel] = useState<string>("");
+  const [youtubeChannel, setYoutubeChannel] = useState<string>("");
   const [twitchOauthToken, setTwitchOauthToken] = useState<string>("");
+  const [youtubeOauthToken, setYoutubeOauthToken] = useState<string>("");
+  const [youtubeChannelId, setYoutubeChannelId] = useState<string>("");
+  const [youtubeLiveChatId, setYoutubeLiveChatId] = useState<string>("");
   const [broadcasterId, setBroadcasterId] = useState<string>("");
   const [clientId, setClientId] = useState<string>("");
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
@@ -108,10 +113,14 @@ export const useChat = () => {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const pendingTimeoutsRef = useRef<
-    Map<string, { timeout: NodeJS.Timeout; message: ChatMessage }>
+    Map<
+      string,
+      { timeout: ReturnType<typeof setTimeout>; message: ChatMessage }
+    >
   >(new Map());
   const twitchServiceRef = useRef<TwitchChatService | null>(null);
   const kickServiceRef = useRef<KickChatService | null>(null);
+  const youtubeServiceRef = useRef<YoutubeChatService | null>(null);
   const processedMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Token refresh logic
@@ -151,8 +160,47 @@ export const useChat = () => {
     return twitchToken;
   };
 
+  const refreshYoutubeTokenIfNeeded = async (): Promise<string | null> => {
+    const youtubeToken = localStorage.getItem("youtubeToken");
+    const refreshToken = localStorage.getItem("youtubeRefreshToken");
+    const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+
+    if (!youtubeToken || !refreshToken) return null;
+
+    const shouldRefresh =
+      !expiresAt ||
+      parseInt(expiresAt) - Date.now() < TOKEN_REFRESH_THRESHOLD_MS;
+
+    if (shouldRefresh) {
+      try {
+        const tokenResponse =
+          await OAuthService.refreshYoutubeToken(refreshToken);
+        const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
+
+        localStorage.setItem("youtubeToken", tokenResponse.access_token);
+        localStorage.setItem("youtubeTokenExpiresAt", newExpiresAt.toString());
+        if (tokenResponse.refresh_token) {
+          localStorage.setItem(
+            "youtubeRefreshToken",
+            tokenResponse.refresh_token,
+          );
+        }
+
+        setYoutubeOauthToken(tokenResponse.access_token);
+        return tokenResponse.access_token;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    return youtubeToken;
+  };
+
   const refreshTwitchTokenRef = useRef(refreshTwitchTokenIfNeeded);
   refreshTwitchTokenRef.current = refreshTwitchTokenIfNeeded;
+
+  const refreshYoutubeTokenRef = useRef(refreshYoutubeTokenIfNeeded);
+  refreshYoutubeTokenRef.current = refreshYoutubeTokenIfNeeded;
 
   // Parse URL parameters helper
   const parseUrlParams = () => {
@@ -165,6 +213,12 @@ export const useChat = () => {
       refreshToken: params.get("refreshToken"),
       expiresAt: params.get("expiresAt"),
       kickChannel: params.get("kickChannel"),
+      youtubeChannel: params.get("youtubeChannel"),
+      youtubeToken: params.get("youtubeToken"),
+      youtubeChannelId: params.get("youtubeChannelId"),
+      youtubeLiveChatId: params.get("youtubeLiveChatId"),
+      youtubeRefreshToken: params.get("youtubeRefreshToken"),
+      youtubeExpiresAt: params.get("youtubeExpiresAt"),
       messageDelay: params.get("messageDelay"),
       styles: {
         usernameBg: params.get("usernameBg") || DEFAULT_STYLES.usernameBg,
@@ -201,7 +255,8 @@ export const useChat = () => {
     // Handle URL params (widget URL - takes priority)
     const hasUrlParams =
       (urlParams.twitchChannel && urlParams.twitchToken) ||
-      urlParams.kickChannel;
+      urlParams.kickChannel ||
+      (urlParams.youtubeChannel && urlParams.youtubeToken);
 
     if (hasUrlParams) {
       if (urlParams.twitchChannel && urlParams.twitchToken) {
@@ -231,6 +286,37 @@ export const useChat = () => {
       if (urlParams.kickChannel) {
         setKickChannel(urlParams.kickChannel);
       }
+
+      if (urlParams.youtubeChannel && urlParams.youtubeToken) {
+        setYoutubeChannel(urlParams.youtubeChannel);
+        setYoutubeOauthToken(urlParams.youtubeToken);
+        if (urlParams.youtubeChannelId)
+          setYoutubeChannelId(urlParams.youtubeChannelId);
+        if (urlParams.youtubeLiveChatId)
+          setYoutubeLiveChatId(urlParams.youtubeLiveChatId);
+
+        localStorage.setItem("youtubeToken", urlParams.youtubeToken);
+        localStorage.setItem(
+          "youtubeChannelInfo",
+          JSON.stringify({
+            username: urlParams.youtubeChannel,
+            id: urlParams.youtubeChannelId,
+            platform: "youtube",
+          }),
+        );
+        if (urlParams.youtubeChannelId)
+          localStorage.setItem("youtubeChannelId", urlParams.youtubeChannelId);
+        if (urlParams.youtubeRefreshToken)
+          localStorage.setItem(
+            "youtubeRefreshToken",
+            urlParams.youtubeRefreshToken,
+          );
+        if (urlParams.youtubeExpiresAt)
+          localStorage.setItem(
+            "youtubeTokenExpiresAt",
+            urlParams.youtubeExpiresAt,
+          );
+      }
       return;
     }
 
@@ -238,6 +324,8 @@ export const useChat = () => {
     const twitchToken = localStorage.getItem("twitchToken");
     const twitchChannelInfo = localStorage.getItem("twitchChannelInfo");
     const savedKickChannel = localStorage.getItem("kickChannel");
+    const youtubeToken = localStorage.getItem("youtubeToken");
+    const youtubeChannelInfo = localStorage.getItem("youtubeChannelInfo");
 
     if (twitchToken && twitchChannelInfo) {
       try {
@@ -254,6 +342,22 @@ export const useChat = () => {
 
     if (savedKickChannel) {
       setKickChannel(savedKickChannel);
+    }
+
+    if (youtubeToken && youtubeChannelInfo) {
+      try {
+        const validToken = await refreshYoutubeTokenIfNeeded();
+        if (validToken) {
+          const channelInfo = JSON.parse(youtubeChannelInfo);
+          setYoutubeOauthToken(validToken);
+          setYoutubeChannel(channelInfo.username);
+          setYoutubeChannelId(
+            channelInfo.id || localStorage.getItem("youtubeChannelId") || "",
+          );
+        }
+      } catch (e) {
+        // Error parsing channel info
+      }
     }
   };
 
@@ -418,26 +522,28 @@ export const useChat = () => {
   }, [twitchOauthToken]);
 
   useEffect(() => {
-    return manageService(
-      twitchServiceRef as React.MutableRefObject<
-        TwitchChatService | KickChatService | null
-      >,
-      twitchChannel,
-      () => {
-        const twitchClientId =
-          clientId || localStorage.getItem("twitchClientId") || undefined;
-        const userInfo = getTwitchUserInfo();
+    if (!youtubeOauthToken) return;
+    const intervalId = setInterval(() => {
+      void refreshYoutubeTokenRef.current();
+    }, TOKEN_REFRESH_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, [youtubeOauthToken]);
 
-        return new TwitchChatService(twitchChannel, handleNewMessage, {
-          clientId: twitchClientId,
-          oauthToken: twitchOauthToken || undefined,
-          userInfo,
-          onMessageDelete: removeMessageByMsgId,
-          onUserBanned: removeMessagesByUser,
-          onTokenRefresh: refreshTwitchTokenIfNeeded,
-        });
-      },
-    );
+  useEffect(() => {
+    return manageService(twitchServiceRef, twitchChannel, () => {
+      const twitchClientId =
+        clientId || localStorage.getItem("twitchClientId") || undefined;
+      const userInfo = getTwitchUserInfo();
+
+      return new TwitchChatService(twitchChannel, handleNewMessage, {
+        clientId: twitchClientId,
+        oauthToken: twitchOauthToken || undefined,
+        userInfo,
+        onMessageDelete: removeMessageByMsgId,
+        onUserBanned: removeMessagesByUser,
+        onTokenRefresh: refreshTwitchTokenIfNeeded,
+      });
+    });
   }, [
     twitchChannel,
     twitchOauthToken,
@@ -450,20 +556,38 @@ export const useChat = () => {
   ]);
 
   useEffect(() => {
+    return manageService(kickServiceRef, kickChannel, () => {
+      return new KickChatService(kickChannel, handleNewMessage, {
+        onMessageDelete: removeMessageByMsgId,
+        onUserBanned: removeMessagesByUser,
+      });
+    });
+  }, [
+    kickChannel,
+    config.hideCommands,
+    config.ignoredUsers,
+    messageDelay,
+    config.messagesLimit,
+  ]);
+
+  useEffect(() => {
     return manageService(
-      kickServiceRef as React.MutableRefObject<
-        TwitchChatService | KickChatService | null
-      >,
-      kickChannel,
+      youtubeServiceRef,
+      youtubeChannel && youtubeOauthToken ? youtubeChannel : "",
       () => {
-        return new KickChatService(kickChannel, handleNewMessage, {
-          onMessageDelete: removeMessageByMsgId,
-          onUserBanned: removeMessagesByUser,
+        return new YoutubeChatService(youtubeChannel, handleNewMessage, {
+          oauthToken: youtubeOauthToken || undefined,
+          channelId: youtubeChannelId || undefined,
+          liveChatId: youtubeLiveChatId || undefined,
+          onTokenRefresh: refreshYoutubeTokenIfNeeded,
         });
       },
     );
   }, [
-    kickChannel,
+    youtubeChannel,
+    youtubeOauthToken,
+    youtubeChannelId,
+    youtubeLiveChatId,
     config.hideCommands,
     config.ignoredUsers,
     messageDelay,
@@ -503,6 +627,7 @@ export const useChat = () => {
       pendingTimeoutsRef.current.clear();
       twitchServiceRef.current?.disconnect();
       kickServiceRef.current?.disconnect();
+      youtubeServiceRef.current?.disconnect();
     };
   }, []);
 

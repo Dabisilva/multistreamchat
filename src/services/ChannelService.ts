@@ -9,7 +9,7 @@ export interface ChannelInfo {
   followers?: number;
   subscribers?: number;
   isLive?: boolean;
-  platform: 'twitch' | 'kick';
+  platform: 'twitch' | 'kick' | 'youtube';
 }
 
 export interface ChannelBadges {

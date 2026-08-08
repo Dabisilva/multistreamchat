@@ -10,7 +10,7 @@ export interface ChatMessage {
   thirdPartyEmotes?: Emote[]; // BTTV, FFZ, 7TV emotes
   isAction: boolean;
   timestamp: number;
-  provider: 'twitch' | 'kick';
+  provider: 'twitch' | 'kick' | 'youtube';
   channel: string;
   msgId: string;
 }
@@ -167,7 +167,7 @@ export interface KickMessageResponse {
 }
 
 // Platform types
-export type Platform = 'twitch' | 'kick';
+export type Platform = 'twitch' | 'kick' | 'youtube';
 
 // Legacy message interface (for compatibility)
 export interface LegacyChatMessage {

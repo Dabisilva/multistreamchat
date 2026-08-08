@@ -6,6 +6,7 @@ import { MessageRow } from "./components/MessageRow";
 import "./style.css";
 
 const baseUrl = window.location.origin;
+
 interface LoginProps {
   onLogin?: (
     twitchToken: string,
@@ -16,16 +17,17 @@ interface LoginProps {
 
 const App: React.FC<LoginProps> = () => {
   const [isLoadingTwitch, setIsLoadingTwitch] = useState(false);
+  const [isLoadingYoutube, setIsLoadingYoutube] = useState(false);
   const [error, setError] = useState("");
   const [twitchAuthenticated, setTwitchAuthenticated] = useState(false);
+  const [youtubeAuthenticated, setYoutubeAuthenticated] = useState(false);
   const [kickChannel, setKickChannel] = useState(
     localStorage.getItem("kickChannel") || "",
   );
   const [kickChannelSaved, setKickChannelSaved] = useState(
     !!localStorage.getItem("kickChannel"),
   );
-  const [twitchWidgetUrl, setTwitchWidgetUrl] = useState("");
-  const [kickWidgetUrl, setKickWidgetUrl] = useState("");
+  const [widgetUrl, setWidgetUrl] = useState("");
   const [showCustomization, setShowCustomization] = useState(false);
 
   // Customization options
@@ -42,6 +44,114 @@ const App: React.FC<LoginProps> = () => {
   const [messageDelay, setMessageDelay] = useState("5");
   const [fullWidthMessages, setFullWidthMessages] = useState(false);
 
+  // Helper function to convert hex to RGBA
+  const hexToRgba = (hex: string, alpha: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const getCustomizationParams = () => {
+    const usernameBgRgba = hexToRgba(usernameBgColor, usernameBgAlpha);
+    const messageBgRgba = hexToRgba(messageBgColor, messageBgAlpha);
+    const messageColorRgba = hexToRgba(messageTextColor, messageTextAlpha);
+
+    return (
+      `&usernameBg=${encodeURIComponent(usernameBgRgba)}` +
+      `&messageBg=${encodeURIComponent(messageBgRgba)}` +
+      `&messageColor=${encodeURIComponent(messageColorRgba)}` +
+      `&borderRadius=${borderRadius}` +
+      `&usernameFontSize=${usernameFontSize}` +
+      `&messageFontSize=${messageFontSize}` +
+      `&messagePadding=${messagePadding}` +
+      `&messageDelay=${messageDelay}` +
+      `&fullWidthMessages=${fullWidthMessages}`
+    );
+  };
+
+  const buildWidgetUrl = (): string => {
+    const params: string[] = [];
+
+    const twitchToken = localStorage.getItem("twitchToken");
+    const twitchUser = localStorage.getItem("twitchUserInfo");
+    if (twitchToken && twitchUser) {
+      try {
+        const userData = JSON.parse(twitchUser);
+        const storedClientId =
+          localStorage.getItem("twitchClientId") ||
+          (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
+          "kimne78kx3ncx6brgo4mv6wki5h1ko";
+        const broadcasterId = userData.broadcasterId || userData.id;
+        const storedRefreshToken = localStorage.getItem("twitchRefreshToken");
+        const storedExpiresAt = localStorage.getItem("twitchTokenExpiresAt");
+
+        params.push(`twitchChannel=${encodeURIComponent(userData.username)}`);
+        params.push(`twitchToken=${encodeURIComponent(twitchToken)}`);
+        params.push(`broadcasterId=${encodeURIComponent(broadcasterId)}`);
+        params.push(`clientId=${encodeURIComponent(storedClientId)}`);
+        if (storedRefreshToken) {
+          params.push(
+            `refreshToken=${encodeURIComponent(storedRefreshToken)}`,
+          );
+        }
+        if (storedExpiresAt) {
+          params.push(`expiresAt=${encodeURIComponent(storedExpiresAt)}`);
+        }
+      } catch {
+        // ignore invalid twitch user json
+      }
+    }
+
+    const savedKickChannel = localStorage.getItem("kickChannel");
+    if (savedKickChannel) {
+      params.push(`kickChannel=${encodeURIComponent(savedKickChannel)}`);
+    }
+
+    const youtubeToken = localStorage.getItem("youtubeToken");
+    const youtubeUser = localStorage.getItem("youtubeUserInfo");
+    if (youtubeToken && youtubeUser) {
+      try {
+        const userData = JSON.parse(youtubeUser);
+        const channelId =
+          userData.broadcasterId ||
+          userData.id ||
+          localStorage.getItem("youtubeChannelId") ||
+          "";
+        const storedRefreshToken = localStorage.getItem("youtubeRefreshToken");
+        const storedExpiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+
+        params.push(
+          `youtubeChannel=${encodeURIComponent(userData.username)}`,
+        );
+        params.push(`youtubeToken=${encodeURIComponent(youtubeToken)}`);
+        if (channelId) {
+          params.push(`youtubeChannelId=${encodeURIComponent(channelId)}`);
+        }
+        if (storedRefreshToken) {
+          params.push(
+            `youtubeRefreshToken=${encodeURIComponent(storedRefreshToken)}`,
+          );
+        }
+        if (storedExpiresAt) {
+          params.push(
+            `youtubeExpiresAt=${encodeURIComponent(storedExpiresAt)}`,
+          );
+        }
+      } catch {
+        // ignore invalid youtube user json
+      }
+    }
+
+    if (params.length === 0) return "";
+
+    return `${baseUrl}/chat?${params.join("&")}${getCustomizationParams()}`;
+  };
+
+  const refreshWidgetUrl = () => {
+    setWidgetUrl(buildWidgetUrl());
+  };
+
   // Process Twitch OAuth callback
   const processTwitchOAuthCallback = async (code: string, state: string) => {
     try {
@@ -54,15 +164,12 @@ const App: React.FC<LoginProps> = () => {
         tokenResponse.access_token,
       );
 
-      // Get the client ID that was used for OAuth
       const clientId =
         (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
         "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
-      // Calculate token expiration time (expires_in is in seconds)
       const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
-      // Store tokens, client ID, expiration time, and user info
       localStorage.setItem("twitchToken", tokenResponse.access_token);
       localStorage.setItem("twitchClientId", clientId);
       localStorage.setItem("twitchTokenExpiresAt", expiresAt.toString());
@@ -81,25 +188,63 @@ const App: React.FC<LoginProps> = () => {
         localStorage.setItem("twitchRefreshToken", tokenResponse.refresh_token);
       }
 
-      // Generate widget URL with all necessary parameters
-      const broadcasterId = userData.broadcasterId || userData.id;
-      let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${clientId}`;
-
-      // Include refresh token in URL for OBS compatibility (OBS has separate localStorage)
-      if (tokenResponse.refresh_token) {
-        widget += `&refreshToken=${encodeURIComponent(tokenResponse.refresh_token)}`;
-      }
-
-      // Include expiration time
-      widget += `&expiresAt=${expiresAt}${getCustomizationParams()}`;
-
-      setTwitchWidgetUrl(widget);
       setTwitchAuthenticated(true);
+      refreshWidgetUrl();
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Erro ao processar autenticação da Twitch",
+      );
+      throw err;
+    }
+  };
+
+  // Process YouTube OAuth callback
+  const processYoutubeOAuthCallback = async (code: string, state: string) => {
+    try {
+      const tokenResponse = await OAuthService.handleOAuthCallback(
+        "youtube",
+        code,
+        state,
+      );
+
+      const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
+
+      // Persist token first so a later user-info failure doesn't lose the session
+      localStorage.setItem("youtubeToken", tokenResponse.access_token);
+      localStorage.setItem("youtubeTokenExpiresAt", expiresAt.toString());
+      if (tokenResponse.refresh_token) {
+        localStorage.setItem(
+          "youtubeRefreshToken",
+          tokenResponse.refresh_token,
+        );
+      }
+
+      const userData = await OAuthService.getYoutubeUserInfo(
+        tokenResponse.access_token,
+      );
+
+      localStorage.setItem("youtubeUserInfo", JSON.stringify(userData));
+      localStorage.setItem("youtubeChannelId", userData.id);
+      localStorage.setItem(
+        "youtubeChannelInfo",
+        JSON.stringify({
+          username: userData.username,
+          displayName: userData.displayName,
+          id: userData.id,
+          platform: "youtube",
+        }),
+      );
+
+      setYoutubeAuthenticated(true);
+      setError("");
+      refreshWidgetUrl();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Erro ao processar autenticação do YouTube",
       );
       throw err;
     }
@@ -115,7 +260,6 @@ const App: React.FC<LoginProps> = () => {
       return null;
     }
 
-    // Check if token expires within the next 10 minutes (600000 ms)
     const shouldRefresh =
       !expiresAt || parseInt(expiresAt) - Date.now() < 600000;
 
@@ -124,10 +268,8 @@ const App: React.FC<LoginProps> = () => {
         const tokenResponse =
           await OAuthService.refreshTwitchToken(refreshToken);
 
-        // Calculate new expiration time
         const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
-        // Update stored tokens
         localStorage.setItem("twitchToken", tokenResponse.access_token);
         localStorage.setItem("twitchTokenExpiresAt", newExpiresAt.toString());
 
@@ -138,39 +280,11 @@ const App: React.FC<LoginProps> = () => {
           );
         }
 
-        // Update widget URL with new token
-        const twitchUser = localStorage.getItem("twitchUserInfo");
-        if (twitchUser) {
-          const userData = JSON.parse(twitchUser);
-          const storedClientId =
-            localStorage.getItem("twitchClientId") ||
-            (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
-            "kimne78kx3ncx6brgo4mv6wki5h1ko";
-          const broadcasterId = userData.broadcasterId || userData.id;
-          const savedKickChannel = localStorage.getItem("kickChannel");
-
-          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${tokenResponse.access_token}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
-
-          // Include refresh token in URL for OBS compatibility
-          if (tokenResponse.refresh_token) {
-            widget += `&refreshToken=${encodeURIComponent(tokenResponse.refresh_token)}`;
-          }
-
-          // Include expiration time
-          widget += `&expiresAt=${newExpiresAt}${getCustomizationParams()}`;
-
-          if (savedKickChannel) {
-            widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
-          }
-
-          setTwitchWidgetUrl(widget);
-        }
-
+        refreshWidgetUrl();
         return tokenResponse.access_token;
       } catch (err) {
-        // Token refresh failed - user needs to re-authenticate
         handleTwitchSignOut();
-        setError("Sua sessão expirou. Por favor, faça login novamente.");
+        setError("Sua sessão da Twitch expirou. Por favor, faça login novamente.");
         return null;
       }
     }
@@ -178,148 +292,180 @@ const App: React.FC<LoginProps> = () => {
     return twitchToken;
   };
 
+  const refreshYoutubeTokenIfNeeded = async (): Promise<string | null> => {
+    const youtubeToken = localStorage.getItem("youtubeToken");
+    const refreshToken = localStorage.getItem("youtubeRefreshToken");
+    const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+
+    if (!youtubeToken || !refreshToken) {
+      return null;
+    }
+
+    const shouldRefresh =
+      !expiresAt || parseInt(expiresAt) - Date.now() < 600000;
+
+    if (shouldRefresh) {
+      try {
+        const tokenResponse =
+          await OAuthService.refreshYoutubeToken(refreshToken);
+
+        const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
+
+        localStorage.setItem("youtubeToken", tokenResponse.access_token);
+        localStorage.setItem("youtubeTokenExpiresAt", newExpiresAt.toString());
+
+        if (tokenResponse.refresh_token) {
+          localStorage.setItem(
+            "youtubeRefreshToken",
+            tokenResponse.refresh_token,
+          );
+        }
+
+        refreshWidgetUrl();
+        return tokenResponse.access_token;
+      } catch (err) {
+        handleYoutubeSignOut();
+        setError(
+          "Sua sessão do YouTube expirou. Por favor, faça login novamente.",
+        );
+        return null;
+      }
+    }
+
+    return youtubeToken;
+  };
+
   const refreshTwitchTokenRef = useRef(refreshTwitchTokenIfNeeded);
   refreshTwitchTokenRef.current = refreshTwitchTokenIfNeeded;
+  const refreshYoutubeTokenRef = useRef(refreshYoutubeTokenIfNeeded);
+  refreshYoutubeTokenRef.current = refreshYoutubeTokenIfNeeded;
 
   // Initialize on component mount
   useEffect(() => {
     const init = async () => {
-      // First, process OAuth callback if present (new authentication)
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
       const state = urlParams.get("state");
       const urlError = urlParams.get("error");
+      const scope = urlParams.get("scope") || "";
 
       if (urlError) {
-        setError(`Erro de autenticação: ${urlError}`);
+        setError(
+          `Erro de autenticação: ${urlError}${urlParams.get("error_description") ? ` — ${urlParams.get("error_description")}` : ""}`,
+        );
       }
 
       if (code && state) {
-        const twitchState = localStorage.getItem("twitch_oauth_state");
+        // Survive React StrictMode remounts (refs reset; sessionStorage does not)
+        const handledKey = `oauth_code_handled_${code.slice(0, 24)}`;
+        if (!sessionStorage.getItem(handledKey)) {
+          sessionStorage.setItem(handledKey, "1");
 
-        if (state === twitchState) {
-          setIsLoadingTwitch(true);
-          try {
-            await processTwitchOAuthCallback(code, state);
-          } catch (err) {
-            // Error already handled in processTwitchOAuthCallback
-          } finally {
-            setIsLoadingTwitch(false);
+          const platform =
+            OAuthService.detectOAuthPlatform(state) ||
+            (scope.includes("youtube") ? "youtube" : null);
+
+          // Clear OAuth query params immediately to avoid double-handling
+          window.history.replaceState({}, document.title, "/");
+
+          if (platform === "twitch") {
+            setIsLoadingTwitch(true);
+            try {
+              await processTwitchOAuthCallback(code, state);
+            } catch (err) {
+              // Error already handled
+            } finally {
+              setIsLoadingTwitch(false);
+            }
+          } else if (platform === "youtube") {
+            setIsLoadingYoutube(true);
+            try {
+              await processYoutubeOAuthCallback(code, state);
+            } catch (err) {
+              // Error already handled
+            } finally {
+              setIsLoadingYoutube(false);
+            }
+          } else {
+            setError(
+              "Callback OAuth recebido, mas a sessão local expirou. Clique em Login YouTube/Twitch novamente.",
+            );
           }
         }
       }
 
-      // Check for existing Twitch authentication and refresh if needed
       const twitchToken = localStorage.getItem("twitchToken");
       const twitchUser = localStorage.getItem("twitchUserInfo");
+      const youtubeToken = localStorage.getItem("youtubeToken");
+      const youtubeUser = localStorage.getItem("youtubeUserInfo");
       const savedKickChannel = localStorage.getItem("kickChannel");
 
       if (twitchToken && twitchUser) {
-        // Validate and refresh token if needed
         const validToken = await refreshTwitchTokenIfNeeded();
-
         if (validToken) {
-          const userData = JSON.parse(twitchUser);
-          const storedClientId =
-            localStorage.getItem("twitchClientId") ||
-            (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
-            "kimne78kx3ncx6brgo4mv6wki5h1ko";
-          const broadcasterId = userData.broadcasterId || userData.id;
-          const storedRefreshToken = localStorage.getItem("twitchRefreshToken");
-          const storedExpiresAt = localStorage.getItem("twitchTokenExpiresAt");
-
-          let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${validToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
-
-          // Include refresh token in URL for OBS compatibility
-          if (storedRefreshToken) {
-            widget += `&refreshToken=${encodeURIComponent(storedRefreshToken)}`;
-          }
-
-          // Include expiration time
-          if (storedExpiresAt) {
-            widget += `&expiresAt=${storedExpiresAt}`;
-          }
-
-          widget += getCustomizationParams();
-
-          // If there's a saved Kick channel, append it
-          if (savedKickChannel) {
-            setKickChannel(savedKickChannel);
-            widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
-          }
-
-          setTwitchWidgetUrl(widget);
           setTwitchAuthenticated(true);
-          setError("");
         }
-      } else if (savedKickChannel) {
-        // If only Kick channel is saved (no Twitch)
-        setKickChannel(savedKickChannel);
-        setKickWidgetUrl(
-          `${baseUrl}/chat?kickChannel=${encodeURIComponent(savedKickChannel)}`,
-        );
       }
+
+      if (youtubeToken && youtubeUser) {
+        const validToken = await refreshYoutubeTokenIfNeeded();
+        if (validToken) {
+          setYoutubeAuthenticated(true);
+        }
+      } else if (youtubeToken && !youtubeUser) {
+        // Token saved but profile fetch previously failed — retry
+        try {
+          const userData = await OAuthService.getYoutubeUserInfo(youtubeToken);
+          localStorage.setItem("youtubeUserInfo", JSON.stringify(userData));
+          localStorage.setItem("youtubeChannelId", userData.id);
+          localStorage.setItem(
+            "youtubeChannelInfo",
+            JSON.stringify({
+              username: userData.username,
+              displayName: userData.displayName,
+              id: userData.id,
+              platform: "youtube",
+            }),
+          );
+          setYoutubeAuthenticated(true);
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Falha ao carregar canal do YouTube. Ative a YouTube Data API v3 no Google Cloud.",
+          );
+        }
+      }
+
+      if (savedKickChannel) {
+        setKickChannel(savedKickChannel);
+        setKickChannelSaved(true);
+      }
+
+      refreshWidgetUrl();
     };
 
     void init();
   }, []);
 
-  // Set up periodic token refresh check (every 1 hour)
+  // Periodic token refresh
   useEffect(() => {
-    if (!twitchAuthenticated) return;
+    if (!twitchAuthenticated && !youtubeAuthenticated) return;
 
     const intervalId = setInterval(
       () => {
-        void refreshTwitchTokenRef.current();
+        if (twitchAuthenticated) void refreshTwitchTokenRef.current();
+        if (youtubeAuthenticated) void refreshYoutubeTokenRef.current();
       },
       60 * 60 * 1000,
-    ); // Check every 1 hour
+    );
 
     return () => clearInterval(intervalId);
-  }, [twitchAuthenticated]);
+  }, [twitchAuthenticated, youtubeAuthenticated]);
 
   // Update widget URL when customization changes
   useEffect(() => {
-    if (twitchWidgetUrl || kickWidgetUrl) {
-      const baseUrl = window.location.origin;
-      const twitchToken = localStorage.getItem("twitchToken");
-      const twitchUser = localStorage.getItem("twitchUserInfo");
-      const storedClientId =
-        localStorage.getItem("twitchClientId") ||
-        (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
-        "kimne78kx3ncx6brgo4mv6wki5h1ko";
-      const savedKickChannel = localStorage.getItem("kickChannel");
-
-      if (twitchToken && twitchUser) {
-        const userData = JSON.parse(twitchUser);
-        const broadcasterId = userData.broadcasterId || userData.id;
-        const storedRefreshToken = localStorage.getItem("twitchRefreshToken");
-        const storedExpiresAt = localStorage.getItem("twitchTokenExpiresAt");
-
-        let widget = `${baseUrl}/chat?twitchChannel=${userData.username}&twitchToken=${twitchToken}&broadcasterId=${broadcasterId}&clientId=${storedClientId}`;
-
-        // Include refresh token in URL for OBS compatibility
-        if (storedRefreshToken) {
-          widget += `&refreshToken=${encodeURIComponent(storedRefreshToken)}`;
-        }
-
-        // Include expiration time
-        if (storedExpiresAt) {
-          widget += `&expiresAt=${storedExpiresAt}`;
-        }
-
-        widget += getCustomizationParams();
-
-        if (savedKickChannel) {
-          widget += `&kickChannel=${encodeURIComponent(savedKickChannel)}`;
-        }
-
-        setTwitchWidgetUrl(widget);
-      } else if (kickWidgetUrl && savedKickChannel) {
-        const url = `${baseUrl}/chat?kickChannel=${encodeURIComponent(savedKickChannel)}${getCustomizationParams()}`;
-        setKickWidgetUrl(url);
-      }
-    }
+    refreshWidgetUrl();
   }, [
     usernameBgColor,
     messageBgColor,
@@ -333,6 +479,9 @@ const App: React.FC<LoginProps> = () => {
     messagePadding,
     messageDelay,
     fullWidthMessages,
+    twitchAuthenticated,
+    youtubeAuthenticated,
+    kickChannelSaved,
   ]);
 
   const handleTwitchOAuth = async () => {
@@ -347,6 +496,22 @@ const App: React.FC<LoginProps> = () => {
     }
   };
 
+  const handleYoutubeOAuth = async () => {
+    setIsLoadingYoutube(true);
+    setError("");
+
+    try {
+      await OAuthService.initiateYoutubeOAuth();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Erro ao iniciar autenticação com YouTube",
+      );
+      setIsLoadingYoutube(false);
+    }
+  };
+
   const handleTwitchSignOut = () => {
     localStorage.removeItem("twitchToken");
     localStorage.removeItem("twitchClientId");
@@ -355,7 +520,18 @@ const App: React.FC<LoginProps> = () => {
     localStorage.removeItem("twitchRefreshToken");
     localStorage.removeItem("twitchTokenExpiresAt");
     setTwitchAuthenticated(false);
-    setTwitchWidgetUrl("");
+    refreshWidgetUrl();
+  };
+
+  const handleYoutubeSignOut = () => {
+    localStorage.removeItem("youtubeToken");
+    localStorage.removeItem("youtubeUserInfo");
+    localStorage.removeItem("youtubeChannelInfo");
+    localStorage.removeItem("youtubeChannelId");
+    localStorage.removeItem("youtubeRefreshToken");
+    localStorage.removeItem("youtubeTokenExpiresAt");
+    setYoutubeAuthenticated(false);
+    refreshWidgetUrl();
   };
 
   const handleKickChannelSubmit = () => {
@@ -366,51 +542,21 @@ const App: React.FC<LoginProps> = () => {
 
     const trimmedChannel = kickChannel.trim();
     setKickChannel(trimmedChannel);
-
-    // Save to localStorage
     localStorage.setItem("kickChannel", trimmedChannel);
     setKickChannelSaved(true);
-
-    const baseUrl = window.location.origin;
-
-    // If Twitch is authenticated, append or update Kick parameter
-    if (twitchWidgetUrl) {
-      let url = twitchWidgetUrl;
-
-      // Remove existing kickChannel parameter if present
-      url = url.replace(/&kickChannel=[^&]*/, "");
-
-      // Add the new kickChannel parameter
-      url = `${url}&kickChannel=${encodeURIComponent(trimmedChannel)}`;
-
-      setTwitchWidgetUrl(url);
-    } else {
-      // Otherwise, create URL with just Kick
-      const url = `${baseUrl}/chat?kickChannel=${encodeURIComponent(trimmedChannel)}${getCustomizationParams()}`;
-      setKickWidgetUrl(url);
-    }
-
     setError("");
+    refreshWidgetUrl();
   };
 
   const handleKickChannelClear = () => {
     setKickChannel("");
-
-    // Remove from localStorage
     localStorage.removeItem("kickChannel");
     setKickChannelSaved(false);
-
-    // If Twitch URL exists, remove kickChannel parameter from it
-    if (twitchWidgetUrl && twitchWidgetUrl.includes("kickChannel=")) {
-      const url = twitchWidgetUrl.replace(/&kickChannel=[^&]*/, "");
-      setTwitchWidgetUrl(url);
-    } else {
-      setKickWidgetUrl("");
-    }
+    refreshWidgetUrl();
   };
 
   const openChatPopup = () => {
-    const url = twitchWidgetUrl || kickWidgetUrl;
+    const url = widgetUrl;
     const width = 480;
     const height = 800;
     const left = window.screen.width - width;
@@ -425,27 +571,10 @@ const App: React.FC<LoginProps> = () => {
       ?.focus();
   };
 
-  // Helper function to convert hex to RGBA
-  const hexToRgba = (hex: string, alpha: string) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
-  const getCustomizationParams = () => {
-    const usernameBgRgba = hexToRgba(usernameBgColor, usernameBgAlpha);
-    const messageBgRgba = hexToRgba(messageBgColor, messageBgAlpha);
-    const messageColorRgba = hexToRgba(messageTextColor, messageTextAlpha);
-
-    return `&usernameBg=${encodeURIComponent(usernameBgRgba)}&messageBg=${encodeURIComponent(messageBgRgba)}&messageColor=${encodeURIComponent(messageColorRgba)}&borderRadius=${borderRadius}&usernameFontSize=${usernameFontSize}&messageFontSize=${messageFontSize}&messagePadding=${messagePadding}&messageDelay=${messageDelay}&fullWidthMessages=${fullWidthMessages}`;
-  };
-
   const copyChatUrl = () => {
-    const url = twitchWidgetUrl || kickWidgetUrl;
-    navigator.clipboard.writeText(url).catch(() => {
+    navigator.clipboard.writeText(widgetUrl).catch(() => {
       const textArea = document.createElement("textarea");
-      textArea.value = url;
+      textArea.value = widgetUrl;
       document.body.appendChild(textArea);
       textArea.select();
       document.body.removeChild(textArea);
@@ -460,6 +589,14 @@ const App: React.FC<LoginProps> = () => {
         : "Login Twitch";
   };
 
+  const youtubeButtonText = () => {
+    return isLoadingYoutube
+      ? "Carregando..."
+      : youtubeAuthenticated
+        ? "Conectado"
+        : "Login YouTube";
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-5 font-sans">
       <div className="bg-dark-bg-secondary rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-10 md:p-6 border border-dark-border">
@@ -467,7 +604,7 @@ const App: React.FC<LoginProps> = () => {
           MultiStreamDB Chat
         </h1>
         <p className="text-center text-dark-text-secondary m-0 mb-10 text-base">
-          Conecte-se aos chats da Twitch e Kick
+          Conecte-se aos chats da Twitch, Kick e YouTube
         </p>
 
         <div className="flex flex-col gap-8 xl:flex-row">
@@ -500,6 +637,36 @@ const App: React.FC<LoginProps> = () => {
                     onClick={handleTwitchSignOut}
                     className="mb-4 px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-red-500 hover:bg-red-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(239,68,68,0.3)] w-[120px]"
                     title="Sair do Twitch"
+                  >
+                    Sair
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* YouTube Section */}
+            <div className="mb-5">
+              <div className="flex gap-2.5">
+                <button
+                  className="flex-1 mb-4 px-6 py-3.5 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-[#ff0000] hover:bg-[#cc0000] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(255,0,0,0.3)] disabled:cursor-not-allowed"
+                  onClick={handleYoutubeOAuth}
+                  disabled={isLoadingYoutube || youtubeAuthenticated}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M23.498 6.186a2.974 2.974 0 0 0-2.09-2.103C19.505 3.546 12 3.546 12 3.546s-7.505 0-9.408.537A2.974 2.974 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a2.974 2.974 0 0 0 2.09 2.103c1.903.537 9.408.537 9.408.537s7.505 0 9.408-.537a2.974 2.974 0 0 0 2.09-2.103C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                  </svg>
+                  {youtubeButtonText()}
+                </button>
+
+                {youtubeAuthenticated && (
+                  <button
+                    onClick={handleYoutubeSignOut}
+                    className="mb-4 px-6 py-3.5 border-0 rounded-lg text-base font-semibold cursor-pointer transition-all duration-300 flex items-center justify-center gap-2.5 text-white bg-red-500 hover:bg-red-600 hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(239,68,68,0.3)] w-[120px]"
+                    title="Sair do YouTube"
                   >
                     Sair
                   </button>
@@ -544,7 +711,7 @@ const App: React.FC<LoginProps> = () => {
             </div>
 
             {/* Widget URL Section */}
-            {(twitchWidgetUrl || kickWidgetUrl) && (
+            {widgetUrl && (
               <div className="mt-8 pt-5 border-t-2 border-dark-border animate-slide-down">
                 <p className="m-0 mb-2.5 font-bold text-dark-text-primary">
                   URL do Widget(Pode usar no OBS):
@@ -552,7 +719,7 @@ const App: React.FC<LoginProps> = () => {
                 <div className="flex flex-col md:flex-row gap-2.5 mb-5">
                   <input
                     type="password"
-                    value={twitchWidgetUrl || kickWidgetUrl}
+                    value={widgetUrl}
                     readOnly
                     className="flex-1 px-4 py-3 border-2 border-dark-border focus:border-green-500 rounded-lg text-sm bg-dark-bg-primary text-dark-text-primary font-mono outline-none"
                   />
@@ -581,7 +748,7 @@ const App: React.FC<LoginProps> = () => {
             )}
           </div>
           {/* Customization Panel */}
-          {showCustomization && (twitchWidgetUrl || kickWidgetUrl) && (
+          {showCustomization && widgetUrl && (
             <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
               <div className="bg-dark-bg-primary rounded-xl p-6 border border-dark-border">
                 <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">
@@ -649,7 +816,6 @@ const App: React.FC<LoginProps> = () => {
                       }
                       label={`Transparência: ${Math.round((1 - parseFloat(messageBgAlpha)) * 100)}%`}
                     />
-                    {/* Full Width Messages */}
                     <div className="mt-4">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -820,7 +986,7 @@ const App: React.FC<LoginProps> = () => {
                         emotes: [],
                         isAction: false,
                         timestamp: Date.now(),
-                        provider: "twitch",
+                        provider: "youtube",
                         channel: "example",
                         msgId: "msg2",
                       }}

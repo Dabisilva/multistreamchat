@@ -91,7 +91,7 @@ function ensureContrastWithHeader(color: string): string {
 }
 
 // Attach emotes to message text
-export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' = 'twitch'): string {
+export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' | 'youtube' = 'twitch'): string {
   let text = htmlEncode(message.text);
   const emotes = message.emotes;
 
@@ -158,10 +158,10 @@ export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' =
 }
 
 // Create HTML for emote
-function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick'): string {
+function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick' | 'youtube'): string {
   const url = emote.urls['2'] || emote.urls['1'] || Object.values(emote.urls)[0]; // Prefer 2x for better quality
   
-  if (provider === 'twitch' || emote.type === 'bttv' || emote.type === 'kick') {
+  if (provider === 'twitch' || provider === 'youtube' || emote.type === 'bttv' || emote.type === 'kick') {
     // Add specific class for BTTV emotes
     const emoteClass = emote.type === 'bttv' ? 'emote bttv-emote' : 'emote';
     return `<img class="${emoteClass}" src="${url}" alt="${emote.name}" title="${emote.name}"/>`;
