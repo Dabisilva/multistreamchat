@@ -5,6 +5,7 @@ import { PlatformAuthPanel } from "./components/PlatformAuthPanel";
 import { WidgetUrlSection } from "./components/WidgetUrlSection";
 import { ChatCustomizationPanel } from "./components/ChatCustomizationPanel";
 import { ViewerCustomizationPanel } from "./components/ViewerCustomizationPanel";
+import { AppFooter } from "./components/AppFooter";
 
 import "./style.css";
 
@@ -100,6 +101,8 @@ const App: React.FC = () => {
               )}
           </div>
         </div>
+
+        <AppFooter />
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // Lazy load components for better performance
 const Chat = lazy(() => import('../pages/Chat'));
 const ViewerCount = lazy(() => import('../pages/ViewerCount'));
+const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('../pages/TermsOfService'));
 const App = lazy(() => import('../App'));
 
 // Loading component
@@ -77,6 +79,9 @@ export const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
 
         {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
