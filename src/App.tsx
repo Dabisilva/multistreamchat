@@ -223,7 +223,7 @@ const App: React.FC = () => {
             <p className="text-dark-text-secondary m-0 mb-4 leading-relaxed text-base">
               O{" "}
               <strong className="text-dark-text-primary">
-                MultiStreamDB Chat
+                MultiStreamChat
               </strong>{" "}
               é um aplicativo web gratuito para streamers que transmitem em
               várias plataformas ao mesmo tempo. Ele reúne, em um só lugar, o

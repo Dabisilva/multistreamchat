@@ -8,9 +8,9 @@ const PrivacyPolicy: React.FC = () => {
       lastUpdated="7 de agosto de 2026"
     >
       <section>
-        <h2>1. Sobre o MultiStreamDB Chat</h2>
+        <h2>1. Sobre o MultiStreamChat</h2>
         <p>
-          O MultiStreamDB Chat (“Aplicativo”, “nós”) é uma ferramenta web para
+          O MultiStreamChat (“Aplicativo”, “nós”) é uma ferramenta web para
           streamers que exibe overlays de chat unificado e contagem de
           espectadores das plataformas Twitch, Kick e YouTube, geralmente
           utilizados em softwares de transmissão como o OBS.
@@ -154,7 +154,7 @@ const PrivacyPolicy: React.FC = () => {
       <section>
         <h2>11. Contato</h2>
         <p>
-          Em caso de dúvidas sobre privacidade relacionadas ao MultiStreamDB
+          Em caso de dúvidas sobre privacidade relacionadas ao MultiStreamChat
           Chat, utilize os canais de contato disponibilizados pelo mantenedor
           do projeto.
         </p>

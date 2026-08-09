@@ -1,4 +1,4 @@
-# Multistream Chat
+# MultiStreamChat
 
 A real-time chat overlay that combines messages from both Twitch and Kick platforms with their respective user colors, badges, and emotes. Built with React, TypeScript, and Vite for modern web development with excellent developer experience.
 

@@ -11,7 +11,7 @@ const TermsOfService: React.FC = () => {
       <section>
         <h2>1. Aceitação dos termos</h2>
         <p>
-          Ao acessar ou utilizar o MultiStreamDB Chat (“Aplicativo”), você
+          Ao acessar ou utilizar o MultiStreamChat (“Aplicativo”), você
           concorda com estes Termos de Serviço. Se não concordar, não utilize o
           serviço.
         </p>
@@ -91,7 +91,7 @@ const TermsOfService: React.FC = () => {
         <h2>5. Plataformas de terceiros</h2>
         <p>
           Twitch, Kick, YouTube e Google são serviços independentes. O
-          MultiStreamDB Chat não é afiliado, endossado ou patrocinado por essas
+          MultiStreamChat não é afiliado, endossado ou patrocinado por essas
           empresas, salvo indicação expressa em contrário. A interrupção,
           mudança de API ou restrição de acesso por parte delas pode afetar o
           funcionamento do Aplicativo sem que isso configure obrigação de
@@ -121,7 +121,7 @@ const TermsOfService: React.FC = () => {
       <section>
         <h2>8. Limitação de responsabilidade</h2>
         <p>
-          Na medida permitida pela lei, o mantenedor do MultiStreamDB Chat não
+          Na medida permitida pela lei, o mantenedor do MultiStreamChat não
           se responsabiliza por danos indiretos, lucros cessantes, perda de
           dados, interrupção de transmissão ou qualquer prejuízo decorrente do
           uso ou da impossibilidade de uso do Aplicativo, inclusive falhas
@@ -133,7 +133,7 @@ const TermsOfService: React.FC = () => {
       <section>
         <h2>9. Propriedade intelectual</h2>
         <p>
-          O código, a marca “MultiStreamDB Chat” e os elementos da interface
+          O código, a marca “MultiStreamChat” e os elementos da interface
           pertencem aos seus respectivos titulares. Marcas e conteúdos das
           plataformas (Twitch, Kick, YouTube, emotes de terceiros etc.)
           pertencem aos seus proprietários e são usados apenas conforme
