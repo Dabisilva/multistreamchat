@@ -290,7 +290,7 @@ export class OAuthService {
     const { codeVerifier, codeChallenge } = await this.generateCodeChallenge();
     this.writeOAuthStorage('youtube_code_verifier', codeVerifier);
 
-    const scopes = 'https://www.googleapis.com/auth/youtube.readonly';
+    const scopes = "https://www.googleapis.com/auth/youtube.readonly";
 
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth?` +

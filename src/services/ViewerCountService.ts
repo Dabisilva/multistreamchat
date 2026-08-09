@@ -1,3 +1,5 @@
+import { resolveYoutubeLive } from "./youtubeLive";
+
 export type ViewerPlatform = "twitch" | "kick" | "youtube";
 
 export interface PlatformViewers {
@@ -24,7 +26,6 @@ const TWITCH_CLIENT_ID =
 
 export class ViewerCountService {
   private credentials: ViewerCountCredentials;
-  private youtubeVideoId: string | null = null;
 
   constructor(credentials: ViewerCountCredentials) {
     this.credentials = credentials;
@@ -180,7 +181,7 @@ export class ViewerCountService {
     url: string,
     retried = false,
   ): Promise<Response> {
-    let token = this.credentials.youtubeToken || "";
+    const token = this.credentials.youtubeToken || "";
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -203,33 +204,6 @@ export class ViewerCountService {
     return response;
   }
 
-  private async resolveYoutubeVideoId(): Promise<string | null> {
-    if (this.youtubeVideoId) return this.youtubeVideoId;
-
-    const broadcastsUrl =
-      "https://www.googleapis.com/youtube/v3/liveBroadcasts" +
-      "?part=snippet,contentDetails,status&broadcastStatus=active&broadcastType=all&mine=true";
-
-    const response = await this.youtubeFetch(broadcastsUrl);
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    const item = data.items?.[0];
-    const videoId =
-      item?.id ||
-      item?.contentDetails?.boundStreamId ||
-      item?.snippet?.resourceId?.videoId ||
-      null;
-
-    // liveBroadcasts id is the video id for the broadcast
-    if (item?.id) {
-      this.youtubeVideoId = item.id;
-      return item.id;
-    }
-
-    return videoId;
-  }
-
   private async fetchYoutube(): Promise<PlatformViewers> {
     if (!this.credentials.youtubeToken) {
       return {
@@ -241,48 +215,21 @@ export class ViewerCountService {
     }
 
     try {
-      const videoId = await this.resolveYoutubeVideoId();
+      const live = await resolveYoutubeLive(
+        (url) => this.youtubeFetch(url),
+        this.credentials.youtubeChannelId || undefined,
+      );
 
-      if (!videoId) {
-        this.youtubeVideoId = null;
-        return { platform: "youtube", count: 0, isLive: false };
-      }
-
-      const videosUrl =
-        "https://www.googleapis.com/youtube/v3/videos" +
-        `?part=liveStreamingDetails,snippet&id=${encodeURIComponent(videoId)}`;
-
-      const response = await this.youtubeFetch(videosUrl);
-      if (!response.ok) {
-        this.youtubeVideoId = null;
-        return {
-          platform: "youtube",
-          count: null,
-          isLive: false,
-          error: `HTTP ${response.status}`,
-        };
-      }
-
-      const data = await response.json();
-      const video = data.items?.[0];
-      const details = video?.liveStreamingDetails;
-      const concurrent = details?.concurrentViewers;
-      const hasEnded = !!details?.actualEndTime;
-      const isLive = concurrent != null && !hasEnded;
-
-      if (!isLive) {
-        // Stream may have ended or never started
-        this.youtubeVideoId = null;
+      if (!live?.isLive) {
         return { platform: "youtube", count: 0, isLive: false };
       }
 
       return {
         platform: "youtube",
-        count: parseInt(String(concurrent), 10) || 0,
+        count: live.concurrentViewers ?? 0,
         isLive: true,
       };
     } catch {
-      this.youtubeVideoId = null;
       return {
         platform: "youtube",
         count: null,

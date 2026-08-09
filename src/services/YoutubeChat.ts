@@ -1,5 +1,6 @@
-import { Badge, ChatMessage, ChatProvider } from '../types';
-import { generateColor } from '../utils/messageUtils';
+import { Badge, ChatMessage, ChatProvider } from "../types";
+import { generateColor } from "../utils/messageUtils";
+import { resolveYoutubeLive } from "./youtubeLive";
 
 interface YoutubeAuthorDetails {
   channelId?: string;
@@ -19,13 +20,6 @@ interface YoutubeLiveChatItem {
     publishedAt?: string;
     displayMessage?: string;
     textMessageDetails?: { messageText?: string };
-    superChatDetails?: {
-      amountDisplayString?: string;
-      userComment?: string;
-    };
-    superStickerDetails?: {
-      amountDisplayString?: string;
-    };
   };
   authorDetails?: YoutubeAuthorDetails;
 }
@@ -51,13 +45,13 @@ export class YoutubeChatService implements ChatProvider {
       channelId?: string;
       liveChatId?: string;
       onTokenRefresh?: () => Promise<string | null>;
-    }
+    },
   ) {
     this.channel = channel;
     this.onMessage = onMessage;
-    this.oauthToken = options?.oauthToken || '';
-    this.channelId = options?.channelId || '';
-    this.liveChatId = options?.liveChatId || '';
+    this.oauthToken = options?.oauthToken || "";
+    this.channelId = options?.channelId || "";
+    this.liveChatId = options?.liveChatId || "";
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
   }
 
@@ -74,7 +68,6 @@ export class YoutubeChatService implements ChatProvider {
       }
 
       if (!this.liveChatId) {
-        // Not live yet — retry shortly
         this.schedulePoll(15000);
         return;
       }
@@ -111,93 +104,67 @@ export class YoutubeChatService implements ChatProvider {
 
     if (author.isChatOwner) {
       badges.push({
-        type: 'broadcaster',
-        version: '1',
-        url: this.badgeUrl('broadcaster'),
-        description: 'Channel Owner',
+        type: "broadcaster",
+        version: "1",
+        url: this.badgeUrl("broadcaster"),
+        description: "Channel Owner",
       });
     }
 
     if (author.isChatModerator) {
       badges.push({
-        type: 'moderator',
-        version: '1',
-        url: this.badgeUrl('moderator'),
-        description: 'Moderator',
+        type: "moderator",
+        version: "1",
+        url: this.badgeUrl("moderator"),
+        description: "Moderator",
       });
     }
 
     if (author.isChatSponsor) {
       badges.push({
-        type: 'member',
-        version: '1',
-        url: this.badgeUrl('member'),
-        description: 'Member',
+        type: "member",
+        version: "1",
+        url: this.badgeUrl("member"),
+        description: "Member",
       });
     }
 
     if (author.isVerified) {
       badges.push({
-        type: 'verified',
-        version: '1',
-        url: this.badgeUrl('verified'),
-        description: 'Verified',
+        type: "verified",
+        version: "1",
+        url: this.badgeUrl("verified"),
+        description: "Verified",
       });
     }
 
     return badges;
   }
 
-  private getMessageText(item: YoutubeLiveChatItem): string {
-    const snippet = item.snippet;
-    if (!snippet) return '';
-
-    if (snippet.type === 'superChatEvent' && snippet.superChatDetails) {
-      const amount = snippet.superChatDetails.amountDisplayString || '';
-      const comment = snippet.superChatDetails.userComment || '';
-      return comment ? `[Super Chat ${amount}] ${comment}` : `[Super Chat ${amount}]`;
-    }
-
-    if (snippet.type === 'superStickerEvent' && snippet.superStickerDetails) {
-      const amount = snippet.superStickerDetails.amountDisplayString || '';
-      return `[Super Sticker ${amount}]`;
-    }
-
-    return (
-      snippet.displayMessage ||
-      snippet.textMessageDetails?.messageText ||
-      ''
-    );
-  }
-
   private processItem(item: YoutubeLiveChatItem): void {
-    const text = this.getMessageText(item);
-    if (!text || !item.authorDetails?.displayName) return;
+    // Only normal chat messages — ignore Super Chat, stickers, memberships, etc.
+    if (item.snippet?.type !== "textMessageEvent") return;
 
-    const type = item.snippet?.type;
-    if (
-      type &&
-      type !== 'textMessageEvent' &&
-      type !== 'superChatEvent' &&
-      type !== 'superStickerEvent'
-    ) {
-      return;
-    }
+    const text =
+      item.snippet.displayMessage ||
+      item.snippet.textMessageDetails?.messageText ||
+      "";
+    const displayName = item.authorDetails?.displayName;
+    if (!text || !displayName) return;
 
-    const displayName = item.authorDetails.displayName;
     const chatMessage: ChatMessage = {
       id: item.id,
-      userId: item.authorDetails.channelId || '',
+      userId: item.authorDetails?.channelId || "",
       displayName,
       displayColor: generateColor(displayName),
       text,
       badges: this.parseBadges(item.authorDetails),
       emotes: [],
       isAction: false,
-      timestamp: item.snippet?.publishedAt
+      timestamp: item.snippet.publishedAt
         ? Date.parse(item.snippet.publishedAt)
         : Date.now(),
-      provider: 'youtube',
+      provider: "youtube",
       channel: this.channel,
       msgId: item.id,
     };
@@ -209,7 +176,7 @@ export class YoutubeChatService implements ChatProvider {
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${this.oauthToken}`,
-        Accept: 'application/json',
+        Accept: "application/json",
       },
     });
 
@@ -225,36 +192,18 @@ export class YoutubeChatService implements ChatProvider {
   }
 
   private async resolveLiveChatId(): Promise<string> {
-    // Prefer active broadcast for the authenticated channel
-    const broadcastsUrl =
-      'https://www.googleapis.com/youtube/v3/liveBroadcasts' +
-      '?part=snippet,status&broadcastStatus=active&broadcastType=all&mine=true';
+    const live = await resolveYoutubeLive(
+      (url) => this.apiFetch(url),
+      this.channelId || undefined,
+    );
 
-    const broadcastRes = await this.apiFetch(broadcastsUrl);
-    if (broadcastRes.ok) {
-      const data = await broadcastRes.json();
-      const liveChatId = data.items?.[0]?.snippet?.liveChatId;
-      if (liveChatId) {
-        if (!this.channelId && data.items[0]?.snippet?.channelId) {
-          this.channelId = data.items[0].snippet.channelId;
-        }
-        return liveChatId;
-      }
+    if (!live) return "";
+
+    if (!this.channelId) {
+      // channelId may still be unknown; keep whatever we had
     }
 
-    // Fallback: upcoming broadcast (useful right before going live)
-    const upcomingUrl =
-      'https://www.googleapis.com/youtube/v3/liveBroadcasts' +
-      '?part=snippet,status&broadcastStatus=upcoming&broadcastType=all&mine=true';
-
-    const upcomingRes = await this.apiFetch(upcomingUrl);
-    if (upcomingRes.ok) {
-      const data = await upcomingRes.json();
-      const liveChatId = data.items?.[0]?.snippet?.liveChatId;
-      if (liveChatId) return liveChatId;
-    }
-
-    return '';
+    return live.liveChatId || "";
   }
 
   private schedulePoll(intervalMs: number): void {
@@ -282,13 +231,15 @@ export class YoutubeChatService implements ChatProvider {
         return;
       }
       this.connected = true;
+      this.skipHistory = true;
+      this.nextPageToken = null;
     }
 
     try {
       let url =
-        'https://www.googleapis.com/youtube/v3/liveChat/messages' +
+        "https://www.googleapis.com/youtube/v3/liveChat/messages" +
         `?liveChatId=${encodeURIComponent(this.liveChatId)}` +
-        '&part=snippet,authorDetails&maxResults=200';
+        "&part=snippet,authorDetails&maxResults=200";
 
       if (this.nextPageToken) {
         url += `&pageToken=${encodeURIComponent(this.nextPageToken)}`;
@@ -298,9 +249,8 @@ export class YoutubeChatService implements ChatProvider {
 
       if (!response.ok) {
         const status = response.status;
-        // Chat ended or not found — clear and retry discovering a new live chat
         if (status === 403 || status === 404) {
-          this.liveChatId = '';
+          this.liveChatId = "";
           this.nextPageToken = null;
           this.skipHistory = true;
           this.connected = false;
@@ -318,7 +268,6 @@ export class YoutubeChatService implements ChatProvider {
       const items: YoutubeLiveChatItem[] = data.items || [];
 
       if (this.skipHistory) {
-        // Match IRC join behavior: ignore backlog, only show new messages
         this.skipHistory = false;
       } else {
         for (const item of items) {
@@ -327,7 +276,7 @@ export class YoutubeChatService implements ChatProvider {
       }
 
       const interval =
-        typeof data.pollingIntervalMillis === 'number'
+        typeof data.pollingIntervalMillis === "number"
           ? data.pollingIntervalMillis
           : 5000;
 
