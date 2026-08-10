@@ -7,32 +7,12 @@ import {
   type ChatCustomizationSettings,
   type ViewerCustomizationSettings,
 } from "../utils/widgetUrl";
+import {
+  DEFAULT_CHAT_SETTINGS,
+  DEFAULT_VIEWER_SETTINGS,
+} from "../utils/styleDefaults";
 
 const baseUrl = window.location.origin;
-
-const DEFAULT_CHAT_SETTINGS: ChatCustomizationSettings = {
-  usernameBgColor: "#30034d",
-  messageBgColor: "#8b5cf6",
-  messageTextColor: "#ffffff",
-  usernameBgAlpha: "0",
-  messageBgAlpha: "0",
-  messageTextAlpha: "1",
-  borderRadius: "4",
-  usernameFontSize: "20",
-  messageFontSize: "20",
-  messagePadding: "0",
-  messageDelay: "5",
-  fullWidthMessages: false,
-};
-
-const DEFAULT_VIEWER_SETTINGS: ViewerCustomizationSettings = {
-  viewerFontSize: "32",
-  viewerTextColor: "#ffffff",
-  showTwitchViews: true,
-  showKickViews: true,
-  showYoutubeViews: true,
-  sumViews: true,
-};
 
 export function useAppDashboard() {
   const [isLoadingTwitch, setIsLoadingTwitch] = useState(false);
@@ -61,9 +41,9 @@ export function useAppDashboard() {
     setViewerWidgetUrl(
       buildViewerWidgetUrl(baseUrl, {
         ...nextViewer,
-        showTwitchViews: nextViewer.showTwitchViews && twitchAuthenticated,
-        showYoutubeViews: nextViewer.showYoutubeViews && youtubeAuthenticated,
-        showKickViews: nextViewer.showKickViews && kickChannelSaved,
+        showTwitch: nextViewer.showTwitch && twitchAuthenticated,
+        showYoutube: nextViewer.showYoutube && youtubeAuthenticated,
+        showKick: nextViewer.showKick && kickChannelSaved,
       }),
     );
   };

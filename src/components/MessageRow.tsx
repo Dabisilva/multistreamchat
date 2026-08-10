@@ -5,6 +5,7 @@ import {
   createUsernameHtml,
   getValidBadges,
 } from "../utils/messageUtils";
+import { DEFAULT_MESSAGE_STYLES } from "../utils/styleDefaults";
 
 export const MessageRow: React.FC<MessageRowProps> = ({
   message,
@@ -39,16 +40,7 @@ export const MessageRow: React.FC<MessageRowProps> = ({
 
   const actionClass = message.isAction ? "action" : "";
 
-  const styles = customStyles || {
-    usernameBg: "",
-    messageBg: "",
-    messageColor: "#ffffff",
-    borderRadius: "4",
-    usernameFontSize: "20",
-    messageFontSize: "20",
-    messagePadding: "0",
-    fullWidthMessages: "false",
-  };
+  const styles = customStyles || DEFAULT_MESSAGE_STYLES;
 
   const isFullWidth = styles.fullWidthMessages === "true";
 

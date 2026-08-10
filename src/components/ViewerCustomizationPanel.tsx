@@ -19,19 +19,22 @@ interface ViewerCustomizationPanelProps {
 const PreviewCount: React.FC<{
   platform: "twitch" | "youtube" | "kick";
   count: string;
-  fontSize: string;
-  textColor: string;
-}> = ({ platform, count, fontSize, textColor }) => {
-  const iconSize = Math.max(Math.round(parseInt(fontSize, 10) * 0.7) || 22, 16);
+  viewerFontSize: string;
+  viewerTextColor: string;
+}> = ({ platform, count, viewerFontSize, viewerTextColor }) => {
+  const iconSize = Math.max(
+    Math.round(parseInt(viewerFontSize, 10) * 0.7) || 22,
+    16,
+  );
 
   return (
-    <div className="flex items-center gap-2" style={{ color: textColor }}>
+    <div className="flex items-center gap-2" style={{ color: viewerTextColor }}>
       <PlatformIcon platform={platform} size={iconSize} branded />
       <span
         style={{
-          fontSize: `${fontSize}px`,
+          fontSize: `${viewerFontSize}px`,
           fontWeight: 700,
-          color: textColor,
+          color: viewerTextColor,
           lineHeight: 1,
           textShadow: "0 2px 8px rgba(0,0,0,0.45)",
         }}
@@ -74,7 +77,7 @@ export const ViewerCustomizationPanel: React.FC<
 
   const handlePlatformToggle = (
     platform: PlatformKey,
-    key: "showTwitchViews" | "showYoutubeViews" | "showKickViews",
+    key: "showTwitch" | "showYoutube" | "showKick",
     checked: boolean,
   ) => {
     if (checked && !connected[platform]) {
@@ -87,9 +90,9 @@ export const ViewerCustomizationPanel: React.FC<
     onChange(key, checked);
   };
 
-  const showTwitch = settings.showTwitchViews && twitchAuthenticated;
-  const showYoutube = settings.showYoutubeViews && youtubeAuthenticated;
-  const showKick = settings.showKickViews && kickConnected;
+  const showTwitch = settings.showTwitch && twitchAuthenticated;
+  const showYoutube = settings.showYoutube && youtubeAuthenticated;
+  const showKick = settings.showKick && kickConnected;
 
   const sumPreviewCount =
     (showTwitch ? 1200 : 0) + (showYoutube ? 850 : 0) + (showKick ? 340 : 0);
@@ -146,11 +149,7 @@ export const ViewerCustomizationPanel: React.FC<
                   type="checkbox"
                   checked={showTwitch}
                   onChange={(e) =>
-                    handlePlatformToggle(
-                      "twitch",
-                      "showTwitchViews",
-                      e.target.checked,
-                    )
+                    handlePlatformToggle("twitch", "showTwitch", e.target.checked)
                   }
                   className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-purple-500"
                 />
@@ -175,7 +174,7 @@ export const ViewerCustomizationPanel: React.FC<
                   onChange={(e) =>
                     handlePlatformToggle(
                       "youtube",
-                      "showYoutubeViews",
+                      "showYoutube",
                       e.target.checked,
                     )
                   }
@@ -200,11 +199,7 @@ export const ViewerCustomizationPanel: React.FC<
                   type="checkbox"
                   checked={showKick}
                   onChange={(e) =>
-                    handlePlatformToggle(
-                      "kick",
-                      "showKickViews",
-                      e.target.checked,
-                    )
+                    handlePlatformToggle("kick", "showKick", e.target.checked)
                   }
                   className="w-5 h-5 rounded border-2 border-dark-border bg-dark-bg-secondary cursor-pointer accent-green-500"
                 />
@@ -284,24 +279,24 @@ export const ViewerCustomizationPanel: React.FC<
                 <PreviewCount
                   platform="twitch"
                   count="1.200"
-                  fontSize={settings.viewerFontSize}
-                  textColor={settings.viewerTextColor}
+                  viewerFontSize={settings.viewerFontSize}
+                  viewerTextColor={settings.viewerTextColor}
                 />
               )}
               {showYoutube && (
                 <PreviewCount
                   platform="youtube"
                   count="850"
-                  fontSize={settings.viewerFontSize}
-                  textColor={settings.viewerTextColor}
+                  viewerFontSize={settings.viewerFontSize}
+                  viewerTextColor={settings.viewerTextColor}
                 />
               )}
               {showKick && (
                 <PreviewCount
                   platform="kick"
                   count="340"
-                  fontSize={settings.viewerFontSize}
-                  textColor={settings.viewerTextColor}
+                  viewerFontSize={settings.viewerFontSize}
+                  viewerTextColor={settings.viewerTextColor}
                 />
               )}
             </div>

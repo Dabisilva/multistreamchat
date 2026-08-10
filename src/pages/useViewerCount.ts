@@ -4,26 +4,27 @@ import {
   ViewerCountService,
   PlatformViewers,
 } from "../services/ViewerCountService";
+import { DEFAULT_VIEWER_SETTINGS } from "../utils/styleDefaults";
 
 const POLL_INTERVAL_MS = 15000;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
 
 export interface ViewerCountConfig {
-  fontSize: number;
+  viewerFontSize: number;
   showTwitch: boolean;
   showKick: boolean;
   showYoutube: boolean;
   sumViews: boolean;
-  textColor: string;
+  viewerTextColor: string;
 }
 
 const DEFAULT_CONFIG: ViewerCountConfig = {
-  fontSize: 32,
-  showTwitch: true,
-  showKick: true,
-  showYoutube: true,
-  sumViews: true,
-  textColor: "#ffffff",
+  viewerFontSize: Number(DEFAULT_VIEWER_SETTINGS.viewerFontSize),
+  showTwitch: DEFAULT_VIEWER_SETTINGS.showTwitch,
+  showKick: DEFAULT_VIEWER_SETTINGS.showKick,
+  showYoutube: DEFAULT_VIEWER_SETTINGS.showYoutube,
+  sumViews: DEFAULT_VIEWER_SETTINGS.sumViews,
+  viewerTextColor: DEFAULT_VIEWER_SETTINGS.viewerTextColor,
 };
 
 export const useViewerCount = () => {
@@ -118,12 +119,12 @@ export const useViewerCount = () => {
       youtubeChannelId: params.get("youtubeChannelId") || "",
       youtubeRefreshToken: params.get("youtubeRefreshToken"),
       youtubeExpiresAt: params.get("youtubeExpiresAt"),
-      fontSize: params.get("viewerFontSize"),
+      viewerFontSize: params.get("viewerFontSize"),
       showTwitch: params.get("showTwitch"),
       showKick: params.get("showKick"),
       showYoutube: params.get("showYoutube"),
       sumViews: params.get("sumViews"),
-      textColor: params.get("viewerTextColor"),
+      viewerTextColor: params.get("viewerTextColor"),
     };
   };
 
@@ -131,9 +132,9 @@ export const useViewerCount = () => {
     const urlParams = parseUrlParams();
 
     setConfig({
-      fontSize: urlParams.fontSize
-        ? parseInt(urlParams.fontSize, 10) || DEFAULT_CONFIG.fontSize
-        : DEFAULT_CONFIG.fontSize,
+      viewerFontSize: urlParams.viewerFontSize
+        ? parseInt(urlParams.viewerFontSize, 10) || DEFAULT_CONFIG.viewerFontSize
+        : DEFAULT_CONFIG.viewerFontSize,
       showTwitch:
         urlParams.showTwitch !== null
           ? urlParams.showTwitch !== "false"
@@ -150,7 +151,8 @@ export const useViewerCount = () => {
         urlParams.sumViews !== null
           ? urlParams.sumViews !== "false"
           : DEFAULT_CONFIG.sumViews,
-      textColor: urlParams.textColor || DEFAULT_CONFIG.textColor,
+      viewerTextColor:
+        urlParams.viewerTextColor || DEFAULT_CONFIG.viewerTextColor,
     });
 
     if (urlParams.twitchChannel && urlParams.twitchToken) {

@@ -4,6 +4,7 @@ import { TwitchChatService } from "../services/TwitchChat";
 import { KickChatService } from "../services/KickChat";
 import { YoutubeChatService } from "../services/YoutubeChat";
 import { shouldHideMessage } from "../utils/messageUtils";
+import { DEFAULT_MESSAGE_STYLES } from "../utils/styleDefaults";
 import OAuthService from "../services/OAuthService";
 
 // Constants
@@ -37,17 +38,6 @@ const DEFAULT_CONFIG: ChatConfig = {
   hideCommands: true,
   ignoredUsers: ["streamelements", "@streamelements", "cuscuzbot"],
   alignMessages: "bottom",
-};
-
-const DEFAULT_STYLES = {
-  usernameBg: "#30034d",
-  messageBg: "#8b5cf6",
-  messageColor: "#ffffff",
-  borderRadius: "10",
-  usernameFontSize: "20",
-  messageFontSize: "20",
-  messagePadding: "0",
-  fullWidthMessages: "false",
 };
 
 function manageService(
@@ -108,7 +98,7 @@ export const useChat = () => {
   const [broadcasterId, setBroadcasterId] = useState<string>("");
   const [clientId, setClientId] = useState<string>("");
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
-  const [customStyles, setCustomStyles] = useState(DEFAULT_STYLES);
+  const [customStyles, setCustomStyles] = useState(DEFAULT_MESSAGE_STYLES);
   const [messageDelay, setMessageDelay] = useState<number>(DEFAULT_DELAY_MS);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -221,18 +211,25 @@ export const useChat = () => {
       youtubeExpiresAt: params.get("youtubeExpiresAt"),
       messageDelay: params.get("messageDelay"),
       styles: {
-        usernameBg: params.get("usernameBg") || DEFAULT_STYLES.usernameBg,
-        messageBg: params.get("messageBg") || DEFAULT_STYLES.messageBg,
-        messageColor: params.get("messageColor") || DEFAULT_STYLES.messageColor,
-        borderRadius: params.get("borderRadius") || DEFAULT_STYLES.borderRadius,
+        usernameBg:
+          params.get("usernameBg") || DEFAULT_MESSAGE_STYLES.usernameBg,
+        messageBg: params.get("messageBg") || DEFAULT_MESSAGE_STYLES.messageBg,
+        messageColor:
+          params.get("messageColor") || DEFAULT_MESSAGE_STYLES.messageColor,
+        borderRadius:
+          params.get("borderRadius") || DEFAULT_MESSAGE_STYLES.borderRadius,
         usernameFontSize:
-          params.get("usernameFontSize") || DEFAULT_STYLES.usernameFontSize,
+          params.get("usernameFontSize") ||
+          DEFAULT_MESSAGE_STYLES.usernameFontSize,
         messageFontSize:
-          params.get("messageFontSize") || DEFAULT_STYLES.messageFontSize,
+          params.get("messageFontSize") ||
+          DEFAULT_MESSAGE_STYLES.messageFontSize,
         messagePadding:
-          params.get("messagePadding") || DEFAULT_STYLES.messagePadding,
+          params.get("messagePadding") ||
+          DEFAULT_MESSAGE_STYLES.messagePadding,
         fullWidthMessages:
-          params.get("fullWidthMessages") || DEFAULT_STYLES.fullWidthMessages,
+          params.get("fullWidthMessages") ||
+          DEFAULT_MESSAGE_STYLES.fullWidthMessages,
       },
     };
   };

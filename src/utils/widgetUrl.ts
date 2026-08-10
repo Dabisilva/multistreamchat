@@ -4,11 +4,11 @@ const DEFAULT_TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
 export interface ChatCustomizationSettings {
   usernameBgColor: string;
-  messageBgColor: string;
-  messageTextColor: string;
   usernameBgAlpha: string;
+  messageBgColor: string;
   messageBgAlpha: string;
-  messageTextAlpha: string;
+  messageColor: string;
+  messageColorAlpha: string;
   borderRadius: string;
   usernameFontSize: string;
   messageFontSize: string;
@@ -20,9 +20,9 @@ export interface ChatCustomizationSettings {
 export interface ViewerCustomizationSettings {
   viewerFontSize: string;
   viewerTextColor: string;
-  showTwitchViews: boolean;
-  showKickViews: boolean;
-  showYoutubeViews: boolean;
+  showTwitch: boolean;
+  showKick: boolean;
+  showYoutube: boolean;
   sumViews: boolean;
 }
 
@@ -108,8 +108,8 @@ export function getChatCustomizationParams(
     settings.messageBgAlpha,
   );
   const messageColorRgba = hexToRgba(
-    settings.messageTextColor,
-    settings.messageTextAlpha,
+    settings.messageColor,
+    settings.messageColorAlpha,
   );
 
   return (
@@ -131,9 +131,9 @@ export function getViewerCustomizationParams(
   return (
     `&viewerFontSize=${settings.viewerFontSize}` +
     `&viewerTextColor=${encodeURIComponent(settings.viewerTextColor)}` +
-    `&showTwitch=${settings.showTwitchViews}` +
-    `&showKick=${settings.showKickViews}` +
-    `&showYoutube=${settings.showYoutubeViews}` +
+    `&showTwitch=${settings.showTwitch}` +
+    `&showKick=${settings.showKick}` +
+    `&showYoutube=${settings.showYoutube}` +
     `&sumViews=${settings.sumViews}`
   );
 }

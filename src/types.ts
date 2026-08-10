@@ -48,20 +48,22 @@ export interface ChatConfig {
   alignMessages: 'block' | 'bottom';
 }
 
+export interface MessageCustomStyles {
+  usernameBg: string;
+  messageBg: string;
+  messageColor: string;
+  borderRadius: string;
+  usernameFontSize: string;
+  messageFontSize: string;
+  messagePadding: string;
+  fullWidthMessages?: string;
+}
+
 export interface MessageRowProps {
   message: ChatMessage;
   hideAfter: number;
   onRemove: (id: string) => void;
-  customStyles?: {
-    usernameBg: string;
-    messageBg: string;
-    messageColor: string;
-    borderRadius: string;
-    usernameFontSize: string;
-    messageFontSize: string;
-    messagePadding: string;
-    fullWidthMessages?: string;
-  };
+  customStyles?: MessageCustomStyles;
 }
 
 export interface ChatProvider {

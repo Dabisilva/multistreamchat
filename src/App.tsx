@@ -4,18 +4,8 @@ import { AppFooter } from "./components/AppFooter";
 import { MessageRow } from "./components/MessageRow";
 import { PlatformIcon } from "./components/PlatformIcon";
 
+import { DEFAULT_MESSAGE_STYLES } from "./utils/styleDefaults";
 import "./style.css";
-
-const PREVIEW_STYLES = {
-  usernameBg: "",
-  messageBg: "",
-  messageColor: "#ffffff",
-  borderRadius: "6",
-  usernameFontSize: "16",
-  messageFontSize: "16",
-  messagePadding: "0",
-  fullWidthMessages: "false",
-};
 
 const DEMO_MESSAGES = [
   {
@@ -160,7 +150,7 @@ const ProductPreview: React.FC = () => (
                   message={message}
                   hideAfter={180}
                   onRemove={() => {}}
-                  customStyles={PREVIEW_STYLES}
+                  customStyles={DEFAULT_MESSAGE_STYLES}
                 />
               </div>
             ))}

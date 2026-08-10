@@ -20,8 +20,8 @@ const ViewerCount: React.FC = () => {
   } = useViewerCount();
 
   const textStyle: React.CSSProperties = {
-    fontSize: `${config.fontSize}px`,
-    color: config.textColor,
+    fontSize: `${config.viewerFontSize}px`,
+    color: config.viewerTextColor,
     fontWeight: 700,
     fontFamily: '"Segoe UI", system-ui, sans-serif',
     lineHeight: 1,
@@ -29,7 +29,7 @@ const ViewerCount: React.FC = () => {
     letterSpacing: "0.02em",
   };
 
-  const iconSize = Math.max(Math.round(config.fontSize * 0.9), 16);
+  const iconSize = Math.max(Math.round(config.viewerFontSize * 0.9), 16);
 
   const isPlatformEnabled = (platform: ViewerPlatform) => {
     if (platform === "twitch")
@@ -52,7 +52,7 @@ const ViewerCount: React.FC = () => {
   const renderSummed = (count: number, platforms: ViewerPlatform[]) => (
     <div
       className="flex items-center gap-3"
-      style={{ color: config.textColor }}
+      style={{ color: config.viewerTextColor }}
     >
       {platforms.length > 0 && (
         <div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ const ViewerCount: React.FC = () => {
               key={v.platform}
               className="flex items-center gap-2"
               style={{
-                color: config.textColor,
+                color: config.viewerTextColor,
                 opacity: v.isLive ? 1 : 0.45,
               }}
             >

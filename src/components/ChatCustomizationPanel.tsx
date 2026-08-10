@@ -2,7 +2,7 @@ import React from "react";
 import CustomRangeInput from "./CustomRangeInput";
 import { ColorField } from "./ColorField";
 import { MessageRow } from "./MessageRow";
-import { hexToRgba } from "../utils/colorUtils";
+import { toMessageStyles } from "../utils/styleDefaults";
 import type { ChatCustomizationSettings } from "../utils/widgetUrl";
 
 interface ChatCustomizationPanelProps {
@@ -17,19 +17,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
   settings,
   onChange,
 }) => {
-  const previewStyles = {
-    usernameBg: hexToRgba(settings.usernameBgColor, settings.usernameBgAlpha),
-    messageBg: hexToRgba(settings.messageBgColor, settings.messageBgAlpha),
-    messageColor: hexToRgba(
-      settings.messageTextColor,
-      settings.messageTextAlpha,
-    ),
-    borderRadius: settings.borderRadius,
-    usernameFontSize: settings.usernameFontSize,
-    messageFontSize: settings.messageFontSize,
-    messagePadding: settings.messagePadding,
-    fullWidthMessages: settings.fullWidthMessages.toString(),
-  };
+  const previewStyles = toMessageStyles(settings);
 
   return (
     <div className="flex gap-8 bg-dark-bg-card rounded-xl p-6 border border-dark-border">
@@ -74,10 +62,10 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
 
           <ColorField
             label="Cor do Texto da Mensagem"
-            color={settings.messageTextColor}
-            onColorChange={(value) => onChange("messageTextColor", value)}
-            alpha={settings.messageTextAlpha}
-            onAlphaChange={(value) => onChange("messageTextAlpha", value)}
+            color={settings.messageColor}
+            onColorChange={(value) => onChange("messageColor", value)}
+            alpha={settings.messageColorAlpha}
+            onAlphaChange={(value) => onChange("messageColorAlpha", value)}
           />
 
           <div>
@@ -124,7 +112,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-dark-text-secondary mb-2">
-              Espacamento da Mensagem
+              Espaçamento da Mensagem
             </label>
             <input
               type="number"
