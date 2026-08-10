@@ -65,8 +65,8 @@ const DEMO_MESSAGES = [
     msgId: "m4",
   },
   {
-    id: "demo-4",
-    userId: "u4",
+    id: "demo-5",
+    userId: "u5",
     displayName: "Jorge",
     displayColor: "#55079e",
     text: "Jorge",
@@ -76,12 +76,20 @@ const DEMO_MESSAGES = [
     timestamp: Date.now(),
     provider: "twitch" as const,
     channel: "demo",
-    msgId: "m4",
+    msgId: "m5",
   },
 ];
 
+const PREVIEW_MESSAGE_STYLES = {
+  ...DEFAULT_MESSAGE_STYLES,
+  usernameFontSize: "13",
+  messageFontSize: "13",
+  messagePadding: "2",
+  borderRadius: "4",
+};
+
 const ViewerPreview: React.FC = () => (
-  <div className="flex items-center gap-4 flex-wrap">
+  <div className="flex items-center gap-2.5">
     {(
       [
         { platform: "twitch" as const, count: "1.2K" },
@@ -89,10 +97,10 @@ const ViewerPreview: React.FC = () => (
         { platform: "kick" as const, count: "340" },
       ] as const
     ).map(({ platform, count }) => (
-      <div key={platform} className="flex items-center gap-2">
-        <PlatformIcon platform={platform} size={22} branded />
+      <div key={platform} className="flex items-center gap-1.5 shrink-0">
+        <PlatformIcon platform={platform} size={14} branded />
         <span
-          className="font-bold text-white text-[22px] leading-none tracking-wide"
+          className="font-bold text-white text-[13px] leading-none tracking-wide"
           style={{ textShadow: "0 2px 8px rgba(0,0,0,0.45)" }}
         >
           {count}
@@ -104,8 +112,8 @@ const ViewerPreview: React.FC = () => (
 
 const ProductPreview: React.FC = () => (
   <div className="relative w-full max-w-lg mx-auto animate-fade-in">
-    {/* Mock stream frame */}
-    <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_25px_80px_rgba(0,0,0,0.45)] aspect-[4/3] bg-[radial-gradient(ellipse_at_30%_20%,#312e81_0%,#0f0f0f_55%,#000_100%)]">
+    {/* Mock stream frame — height grows with overlays so nothing clips */}
+    <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-[0_25px_80px_rgba(0,0,0,0.45)] min-h-[360px] bg-[radial-gradient(ellipse_at_30%_20%,#312e81_0%,#0f0f0f_55%,#000_100%)] flex flex-col">
       {/* Soft light blobs */}
       <div
         className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-purple-500/25 blur-3xl pointer-events-none"
@@ -116,31 +124,21 @@ const ProductPreview: React.FC = () => (
         aria-hidden
       />
 
-      {/* Fake gameplay / stream content */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="text-center opacity-40">
-          <div className="text-white/80 text-sm font-medium tracking-[0.2em] uppercase mb-2">
-            Live preview
-          </div>
-          <div className="w-28 h-28 mx-auto rounded-full border border-white/15 bg-white/5" />
-        </div>
-      </div>
-
-      {/* Viewer count overlay */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className="rounded-xl bg-black/55 backdrop-blur-md border border-white/10 px-4 py-2.5 shadow-lg">
+      {/* Top overlays */}
+      <div className="relative z-10 flex items-start justify-between gap-3 p-3 sm:p-4">
+        <div className="rounded-xl bg-black/55 backdrop-blur-md border border-white/10 px-2.5 py-2 shadow-lg max-w-[min(100%,220px)] overflow-hidden">
           <ViewerPreview />
         </div>
       </div>
 
       {/* Chat overlay */}
-      <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-[78%] z-10">
-        <div className="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 p-1 px-3 max-h-[52%] overflow-hidden">
-          <div className="space-y-3 w-[400px]">
+      <div className="relative z-10 p-3 pt-0">
+        <div className="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 p-2.5 w-full max-w-full overflow-hidden">
+          <div className="flex flex-col gap-1 w-full min-w-0">
             {DEMO_MESSAGES.map((message, index) => (
               <div
                 key={message.id}
-                className="animate-fade-in"
+                className="animate-fade-in min-w-0 max-w-full"
                 style={{
                   animationDelay: `${index * 120}ms`,
                   animationFillMode: "both",
@@ -150,24 +148,12 @@ const ProductPreview: React.FC = () => (
                   message={message}
                   hideAfter={180}
                   onRemove={() => {}}
-                  customStyles={DEFAULT_MESSAGE_STYLES}
+                  customStyles={PREVIEW_MESSAGE_STYLES}
                 />
               </div>
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Platform pills */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
-        {(["twitch", "youtube", "kick"] as const).map((platform) => (
-          <span
-            key={platform}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-black/50 backdrop-blur-md border border-white/10"
-          >
-            <PlatformIcon platform={platform} size={16} branded />
-          </span>
-        ))}
       </div>
     </div>
 
