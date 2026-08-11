@@ -47,7 +47,7 @@ export class YoutubeChatService implements ChatProvider {
       onTokenRefresh?: () => Promise<string | null>;
     },
   ) {
-    this.channel = channel;
+    this.channel = channel.replace(/^@/, "");
     this.onMessage = onMessage;
     this.oauthToken = options?.oauthToken || "";
     this.channelId = options?.channelId || "";
@@ -149,8 +149,10 @@ export class YoutubeChatService implements ChatProvider {
       item.snippet.displayMessage ||
       item.snippet.textMessageDetails?.messageText ||
       "";
-    const displayName = item.authorDetails?.displayName;
-    if (!text || !displayName) return;
+    const rawDisplayName = item.authorDetails?.displayName;
+    if (!text || !rawDisplayName) return;
+
+    const displayName = rawDisplayName.replace(/^@/, "");
 
     const chatMessage: ChatMessage = {
       id: item.id,
