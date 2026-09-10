@@ -50,7 +50,7 @@ const Home: React.FC = () => {
           Conecte-se aos chats da Twitch, Kick e YouTube
         </p>
 
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8 w-full">
           <FeatureNav activeFeature={activeFeature} onChange={switchFeature} />
 
           <div className="flex flex-col xl:flex-row gap-8 items-start">

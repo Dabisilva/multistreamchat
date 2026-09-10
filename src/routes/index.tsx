@@ -24,27 +24,46 @@ const LoadingScreen: React.FC = () => (
   </div>
 );
 
+const hasPlatformSession = () => {
+  return !!(
+    localStorage.getItem('twitchToken') ||
+    localStorage.getItem('youtubeToken') ||
+    localStorage.getItem('kickChannel')
+  );
+};
+
+const isWidgetAuthenticated = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasTwitchAuth = urlParams.has('twitchChannel') && urlParams.has('twitchToken');
+  const hasKickChannel = urlParams.has('kickChannel');
+  const hasYoutubeAuth =
+    urlParams.has('youtubeChannel') && urlParams.has('youtubeToken');
+
+  return hasPlatformSession() || hasTwitchAuth || hasKickChannel || hasYoutubeAuth;
+};
+
+const LandingRoute: React.FC = () => {
+  const params = new URLSearchParams(window.location.search);
+  const isOAuthCallback = params.has('code') || params.has('error');
+
+  if (isOAuthCallback) {
+    return <Navigate to={`/home${window.location.search}`} replace />;
+  }
+
+  if (hasPlatformSession()) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return <App />;
+};
+
 // Protected Route wrapper
 interface ProtectedRouteProps {
   children: React.ReactElement;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const isAuthenticated = () => {
-    const twitchToken = localStorage.getItem('twitchToken');
-
-    // Check URL params for authentication (widget URL)
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasTwitchAuth = urlParams.has('twitchChannel') && urlParams.has('twitchToken');
-    const hasKickChannel = urlParams.has('kickChannel'); // Kick doesn't need OAuth
-    const hasYoutubeAuth =
-      urlParams.has('youtubeChannel') && urlParams.has('youtubeToken');
-    const youtubeToken = localStorage.getItem('youtubeToken');
-
-    return !!(twitchToken || hasTwitchAuth || hasKickChannel || youtubeToken || hasYoutubeAuth);
-  };
-
-  if (!isAuthenticated()) {
+  if (!isWidgetAuthenticated()) {
     return <Navigate to="/home" replace />;
   }
 
@@ -56,7 +75,7 @@ export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/" element={<App />} />
+        <Route path="/" element={<LandingRoute />} />
         <Route path="/home" element={<Home />} />
 
         <Route

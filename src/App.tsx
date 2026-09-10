@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 import { AppFooter } from "./components/AppFooter";
 import { MessageRow } from "./components/MessageRow";
 import { PlatformIcon } from "./components/PlatformIcon";
@@ -164,16 +164,6 @@ const ProductPreview: React.FC = () => (
 );
 
 const App: React.FC = () => {
-  const navigate = useNavigate();
-
-  // OAuth redirect URIs apontam para "/" — encaminha o callback para o dashboard
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("code") || params.has("error")) {
-      navigate(`/home${window.location.search}`, { replace: true });
-    }
-  }, [navigate]);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 font-sans">
       <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-16 px-5 py-10 lg:px-12 max-w-7xl mx-auto">

@@ -26,7 +26,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
           Opções de Personalização
         </h3>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 max-h-[360px] overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ColorField
             label="Cor de Fundo do Nome"
             color={settings.usernameBgColor}
@@ -135,7 +135,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
         </div>
       </div>
 
-      <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border h-[360px]">
+      <div className="bg-dark-bg-primary rounded-xl p-4 border border-dark-border">
         <h3 className="text-lg font-semibold mb-4 text-dark-text-primary">
           Preview
         </h3>
