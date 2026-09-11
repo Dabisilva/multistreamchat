@@ -85,6 +85,16 @@ textarea {
   max-height: 28px;
 }
 
+/* Twitch GIF Keyboard (GIPHY) — larger than emotes */
+.twitch-gif {
+  width: auto;
+  height: auto;
+  max-width: 60px;
+  max-height: 60px;
+  border-radius: 6px;
+  image-rendering: auto;
+}
+
 /* Ensure animated GIFs play */
 .emote[src$=".gif"],
 .emote[src*="/emote/"] {

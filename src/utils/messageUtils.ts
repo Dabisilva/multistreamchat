@@ -99,18 +99,17 @@ export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' |
     return text;
   }
 
-  // Separate Twitch native emotes (with positions) from third-party emotes (BTTV, etc.)
-  const nativeEmotes = emotes.filter(e => e.type === 'twitch' && e.start !== undefined && e.end !== undefined);
-  const thirdPartyEmotes = message.thirdPartyEmotes || emotes.filter(e => e.type !== 'twitch' || e.start === undefined);
+  // Replace anything with character positions first (Twitch emotes and GIF Keyboard GIFs)
+  const positionedEmotes = emotes.filter(e => e.start !== undefined && e.end !== undefined);
+  const thirdPartyEmotes = message.thirdPartyEmotes || emotes.filter(e => e.start === undefined);
 
-  // First, replace Twitch native emotes using their position data (before HTML encoding affected positions)
-  // We need to do this on the ORIGINAL text, not the encoded one
+  // Replace using original character positions before HTML encoding
   let processedText = message.text;
   
-  // Sort native emotes by position (descending) to replace from end to beginning
-  const sortedNativeEmotes = [...nativeEmotes].sort((a, b) => (b.start || 0) - (a.start || 0));
+  // Sort by position (descending) to replace from end to beginning
+  const sortedPositionedEmotes = [...positionedEmotes].sort((a, b) => (b.start || 0) - (a.start || 0));
   
-  for (const emote of sortedNativeEmotes) {
+  for (const emote of sortedPositionedEmotes) {
     if (emote.start !== undefined && emote.end !== undefined) {
       const emoteHtml = createEmoteHtml(emote, provider);
       processedText = processedText.substring(0, emote.start) + emoteHtml + processedText.substring(emote.end + 1);
@@ -161,9 +160,12 @@ export function attachEmotes(message: ChatMessage, provider: 'twitch' | 'kick' |
 function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick' | 'youtube'): string {
   const url = emote.urls['2'] || emote.urls['1'] || Object.values(emote.urls)[0]; // Prefer 2x for better quality
   
-  if (provider === 'twitch' || provider === 'youtube' || emote.type === 'bttv' || emote.type === 'kick') {
-    // Add specific class for BTTV emotes
-    const emoteClass = emote.type === 'bttv' ? 'emote bttv-emote' : 'emote';
+  if (provider === 'twitch' || provider === 'youtube' || emote.type === 'bttv' || emote.type === 'kick' || emote.type === 'twitch-gif') {
+    const emoteClass = emote.type === 'bttv'
+      ? 'emote bttv-emote'
+      : emote.type === 'twitch-gif'
+        ? 'emote twitch-gif'
+        : 'emote';
     return `<img class="${emoteClass}" src="${url}" alt="${emote.name}" title="${emote.name}"/>`;
   } else {
     // Mixer style emote with background positioning (legacy support)

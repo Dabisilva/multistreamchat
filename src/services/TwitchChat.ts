@@ -104,7 +104,10 @@ export class TwitchChatService implements ChatProvider {
         displayColor: tags.color || '',
         text: message,
         badges: this.parseBadges(tags.badges as Record<string, string>),
-        emotes: this.parseEmotes(tags.emotes as Record<string, string[]>, message),
+        emotes: [
+          ...this.parseEmotes(tags.emotes as Record<string, string[]>, message),
+          ...this.parseGifs(tags.gifs, message),
+        ],
         thirdPartyEmotes: this.bttvEmotes.map(e => {
           const extension = (e.animated || e.imageType === 'gif') ? 'gif' : 'webp';
           return {
@@ -212,6 +215,43 @@ export class TwitchChatService implements ChatProvider {
         description
       };
     }).filter(badge => badge.url); // Only return badges with valid URLs
+  }
+
+  // Twitch GIF Keyboard (PRIVMSG `gifs` tag): start-end|id|url[,start-end|id|url]
+  // Use the URL as provided; Twitch requires it not to be rewritten.
+  private parseGifs(gifsTag: unknown, message: string): any[] {
+    if (typeof gifsTag !== 'string' || !gifsTag) {
+      return [];
+    }
+
+    return gifsTag.split(',').flatMap((entry) => {
+      const [range, id, ...urlParts] = entry.split('|');
+      const url = urlParts.join('|');
+      if (!range || !id || !url || !/^https?:\/\//i.test(url)) {
+        return [];
+      }
+
+      const [startRaw, endRaw] = range.split('-');
+      const start = Number(startRaw);
+      const end = Number(endRaw);
+      if (!Number.isFinite(start) || !Number.isFinite(end)) {
+        return [];
+      }
+
+      return [{
+        type: 'twitch-gif',
+        name: message.substring(start, end + 1),
+        id,
+        gif: true,
+        urls: {
+          '1': url,
+          '2': url,
+          '4': url,
+        },
+        start,
+        end,
+      }];
+    });
   }
 
   private parseEmotes(emotes: Record<string, string[]> | undefined, message: string): any[] {
