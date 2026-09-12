@@ -467,7 +467,7 @@ export const useChat = () => {
   };
 
   const handleScroll = () => {
-    if (!chatContainerRef.current) return;
+    if (!chatContainerRef.current || window.name !== "ChatWidget") return;
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
     setShowScrollButton(
       scrollHeight - scrollTop - clientHeight >= SCROLL_THRESHOLD,
