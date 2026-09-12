@@ -1,46 +1,48 @@
 # MultiStreamChat
 
-A real-time chat overlay that combines messages from both Twitch and Kick platforms with their respective user colors, badges, and emotes. Built with React, TypeScript, and Vite for modern web development with excellent developer experience.
+OBS-ready overlays that unify **chat** and **viewer counts** from Twitch, Kick, and YouTube. Built with React, TypeScript, and Vite.
+
+Connect the platforms you stream on, customize the look, then paste a widget URL into OBS as a Browser Source.
 
 ## Features
 
-- **OAuth Authentication**: Secure OAuth 2.0/2.1 login flow for Twitch
-- **Dual Platform Support**: Connects to both Twitch and Kick simultaneously
-- **Real Platform Badges**: Uses platform APIs to fetch actual badge data with OAuth tokens
-- **Channel-Specific Badges**: Displays custom subscriber badges and channel-specific emotes
-- **User Colors**: Displays messages with actual user colors from both platforms
-- **Emote Support**: Full support for Twitch, BTTV, FFZ, and Kick emotes
-- **Real-time Updates**: Live message updates from both platforms
-- **OBS Ready**: Transparent background perfect for streaming overlays
-- **Message Limit**: Automatically manages message history (50 messages max)
-- **Persistent Login**: OAuth tokens are saved locally for seamless reconnection
-- **Modern UI**: Beautiful login screen with gradient design
-- **Message Delay**: Configurable delay for non-privileged users (moderators, VIPs, and broadcasters show immediately)
-- **TypeScript**: Full type safety and better developer experience
+- **Three platforms**: Twitch, Kick, and YouTube in the same overlays
+- **Chat overlay**: Combined live messages with platform colors, badges, and emotes
+- **Viewer count overlay**: Live viewer totals per platform, or a single summed count
+- **Dashboard**: Sign in, pick Chat or Viewer Count, customize, and copy the OBS URL
+- **OAuth login**: Twitch and YouTube via OAuth 2.0/2.1; Kick uses the channel name (no login)
+- **Persistent sessions**: Tokens and Kick channel are saved locally; access tokens refresh automatically
+- **Real badges**: Twitch/Kick badges from the platforms; YouTube owner, moderator, member, and verified badges
+- **Emotes**: Twitch, BTTV, FFZ, Kick, plus Twitch GIF Keyboard (GIPHY) GIFs
+- **Live detection**: YouTube chat and viewer counts follow the current live stream
+- **OBS ready**: Transparent widgets for Browser Sources
+- **Message delay**: Configurable delay for non-privileged users (mods, VIPs, and owners appear immediately)
+- **Moderation**: Deleted messages and banned users are removed, including while still delayed
+- **Message limit**: Keeps the latest 50 messages
+- **Legal pages**: Privacy Policy and Terms of Service
 
-## Customization Options
+## Getting started
 
-You can customize the chat overlay using the built-in customization panel or by adding URL parameters:
+1. Open the app and go to the home dashboard.
+2. Connect Twitch and/or YouTube with OAuth, and optionally enter a Kick channel.
+3. Choose **Chat** or **Viewer Count**.
+4. Customize the overlay (optional).
+5. Copy the widget URL and add it as an OBS Browser Source (transparent background).
 
-### Style Parameters
-
-- `usernameBg` - Background color for username (default: #30034d)
-- `usernameColor` - Text color for username (default: #ffffff)
-- `messageBg` - Background color for message (default: #8b5cf6)
-- `messageColor` - Text color for message (default: #ffffff)
-- `borderRadius` - Border radius in pixels (default: 10)
-- `usernameFontSize` - Font size for username in pixels (default: 16)
-- `messageFontSize` - Font size for message in pixels (default: 20)
-
-### Behavior Parameters
-
-- `messageDelay` - Delay in seconds for messages from non-privileged users (default: 5, max: 6)
-  - Moderators, VIPs, and channel owners are not affected by this delay
-  - Messages deleted or from banned users during the delay will not appear
-  - Can be set from 0 to 6 seconds in 0.5 second increments
+You can connect any combination of platforms. The overlays only show the ones you have connected.
 
 ### Example URL
 
 ```
-http://localhost:5173/chat?twitchChannel=channelname&messageDelay=3&messageBg=%23ff00ff
+http://localhost:5173/chat?twitchChannel=channelname&messageDelay=3&messageBg=%238b5cf6&fullWidthMessages=true&messagePadding=4
+```
+
+## Viewer count overlay
+
+Shows current concurrent viewers. Offline platforms report `0` (and look dimmed when shown separately). Counts refresh about every 45 seconds.
+
+### Example URL
+
+```
+http://localhost:5173/viewers?twitchChannel=channelname&sumViews=true&viewerFontSize=40&viewerTextColor=%23ffffff
 ```
