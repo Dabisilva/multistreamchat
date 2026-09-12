@@ -1,6 +1,5 @@
-import { hexToRgba } from "./colorUtils";
-
-const DEFAULT_TWITCH_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+import { getTwitchClientId } from "@/utils/appEnv";
+import { hexToRgba } from "@/utils/colorUtils";
 
 export interface ChatCustomizationSettings {
   usernameBgColor: string;
@@ -35,9 +34,7 @@ export function buildAuthParams(): string[] {
     try {
       const userData = JSON.parse(twitchUser);
       const storedClientId =
-        localStorage.getItem("twitchClientId") ||
-        (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
-        DEFAULT_TWITCH_CLIENT_ID;
+        localStorage.getItem("twitchClientId") || getTwitchClientId();
       const broadcasterId = userData.broadcasterId || userData.id;
       const storedRefreshToken = localStorage.getItem("twitchRefreshToken");
       const storedExpiresAt = localStorage.getItem("twitchTokenExpiresAt");

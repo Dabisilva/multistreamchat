@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import OAuthService, { type UserInfo } from "../services/OAuthService";
-import type { AppFeature } from "../components/FeatureNav";
+import OAuthService, { type UserInfo } from "@/services/OAuthService";
+import type { AppFeature } from "@/components/FeatureNav";
 import {
   buildChatWidgetUrl,
   buildViewerWidgetUrl,
   type ChatCustomizationSettings,
   type ViewerCustomizationSettings,
-} from "../utils/widgetUrl";
+} from "@/utils/widgetUrl";
 import {
   DEFAULT_CHAT_SETTINGS,
   DEFAULT_VIEWER_SETTINGS,
-} from "../utils/styleDefaults";
+} from "@/utils/styleDefaults";
+import { getTwitchClientId } from "@/utils/appEnv";
 
 const baseUrl = window.location.origin;
 
@@ -137,9 +138,7 @@ export function useAppDashboard() {
         tokenResponse.access_token,
       );
 
-      const clientId =
-        (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
-        "kimne78kx3ncx6brgo4mv6wki5h1ko";
+      const clientId = getTwitchClientId();
 
       const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
@@ -507,9 +506,16 @@ export function useAppDashboard() {
     navigator.clipboard.writeText(activeWidgetUrl).catch(() => {
       const textArea = document.createElement("textarea");
       textArea.value = activeWidgetUrl;
+      textArea.setAttribute("readonly", "");
+      textArea.style.position = "absolute";
+      textArea.style.left = "-9999px";
       document.body.appendChild(textArea);
       textArea.select();
-      document.body.removeChild(textArea);
+      try {
+        document.execCommand("copy");
+      } finally {
+        document.body.removeChild(textArea);
+      }
     });
   };
 

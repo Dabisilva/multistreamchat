@@ -1,10 +1,10 @@
 import React from "react";
-import { useViewerCount } from "./useViewerCount";
+import { useViewerCount } from "@/hooks/useViewerCount";
 import {
   formatViewerCount,
   ViewerPlatform,
-} from "../services/ViewerCountService";
-import { PlatformIcon } from "../components/PlatformIcon";
+} from "@/services/ViewerCountService";
+import { PlatformIcon } from "@/components/PlatformIcon";
 
 const PLATFORM_ORDER: ViewerPlatform[] = ["twitch", "youtube", "kick"];
 

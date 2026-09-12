@@ -27,6 +27,16 @@ const LIVE_STATUSES = new Set(["live", "liveStarting"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 const LIVE_SESSION_KEY = "youtubeLiveSession";
 const LIVE_SESSION_TTL_MS = 8 * 60 * 60_000;
+const REDISCOVERY_MIN_MS = 30_000;
+const REDISCOVERY_MAX_MS = 5 * 60_000;
+const STREAM_RESTART_MS = 30_000;
+
+export function nextYoutubeRediscoveryDelayMs(attempt: number): number {
+  return Math.min(
+    REDISCOVERY_MIN_MS * 2 ** Math.max(0, attempt),
+    REDISCOVERY_MAX_MS,
+  );
+}
 
 interface PersistedLiveSession {
   videoId: string | null;
@@ -245,6 +255,7 @@ async function discoverActiveLive(
   apiFetch: YoutubeFetch,
   includeViewers: boolean,
   channelId?: string,
+  allowSearch = true,
 ): Promise<YoutubeLiveInfo | null> {
   const active = await fetchBroadcasts(
     apiFetch,
@@ -288,7 +299,7 @@ async function discoverActiveLive(
     if (fromUpcoming) return fromUpcoming;
   }
 
-  if (channelId) {
+  if (allowSearch && channelId) {
     const fromSearch = await resolveFromSearch(apiFetch, channelId);
     if (fromSearch) return fromSearch;
   }
@@ -297,16 +308,17 @@ async function discoverActiveLive(
 }
 
 /**
- * Finds the live video once (on overlay render). After that:
- * - if live, viewer updates stay on cheap videos.list polls
- * - if not live, no more liveBroadcasts/search until the overlay remounts
+ * Finds the current live video, then cheaply polls videos.list while live.
+ * If the stream is offline, rediscovers with bounded exponential backoff
+ * instead of staying idle until remount.
  */
 export class YoutubeLiveTracker {
   private videoId: string | null = null;
   private liveChatId: string | null = null;
   private channelId: string | null = null;
   private quotaBlockedUntil = 0;
-  private discoveryDone = false;
+  private nextDiscoveryAt = 0;
+  private discoveryAttempts = 0;
   private inFlight: Promise<YoutubeLiveInfo | null> | null = null;
 
   constructor() {
@@ -331,36 +343,47 @@ export class YoutubeLiveTracker {
   }
 
   isIdle(): boolean {
-    return this.discoveryDone && !this.videoId;
+    return !this.videoId && Date.now() < this.nextDiscoveryAt;
   }
 
   getRetryDelayMs(): number {
     if (this.isQuotaBlocked()) {
       return Math.max(this.quotaBlockedUntil - Date.now(), 1000);
     }
-    return 0;
+    if (this.nextDiscoveryAt > Date.now()) {
+      return Math.max(this.nextDiscoveryAt - Date.now(), 1000);
+    }
+    return STREAM_RESTART_MS;
   }
 
   markQuotaExceeded(): void {
     this.quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
     this.videoId = null;
     this.liveChatId = null;
-    this.discoveryDone = true;
+    this.nextDiscoveryAt = this.quotaBlockedUntil;
+    this.discoveryAttempts = 0;
     clearPersistedLiveSession();
   }
 
   clearLive(): void {
     this.videoId = null;
     this.liveChatId = null;
-    this.discoveryDone = true;
+    this.scheduleRediscovery();
     clearPersistedLiveSession();
   }
 
   invalidateCache(): void {
     this.videoId = null;
     this.liveChatId = null;
-    this.discoveryDone = true;
+    this.discoveryAttempts = 0;
+    this.nextDiscoveryAt = Date.now() + STREAM_RESTART_MS;
     clearPersistedLiveSession();
+  }
+
+  private scheduleRediscovery(): void {
+    this.nextDiscoveryAt =
+      Date.now() + nextYoutubeRediscoveryDelayMs(this.discoveryAttempts);
+    this.discoveryAttempts += 1;
   }
 
   async refresh(
@@ -411,21 +434,27 @@ export class YoutubeLiveTracker {
       this.videoId = null;
       this.liveChatId = null;
       clearPersistedLiveSession();
+      this.discoveryAttempts = 0;
+      this.nextDiscoveryAt = Date.now() + STREAM_RESTART_MS;
+      return null;
     }
 
-    if (this.discoveryDone) return null;
+    if (Date.now() < this.nextDiscoveryAt) return null;
 
     const info = await discoverActiveLive(
       apiFetch,
       includeViewers,
       this.channelId || undefined,
+      this.discoveryAttempts === 0,
     );
-    this.discoveryDone = true;
 
     if (!info) {
       this.clearLive();
       return null;
     }
+
+    this.discoveryAttempts = 0;
+    this.nextDiscoveryAt = 0;
 
     this.videoId = info.videoId;
     this.liveChatId = info.liveChatId || null;

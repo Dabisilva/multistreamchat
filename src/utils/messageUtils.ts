@@ -1,10 +1,13 @@
-import { ChatMessage, Emote } from '../types';
+import { Badge, ChatMessage, Emote } from '@/types';
+import { sanitizeCssColor } from '@/utils/colorUtils';
 
-// HTML encode function
 export function htmlEncode(text: string): string {
-  return text.replace(/[<>"^]/g, function (char) {
-    return "&#" + char.charCodeAt(0) + ";";
-  });
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // Generate color from username with improved brightness
@@ -166,7 +169,8 @@ function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick' | 'youtube'):
       : emote.type === 'twitch-gif'
         ? 'emote twitch-gif'
         : 'emote';
-    return `<img class="${emoteClass}" src="${url}" alt="${emote.name}" title="${emote.name}"/>`;
+    const safeName = htmlEncode(emote.name);
+    return `<img class="${emoteClass}" src="${url}" alt="${safeName}" title="${safeName}"/>`;
   } else {
     // Mixer style emote with background positioning (legacy support)
     const coords = emote.coords || { x: 0, y: 0 };
@@ -178,7 +182,7 @@ function createEmoteHtml(emote: Emote, provider: 'twitch' | 'kick' | 'youtube'):
 }
 
 // Badge utility functions - simplified approach
-export function getValidBadges(badges: any[]): any[] {
+export function getValidBadges(badges: Badge[]): Badge[] {
   if (!badges || badges.length === 0) {
     return [];
   }
@@ -191,7 +195,7 @@ export function getValidBadges(badges: any[]): any[] {
 }
 
 // Badge validation and filtering
-export function validateBadges(badges: any[]): any[] {
+export function validateBadges(badges: Badge[]): Badge[] {
   if (!badges || !Array.isArray(badges)) {
     return [];
   }
@@ -205,7 +209,7 @@ export function validateBadges(badges: any[]): any[] {
 }
 
 // Badge sorting by priority (moderator, subscriber, etc.)
-export function sortBadgesByPriority(badges: any[]): any[] {
+export function sortBadgesByPriority(badges: Badge[]): Badge[] {
   const priorityOrder = [
     'broadcaster',
     'lead_moderator',
@@ -219,7 +223,7 @@ export function sortBadgesByPriority(badges: any[]): any[] {
     'prime'
   ];
   
-  return badges.sort((a, b) => {
+  return [...badges].sort((a, b) => {
     const aIndex = priorityOrder.indexOf(a.type);
     const bIndex = priorityOrder.indexOf(b.type);
     
@@ -252,25 +256,28 @@ export function createUsernameHtml(
     color = customNickColor;
   }
   
-  return `<span style="color: ${color}">${displayName}:</span>`;
+  const safeColor = sanitizeCssColor(color);
+  return `<span style="color: ${safeColor}">${htmlEncode(displayName)}:</span>`;
 }
 
-// Check if message should be hidden
 export function shouldHideMessage(
   text: string, 
   hideCommands: boolean, 
   ignoredUsers: string[], 
-  displayName: string
+  displayName: string,
+  username?: string,
 ): boolean {
-  // Hide commands if enabled
   if (hideCommands && text.startsWith('!')) {
     return true;
   }
-  
-  // Hide ignored users
-  if (ignoredUsers.includes(displayName.toLowerCase())) {
+
+  const ignored = new Set(ignoredUsers.map((user) => user.toLowerCase()));
+  if (ignored.has(displayName.toLowerCase())) {
     return true;
   }
-  
+  if (username && ignored.has(username.toLowerCase())) {
+    return true;
+  }
+
   return false;
 }

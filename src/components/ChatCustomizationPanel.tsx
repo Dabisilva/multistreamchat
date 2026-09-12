@@ -1,9 +1,9 @@
 import React from "react";
-import CustomRangeInput from "./CustomRangeInput";
-import { ColorField } from "./ColorField";
-import { MessageRow } from "./MessageRow";
-import { toMessageStyles } from "../utils/styleDefaults";
-import type { ChatCustomizationSettings } from "../utils/widgetUrl";
+import CustomRangeInput from "@/components/CustomRangeInput";
+import { ColorField } from "@/components/ColorField";
+import { MessageRow } from "@/components/MessageRow";
+import { toMessageStyles } from "@/utils/styleDefaults";
+import type { ChatCustomizationSettings } from "@/utils/widgetUrl";
 
 interface ChatCustomizationPanelProps {
   settings: ChatCustomizationSettings;
@@ -145,6 +145,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
               message={{
                 id: "preview-1",
                 userId: "user1",
+                username: "Jorge",
                 displayName: "Jorge",
                 displayColor: "#FF6B6B",
                 text: "O maior de todos os tempos",
@@ -162,6 +163,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
               message={{
                 id: "preview-2",
                 userId: "user2",
+                username: "Bruno",
                 displayName: "Bruno",
                 displayColor: "#4ECDC4",
                 text: "A que não sei oq não sei oq lá",
@@ -179,6 +181,7 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
               message={{
                 id: "preview-3",
                 userId: "user3",
+                username: "Alanzoka",
                 displayName: "Alanzoka",
                 displayColor: "#b927e6",
                 text: "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",

@@ -1,16 +1,28 @@
 // Chat message interfaces
+export type Platform = 'twitch' | 'kick' | 'youtube';
+
+export type PlatformConnectionState =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'stopping'
+  | 'error';
+
 export interface ChatMessage {
   id: string;
   userId: string;
+  /** Login/handle used for bans, timeouts and ignore lists. */
+  username: string;
   displayName: string;
   displayColor: string;
   text: string;
   badges: Badge[];
   emotes: Emote[];
-  thirdPartyEmotes?: Emote[]; // BTTV, FFZ, 7TV emotes
+  thirdPartyEmotes?: Emote[];
   isAction: boolean;
   timestamp: number;
-  provider: 'twitch' | 'kick' | 'youtube';
+  provider: Platform;
   channel: string;
   msgId: string;
 }
@@ -67,7 +79,7 @@ export interface MessageRowProps {
 }
 
 export interface ChatProvider {
-  connect: () => void;
+  connect: () => void | Promise<void>;
   disconnect: () => void;
   isConnected: () => boolean;
 }
@@ -76,10 +88,10 @@ export interface ChatProvider {
 export interface TwitchTags {
   "display-name": string;
   color?: string;
-  badges?: {
-    [key: string]: string;
-  };
-  [key: string]: any;
+  badges?: Record<string, string>;
+  id?: string;
+  username?: string;
+  "user-id"?: string;
 }
 
 // Kick API types - Updated to match actual API response
@@ -93,28 +105,28 @@ export interface KickChannelInfo {
   vod_enabled: boolean;
   subscription_enabled: boolean;
   followersCount: number;
-  subscriber_badges: any[];
-  banner_image: any;
-  recent_categories: any[];
-  livestream: any;
-  role: any;
+  subscriber_badges: unknown[];
+  banner_image: unknown;
+  recent_categories: unknown[];
+  livestream: unknown;
+  role: unknown;
   muted: boolean;
-  follower_badges: any[];
+  follower_badges: unknown[];
   verified: boolean;
   description: string;
-  facebook_id: any;
-  instagram_id: any;
-  twitter_id: any;
-  youtube_id: any;
-  discord: any;
-  tiktok_id: any;
+  facebook_id: unknown;
+  instagram_id: unknown;
+  twitter_id: unknown;
+  youtube_id: unknown;
+  discord: unknown;
+  tiktok_id: unknown;
   profilepic: string;
   channel_id: number;
   name: string;
   created_at: string;
   updated_at: string;
-  followers: any[];
-  subscribers: any[];
+  followers: unknown[];
+  subscribers: unknown[];
   chatroom: {
     id: number;
     chatable_type: string;
@@ -168,37 +180,9 @@ export interface KickMessageResponse {
   };
 }
 
-// Platform types
-export type Platform = 'twitch' | 'kick' | 'youtube';
-
-// Legacy message interface (for compatibility)
-export interface LegacyChatMessage {
-  username: string;
-  color: string | null;
-  message: string;
+export interface ViewerCount {
   platform: Platform;
-  badges?: Badge[];
-  emotes?: any[];
-  isAction?: boolean;
-  msgId?: string;
-  userId?: string;
-}
-
-// StreamElements event types
-export interface StreamElementsEvent {
-  detail: {
-    listener: string;
-    event?: any;
-    field?: string;
-  };
-}
-
-// Widget button event for testing
-export interface WidgetButtonEvent {
-  detail: {
-    listener: string;
-    event: {
-      field: string;
-    };
-  };
+  count: number | null;
+  isLive: boolean;
+  error?: string;
 }

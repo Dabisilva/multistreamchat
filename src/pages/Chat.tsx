@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
-import { MessageRow } from "../components/MessageRow";
-import { useChat } from "./useChat";
+import { MessageRow } from "@/components/MessageRow";
+import { useChat } from "@/hooks/useChat";
 
 const Chat: React.FC = () => {
   const {

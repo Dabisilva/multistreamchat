@@ -1,5 +1,6 @@
 import tmi from 'tmi.js';
-import { ChatMessage, ChatProvider } from '../types';
+import { Badge, ChatMessage, ChatProvider, Emote } from '@/types';
+import { isAbortError } from '@/utils/abort';
 
 interface BttvEmote {
   id: string;
@@ -36,6 +37,9 @@ export class TwitchChatService implements ChatProvider {
   private clientId: string = 'kimne78kx3ncx6brgo4mv6wki5h1ko'; // Public Twitch client ID
   private oauthToken: string = ''; // OAuth token for authenticated requests
   private broadcasterId: string = '';
+  private stopped = false;
+  private connectGeneration = 0;
+  private abortController: AbortController | null = null;
 
   constructor(
     channel: string, 
@@ -63,29 +67,41 @@ export class TwitchChatService implements ChatProvider {
     }
   }
 
+  setOauthToken(token: string): void {
+    this.oauthToken = token;
+  }
+
   async connect(): Promise<void> {
-    if (this.client) {
-      this.disconnect();
+    this.stopped = false;
+    const generation = ++this.connectGeneration;
+    this.abortController?.abort();
+    this.abortController = new AbortController();
+    this.teardownClient();
+
+    try {
+      if (this.oauthToken) {
+        await this.validateToken();
+        if (this.isStale(generation)) return;
+      }
+
+      if (!this.broadcasterId) {
+        await this.fetchBroadcasterId();
+        if (this.isStale(generation)) return;
+      }
+
+      await this.fetchGlobalBadges();
+      if (this.isStale(generation)) return;
+      await this.fetchChannelBadges();
+      if (this.isStale(generation)) return;
+      await this.fetchChannelIdAndBttv();
+      if (this.isStale(generation)) return;
+    } catch (error) {
+      if (this.isStale(generation) || isAbortError(error)) return;
     }
 
-    // Validate token if available
-    if (this.oauthToken) {
-       await this.validateToken();
-    }
+    if (this.isStale(generation)) return;
 
-    // Fetch broadcaster ID if not already available (needed for channel badges and BTTV)
-    if (!this.broadcasterId) {
-      await this.fetchBroadcasterId();
-    }
-    
-    // Fetch global and channel badges from Twitch Helix API
-    await this.fetchGlobalBadges();
-    await this.fetchChannelBadges();
-    
-    // Fetch BTTV emotes
-    await this.fetchChannelIdAndBttv();
-
-    this.client = new tmi.Client({
+    const client = new tmi.Client({
       options: { debug: false },
       connection: {
         secure: true,
@@ -93,14 +109,20 @@ export class TwitchChatService implements ChatProvider {
       },
       channels: [this.channel]
     });
+    this.client = client;
 
-    this.client.on('message', (channel, tags, message, self) => {
-      if (self) return;
+    client.on('message', (channel, tags, message, self) => {
+      if (self || this.stopped || this.client !== client) return;
+
+      const username = tags.username || '';
+      const displayName = tags['display-name'] || username;
+      const id = tags.id || `${Date.now()}-${Math.random()}`;
 
       const chatMessage: ChatMessage = {
-        id: tags.id || `${Date.now()}-${Math.random()}`,
+        id,
         userId: tags['user-id'] || '',
-        displayName: tags['display-name'] || tags.username || '',
+        username,
+        displayName,
         displayColor: tags.color || '',
         text: message,
         badges: this.parseBadges(tags.badges as Record<string, string>),
@@ -108,70 +130,75 @@ export class TwitchChatService implements ChatProvider {
           ...this.parseEmotes(tags.emotes as Record<string, string[]>, message),
           ...this.parseGifs(tags.gifs, message),
         ],
-        thirdPartyEmotes: this.bttvEmotes.map(e => {
-          const extension = (e.animated || e.imageType === 'gif') ? 'gif' : 'webp';
-          return {
-            type: 'bttv',
-            name: e.code,
-            id: e.id,
-            gif: e.animated || e.imageType === 'gif',
-            urls: {
-              '1': `https://cdn.betterttv.net/emote/${e.id}/1x.${extension}`,
-              '2': `https://cdn.betterttv.net/emote/${e.id}/2x.${extension}`,
-              '4': `https://cdn.betterttv.net/emote/${e.id}/3x.${extension}`
-            }
-          };
-        }),
         isAction: false,
         timestamp: Date.now(),
         provider: 'twitch',
         channel: channel.replace('#', ''),
-        msgId: tags.id || ''
+        msgId: tags.id || id,
       };
 
       this.onMessage(chatMessage);
     });
 
-    this.client.on('connected', () => {
+    client.on('connected', () => {
+      if (this.client !== client) return;
       this.connected = true;
     });
 
-    this.client.on('disconnected', () => {
+    client.on('disconnected', () => {
+      if (this.client !== client) return;
       this.connected = false;
     });
 
-    // Handle message deletions by moderators
-    this.client.on('messagedeleted', (_channel, _username, _deletedMessage, userstate) => {
+    client.on('messagedeleted', (_channel, _username, _deletedMessage, userstate) => {
+      if (this.stopped || this.client !== client) return;
       const targetMsgId = userstate['target-msg-id'];
       if (targetMsgId && this.onMessageDelete) {
         this.onMessageDelete(targetMsgId);
       }
     });
 
-    // Handle user bans
-    this.client.on('ban', (_channel, username) => {
+    client.on('ban', (_channel, username) => {
+      if (this.stopped || this.client !== client) return;
       if (username && this.onUserBanned) {
         this.onUserBanned(username.toLowerCase());
       }
     });
 
-    // Handle user timeouts
-    this.client.on('timeout', (_channel, username) => {
+    client.on('timeout', (_channel, username) => {
+      if (this.stopped || this.client !== client) return;
       if (username && this.onUserBanned) {
         this.onUserBanned(username.toLowerCase());
       }
     });
 
-    this.client.connect().catch(() => {
+    client.connect().catch(() => {
       // Connection error
     });
   }
 
   disconnect(): void {
-    if (this.client) {
-      this.client.disconnect();
-      this.client = null;
-      this.connected = false;
+    this.stopped = true;
+    this.connectGeneration += 1;
+    this.abortController?.abort();
+    this.abortController = null;
+    this.teardownClient();
+  }
+
+  private isStale(generation: number): boolean {
+    return this.stopped || generation !== this.connectGeneration;
+  }
+
+  private teardownClient(): void {
+    const client = this.client;
+    this.client = null;
+    this.connected = false;
+    if (!client) return;
+    try {
+      client.removeAllListeners();
+      void client.disconnect();
+    } catch {
+      // ignore
     }
   }
 
@@ -179,15 +206,12 @@ export class TwitchChatService implements ChatProvider {
     return this.connected;
   }
 
-  private parseBadges(badges: Record<string, string> | undefined): any[] {
+  private parseBadges(badges: Record<string, string> | undefined): Badge[] {
     if (!badges) {
       return [];
     }
 
     return Object.entries(badges).map(([type, version]) => {
-      // Debug: Log badge parsing
-  
-      // Try to get description from API data (check channel badges first)
       let description = this.getBadgeDescription(type);
       
       // Check channel badges first
@@ -219,7 +243,7 @@ export class TwitchChatService implements ChatProvider {
 
   // Twitch GIF Keyboard (PRIVMSG `gifs` tag): start-end|id|url[,start-end|id|url]
   // Use the URL as provided; Twitch requires it not to be rewritten.
-  private parseGifs(gifsTag: unknown, message: string): any[] {
+  private parseGifs(gifsTag: unknown, message: string): Emote[] {
     if (typeof gifsTag !== 'string' || !gifsTag) {
       return [];
     }
@@ -254,8 +278,8 @@ export class TwitchChatService implements ChatProvider {
     });
   }
 
-  private parseEmotes(emotes: Record<string, string[]> | undefined, message: string): any[] {
-    const emoteList: any[] = [];
+  private parseEmotes(emotes: Record<string, string[]> | undefined, message: string): Emote[] {
+    const emoteList: Emote[] = [];
     
     // Parse Twitch native emotes
     if (emotes) {
@@ -323,7 +347,8 @@ export class TwitchChatService implements ChatProvider {
       const response = await fetch('https://id.twitch.tv/oauth2/validate', {
         headers: {
           'Authorization': `Bearer ${cleanToken}`
-        }
+        },
+        signal: this.abortController?.signal,
       });
 
       if (!response.ok) {
@@ -336,6 +361,7 @@ export class TwitchChatService implements ChatProvider {
         expiresIn: data.expires_in // Time in seconds until token expires
       };
     } catch (error) {
+      if (isAbortError(error)) throw error;
       return { valid: false };
     }
   }
@@ -358,7 +384,8 @@ export class TwitchChatService implements ChatProvider {
     try {
   
       const response = await fetch(`https://api.twitch.tv/helix/users?login=${this.channel}`, {
-        headers: this.getTwitchHeaders()
+        headers: this.getTwitchHeaders(),
+        signal: this.abortController?.signal,
       });
 
       if (response.ok) {
@@ -369,6 +396,7 @@ export class TwitchChatService implements ChatProvider {
         }
       }
     } catch (error) {
+      if (isAbortError(error)) throw error;
       console.error('❌ Error fetching broadcaster ID:', error);
     }
   }
@@ -377,7 +405,8 @@ export class TwitchChatService implements ChatProvider {
     try {
       // Use Twitch Helix API to get global badges
       const response = await fetch('https://api.twitch.tv/helix/chat/badges/global', {
-        headers: this.getTwitchHeaders()
+        headers: this.getTwitchHeaders(),
+        signal: this.abortController?.signal,
       });
 
       if (response.ok) {
@@ -398,14 +427,15 @@ export class TwitchChatService implements ChatProvider {
         // Try to refresh token
         if (this.onTokenRefresh) {
           const newToken = await this.onTokenRefresh();
+          if (this.stopped) return;
           if (newToken) {
             this.oauthToken = newToken;
-            // Retry once with new token
             await this.fetchGlobalBadges(1);
           }
         }
       }
     } catch (error) {
+      if (isAbortError(error)) throw error;
       console.error('❌ Error fetching global badges:', error);
     }
   }
@@ -420,7 +450,8 @@ export class TwitchChatService implements ChatProvider {
       // Fetch channel-specific badges (requires OAuth token)
       // Note: This endpoint REQUIRES Authorization header with OAuth token
       const response = await fetch(`https://api.twitch.tv/helix/chat/badges?broadcaster_id=${this.broadcasterId}`, {
-        headers: this.getTwitchHeaders()
+        headers: this.getTwitchHeaders(),
+        signal: this.abortController?.signal,
       });
 
       if (response.ok) {
@@ -441,14 +472,15 @@ export class TwitchChatService implements ChatProvider {
         // Try to refresh token
         if (this.onTokenRefresh) {
           const newToken = await this.onTokenRefresh();
+          if (this.stopped) return;
           if (newToken) {
             this.oauthToken = newToken;
-            // Retry once with new token
             await this.fetchChannelBadges(1);
           }
         }
       }
     } catch (error) {
+      if (isAbortError(error)) throw error;
       console.error('❌ Error fetching channel badges:', error);
     }
   }
@@ -463,7 +495,9 @@ export class TwitchChatService implements ChatProvider {
         return; // Can't fetch channel emotes without broadcaster ID
       }
   
-      const userResponse = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${this.broadcasterId}`);
+      const userResponse = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${this.broadcasterId}`, {
+        signal: this.abortController?.signal,
+      });
       
       if (userResponse.ok) {
         const data = await userResponse.json();
@@ -471,7 +505,7 @@ export class TwitchChatService implements ChatProvider {
         // Combine channel emotes and shared emotes
         const channelEmotes = data.channelEmotes || [];
         const sharedEmotes = data.sharedEmotes || [];
-        const newEmotes = [...channelEmotes, ...sharedEmotes];
+        const newEmotes: BttvEmote[] = [...channelEmotes, ...sharedEmotes];
         
         // Add to existing global emotes (avoid duplicates)
         newEmotes.forEach(emote => {
@@ -481,19 +515,21 @@ export class TwitchChatService implements ChatProvider {
         });
       }
     } catch (error) {
-  
+      if (isAbortError(error)) throw error;
     }
   }
 
   private async fetchGlobalBttvEmotes(): Promise<void> {
     try {
-      const response = await fetch('https://api.betterttv.net/3/cached/emotes/global');
+      const response = await fetch('https://api.betterttv.net/3/cached/emotes/global', {
+        signal: this.abortController?.signal,
+      });
       if (response.ok) {
         const globalEmotes = await response.json();
         this.bttvEmotes = globalEmotes || [];
       }
     } catch (error) {
-      // Failed to fetch global BTTV emotes
+      if (isAbortError(error)) throw error;
     }
   }
 

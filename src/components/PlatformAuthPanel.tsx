@@ -1,5 +1,5 @@
 import React from "react";
-import { PlatformIcon } from "./PlatformIcon";
+import { PlatformIcon } from "@/components/PlatformIcon";
 
 interface PlatformAuthPanelProps {
   error: string;

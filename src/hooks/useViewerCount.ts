@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import OAuthService from "../services/OAuthService";
+import OAuthService from "@/services/OAuthService";
 import {
   ViewerCountService,
   PlatformViewers,
-} from "../services/ViewerCountService";
-import { DEFAULT_VIEWER_SETTINGS } from "../utils/styleDefaults";
+} from "@/services/ViewerCountService";
+import { DEFAULT_VIEWER_SETTINGS } from "@/utils/styleDefaults";
+import { scrubSensitiveSearchParams } from "@/utils/sensitiveUrl";
 
 const POLL_INTERVAL_MS = 45_000;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
@@ -82,7 +83,7 @@ export const useViewerCount = () => {
       credentialsRef.current.twitchToken = tokenResponse.access_token;
       return tokenResponse.access_token;
     } catch {
-      return twitchToken;
+      return null;
     }
   };
 
@@ -114,7 +115,7 @@ export const useViewerCount = () => {
       credentialsRef.current.youtubeToken = tokenResponse.access_token;
       return tokenResponse.access_token;
     } catch {
-      return youtubeToken;
+      return null;
     }
   };
 
@@ -227,6 +228,15 @@ export const useViewerCount = () => {
         localStorage.getItem("youtubeChannelId") || "";
     }
 
+    if (
+      urlParams.twitchToken ||
+      urlParams.refreshToken ||
+      urlParams.youtubeToken ||
+      urlParams.youtubeRefreshToken
+    ) {
+      scrubSensitiveSearchParams();
+    }
+
     setTwitchAuthenticated(
       !!(
         credentialsRef.current.twitchChannel &&
@@ -242,6 +252,11 @@ export const useViewerCount = () => {
       onYoutubeTokenRefresh: refreshYoutubeTokenIfNeeded,
     });
     setReady(true);
+
+    return () => {
+      serviceRef.current?.abortInFlight();
+      serviceRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -253,6 +268,7 @@ export const useViewerCount = () => {
 
     const poll = async () => {
       if (cancelled || inFlight || !serviceRef.current) return;
+      if (typeof document !== "undefined" && document.hidden) return;
       inFlight = true;
 
       serviceRef.current.updateCredentials({
@@ -280,14 +296,36 @@ export const useViewerCount = () => {
       }
     };
 
-    void poll();
-    intervalId = setInterval(() => {
+    const startInterval = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        void poll();
+      }, POLL_INTERVAL_MS);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        return;
+      }
       void poll();
-    }, POLL_INTERVAL_MS);
+      startInterval();
+    };
+
+    void poll();
+    if (typeof document === "undefined" || !document.hidden) {
+      startInterval();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibility);
       serviceRef.current?.abortInFlight();
     };
   }, [ready, config.showTwitch, config.showKick, config.showYoutube]);

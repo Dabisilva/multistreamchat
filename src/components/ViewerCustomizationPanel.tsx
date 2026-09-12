@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import CustomRangeInput from "./CustomRangeInput";
-import { ColorField } from "./ColorField";
-import { PlatformIcon } from "./PlatformIcon";
-import type { ViewerCustomizationSettings } from "../utils/widgetUrl";
-import { formatViewerCount } from "../services/ViewerCountService";
+import CustomRangeInput from "@/components/CustomRangeInput";
+import { ColorField } from "@/components/ColorField";
+import { PlatformIcon } from "@/components/PlatformIcon";
+import type { ViewerCustomizationSettings } from "@/utils/widgetUrl";
+import { formatViewerCount } from "@/services/ViewerCountService";
 
 interface ViewerCustomizationPanelProps {
   settings: ViewerCustomizationSettings;

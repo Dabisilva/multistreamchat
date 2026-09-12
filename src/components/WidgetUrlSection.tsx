@@ -1,5 +1,5 @@
 import React from "react";
-import type { AppFeature } from "./FeatureNav";
+import type { AppFeature } from "@/components/FeatureNav";
 
 interface WidgetUrlSectionProps {
   activeFeature: AppFeature;

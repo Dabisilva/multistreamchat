@@ -1,5 +1,14 @@
 // OAuth Service for Twitch and YouTube authentication
 
+import {
+  getTwitchClientId,
+  getTwitchClientSecret,
+  getTwitchRedirectUri,
+  getYoutubeClientId,
+  getYoutubeClientSecret,
+  getYoutubeRedirectUri,
+} from '@/utils/appEnv';
+
 export interface OAuthConfig {
   clientId: string;
   clientSecret: string;
@@ -517,9 +526,9 @@ export class OAuthService {
   private getTwitchConfig(): OAuthConfig {
     const defaultRedirectUri = `${window.location.origin}/`;
     return {
-      clientId: (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Public Twitch client ID
-      clientSecret: (import.meta as any).env?.VITE_TWITCH_CLIENT_SECRET || '',
-      redirectUri: (import.meta as any).env?.VITE_TWITCH_REDIRECT_URI || defaultRedirectUri
+      clientId: getTwitchClientId(),
+      clientSecret: getTwitchClientSecret(),
+      redirectUri: getTwitchRedirectUri(defaultRedirectUri)
     };
   }
 
@@ -528,12 +537,11 @@ export class OAuthService {
    * Google requires an exact redirect_uri match — do not alter trailing slashes.
    */
   private getYoutubeConfig(): OAuthConfig {
-    const envRedirect = ((import.meta as any).env?.VITE_YOUTUBE_REDIRECT_URI ||
-      '') as string;
+    const envRedirect = getYoutubeRedirectUri('');
 
     return {
-      clientId: (import.meta as any).env?.VITE_YOUTUBE_CLIENT_ID || '',
-      clientSecret: (import.meta as any).env?.VITE_YOUTUBE_CLIENT_SECRET || '',
+      clientId: getYoutubeClientId(),
+      clientSecret: getYoutubeClientSecret(),
       // Prefer explicit env; default to origin without forcing a trailing slash
       redirectUri: envRedirect || window.location.origin,
     };
