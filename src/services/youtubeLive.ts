@@ -20,6 +20,7 @@ interface BroadcastItem {
 
 const LIVE_STATUSES = new Set(["live", "liveStarting", "testing"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
+const IDLE_RETRY_MS = 2 * 60_000;
 
 export class YoutubeQuotaError extends Error {
   constructor() {
@@ -47,6 +48,12 @@ export function isYoutubeQuotaError(status: number, errorText: string): boolean 
   } catch {
     return false;
   }
+}
+
+export function isLiveChatGoneError(status: number, errorText: string): boolean {
+  if (status === 404) return true;
+  if (status !== 403) return false;
+  return !isYoutubeQuotaError(status, errorText);
 }
 
 async function readYoutubeJson(
@@ -111,6 +118,7 @@ async function fetchLiveByVideoId(
 
 async function discoverActiveLive(
   apiFetch: YoutubeFetch,
+  includeViewers: boolean,
 ): Promise<YoutubeLiveInfo | null> {
   const url =
     "https://www.googleapis.com/youtube/v3/liveBroadcasts" +
@@ -121,6 +129,16 @@ async function discoverActiveLive(
   if (!activeLive?.id) return null;
 
   const liveChatId = activeLive.snippet?.liveChatId || "";
+
+  if (!includeViewers && liveChatId) {
+    return {
+      videoId: activeLive.id,
+      liveChatId,
+      concurrentViewers: null,
+      isLive: true,
+    };
+  }
+
   const fromVideo = await fetchLiveByVideoId(apiFetch, activeLive.id);
 
   if (fromVideo) {
@@ -129,6 +147,8 @@ async function discoverActiveLive(
       liveChatId: fromVideo.liveChatId || liveChatId,
     };
   }
+
+  if (!liveChatId) return null;
 
   return {
     videoId: activeLive.id,
@@ -140,67 +160,97 @@ async function discoverActiveLive(
 
 /**
  * Caches the live video and prefers cheap videos.list polls (1 quota unit)
- * instead of rediscovering via liveBroadcasts/search on every tick.
+ * instead of rediscovering via liveBroadcasts on every tick.
+ * When nothing is live, waits IDLE_RETRY_MS before discovering again.
  */
 export class YoutubeLiveTracker {
   private videoId: string | null = null;
   private liveChatId: string | null = null;
   private quotaBlockedUntil = 0;
-  private idle = false;
+  private idleUntil = 0;
+  private inFlight: Promise<YoutubeLiveInfo | null> | null = null;
 
   isQuotaBlocked(): boolean {
     return Date.now() < this.quotaBlockedUntil;
   }
 
   isIdle(): boolean {
-    return this.idle;
+    return Date.now() < this.idleUntil;
+  }
+
+  getRetryDelayMs(): number {
+    const now = Date.now();
+    if (now < this.quotaBlockedUntil) {
+      return Math.max(this.quotaBlockedUntil - now, 1000);
+    }
+    if (now < this.idleUntil) {
+      return Math.max(this.idleUntil - now, 1000);
+    }
+    return IDLE_RETRY_MS;
   }
 
   markQuotaExceeded(): void {
     this.quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
     this.videoId = null;
     this.liveChatId = null;
-    this.idle = true;
+    this.idleUntil = 0;
   }
 
   clearLive(): void {
     this.videoId = null;
     this.liveChatId = null;
-    this.idle = true;
+    this.idleUntil = Date.now() + IDLE_RETRY_MS;
   }
 
-  async refresh(apiFetch: YoutubeFetch): Promise<YoutubeLiveInfo | null> {
-    if (this.isQuotaBlocked() || this.idle) return null;
+  async refresh(
+    apiFetch: YoutubeFetch,
+    options?: { includeViewers?: boolean },
+  ): Promise<YoutubeLiveInfo | null> {
+    if (this.inFlight) return this.inFlight;
 
-    try {
-      if (this.videoId) {
-        const info = await fetchLiveByVideoId(apiFetch, this.videoId);
-        if (info) {
-          this.liveChatId = info.liveChatId || this.liveChatId;
-          return {
-            ...info,
-            liveChatId: this.liveChatId || "",
-          };
+    this.inFlight = this.refreshOnce(apiFetch, options?.includeViewers !== false)
+      .catch((err) => {
+        if (err instanceof YoutubeQuotaError) {
+          this.markQuotaExceeded();
+          return null;
         }
-        this.clearLive();
-        return null;
-      }
+        throw err;
+      })
+      .finally(() => {
+        this.inFlight = null;
+      });
 
-      const info = await discoverActiveLive(apiFetch);
-      if (!info) {
-        this.idle = true;
-        return null;
-      }
+    return this.inFlight;
+  }
 
-      this.videoId = info.videoId;
-      this.liveChatId = info.liveChatId || null;
-      return info;
-    } catch (err) {
-      if (err instanceof YoutubeQuotaError) {
-        this.markQuotaExceeded();
-        return null;
+  private async refreshOnce(
+    apiFetch: YoutubeFetch,
+    includeViewers: boolean,
+  ): Promise<YoutubeLiveInfo | null> {
+    if (this.isQuotaBlocked() || this.isIdle()) return null;
+
+    if (this.videoId) {
+      const info = await fetchLiveByVideoId(apiFetch, this.videoId);
+      if (info) {
+        this.liveChatId = info.liveChatId || this.liveChatId;
+        return {
+          ...info,
+          liveChatId: this.liveChatId || "",
+        };
       }
-      throw err;
+      this.clearLive();
+      return null;
     }
+
+    const info = await discoverActiveLive(apiFetch, includeViewers);
+    if (!info) {
+      this.clearLive();
+      return null;
+    }
+
+    this.videoId = info.videoId;
+    this.liveChatId = info.liveChatId || null;
+    this.idleUntil = 0;
+    return info;
   }
 }

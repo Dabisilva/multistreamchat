@@ -6,7 +6,7 @@ import {
 } from "../services/ViewerCountService";
 import { DEFAULT_VIEWER_SETTINGS } from "../utils/styleDefaults";
 
-const POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 45_000;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
 
 export interface ViewerCountConfig {
@@ -34,6 +34,7 @@ export const useViewerCount = () => {
   const [twitchAuthenticated, setTwitchAuthenticated] = useState(false);
   const [youtubeAuthenticated, setYoutubeAuthenticated] = useState(false);
   const [kickConnected, setKickConnected] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const serviceRef = useRef<ViewerCountService | null>(null);
   const credentialsRef = useRef({
@@ -228,14 +229,19 @@ export const useViewerCount = () => {
       onTwitchTokenRefresh: refreshTwitchTokenIfNeeded,
       onYoutubeTokenRefresh: refreshYoutubeTokenIfNeeded,
     });
+    setReady(true);
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
+
     let cancelled = false;
+    let inFlight = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const poll = async () => {
-      if (!serviceRef.current) return;
+      if (cancelled || inFlight || !serviceRef.current) return;
+      inFlight = true;
 
       serviceRef.current.updateCredentials({
         ...credentialsRef.current,
@@ -243,15 +249,19 @@ export const useViewerCount = () => {
         onYoutubeTokenRefresh: refreshYoutubeTokenIfNeeded,
       });
 
-      const results = await serviceRef.current.fetchAll({
-        twitch: config.showTwitch,
-        kick: config.showKick,
-        youtube: config.showYoutube,
-      });
+      try {
+        const results = await serviceRef.current.fetchAll({
+          twitch: config.showTwitch,
+          kick: config.showKick,
+          youtube: config.showYoutube,
+        });
 
-      if (!cancelled) {
-        setViewers(results);
-        setLoading(false);
+        if (!cancelled) {
+          setViewers(results);
+          setLoading(false);
+        }
+      } finally {
+        inFlight = false;
       }
     };
 
@@ -263,8 +273,9 @@ export const useViewerCount = () => {
     return () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
+      serviceRef.current?.abortInFlight();
     };
-  }, [config.showTwitch, config.showKick, config.showYoutube]);
+  }, [ready, config.showTwitch, config.showKick, config.showYoutube]);
 
   const totalViewers = viewers
     .filter((v) => v.isLive)

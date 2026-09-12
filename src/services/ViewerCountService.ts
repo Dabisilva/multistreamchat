@@ -32,6 +32,7 @@ export class ViewerCountService {
     count: 0,
     isLive: false,
   };
+  private abortController = new AbortController();
 
   constructor(credentials: ViewerCountCredentials) {
     this.credentials = credentials;
@@ -39,6 +40,11 @@ export class ViewerCountService {
 
   updateCredentials(credentials: Partial<ViewerCountCredentials>) {
     this.credentials = { ...this.credentials, ...credentials };
+  }
+
+  abortInFlight(): void {
+    this.abortController.abort();
+    this.abortController = new AbortController();
   }
 
   async fetchAll(enabled: {
@@ -193,6 +199,7 @@ export class ViewerCountService {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
       },
+      signal: this.abortController.signal,
     });
 
     if (
@@ -220,7 +227,7 @@ export class ViewerCountService {
       };
     }
 
-    if (this.youtubeLive.isQuotaBlocked() || this.youtubeLive.isIdle()) {
+    if (this.youtubeLive.isQuotaBlocked()) {
       return this.lastYoutube;
     }
 
@@ -228,6 +235,10 @@ export class ViewerCountService {
       const live = await this.youtubeLive.refresh((url) =>
         this.youtubeFetch(url),
       );
+
+      if (!live && this.youtubeLive.isQuotaBlocked()) {
+        return this.lastYoutube;
+      }
 
       this.lastYoutube = live?.isLive
         ? {
@@ -239,6 +250,13 @@ export class ViewerCountService {
 
       return this.lastYoutube;
     } catch (err) {
+      if (
+        (err instanceof DOMException && err.name === "AbortError") ||
+        (err instanceof Error && err.name === "AbortError")
+      ) {
+        return this.lastYoutube;
+      }
+
       if (err instanceof YoutubeQuotaError) {
         this.youtubeLive.markQuotaExceeded();
         return this.lastYoutube;

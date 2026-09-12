@@ -44,39 +44,24 @@ function manageService(
   channel: string,
   createService: () => ChatService,
 ) {
+  if (serviceRef.current) {
+    serviceRef.current.disconnect();
+    serviceRef.current = null;
+  }
+
   if (!channel) {
-    if (serviceRef.current) {
-      serviceRef.current.disconnect();
-      serviceRef.current = null;
-    }
     return () => {};
   }
 
-  const oldService = serviceRef.current;
-  if (oldService) {
-    oldService.disconnect();
-    serviceRef.current = null;
-
-    const timeoutId = setTimeout(() => {
-      const service = createService();
-      service.connect();
-      serviceRef.current = service;
-    }, SERVICE_RECONNECT_DELAY_MS);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (serviceRef.current) {
-        serviceRef.current.disconnect();
-        serviceRef.current = null;
-      }
-    };
-  }
-
-  const service = createService();
-  service.connect();
-  serviceRef.current = service;
+  // Always schedule connect so React Strict Mode cleanup can cancel the first mount.
+  const timeoutId = setTimeout(() => {
+    const service = createService();
+    service.connect();
+    serviceRef.current = service;
+  }, SERVICE_RECONNECT_DELAY_MS);
 
   return () => {
+    clearTimeout(timeoutId);
     if (serviceRef.current) {
       serviceRef.current.disconnect();
       serviceRef.current = null;
@@ -190,6 +175,9 @@ export const useChat = () => {
 
   const refreshYoutubeTokenRef = useRef(refreshYoutubeTokenIfNeeded);
   refreshYoutubeTokenRef.current = refreshYoutubeTokenIfNeeded;
+
+  const youtubeOauthTokenRef = useRef(youtubeOauthToken);
+  youtubeOauthTokenRef.current = youtubeOauthToken;
 
   // Parse URL parameters helper
   const parseUrlParams = () => {
@@ -518,6 +506,10 @@ export const useChat = () => {
   }, [youtubeOauthToken]);
 
   useEffect(() => {
+    youtubeServiceRef.current?.setOauthToken(youtubeOauthToken);
+  }, [youtubeOauthToken]);
+
+  useEffect(() => {
     return manageService(twitchServiceRef, twitchChannel, () => {
       const twitchClientId =
         clientId || localStorage.getItem("twitchClientId") || undefined;
@@ -558,22 +550,24 @@ export const useChat = () => {
     config.messagesLimit,
   ]);
 
+  const youtubeEnabled = Boolean(youtubeChannel && youtubeOauthToken);
+
   useEffect(() => {
     return manageService(
       youtubeServiceRef,
-      youtubeChannel && youtubeOauthToken ? youtubeChannel : "",
+      youtubeEnabled ? youtubeChannel : "",
       () => {
         return new YoutubeChatService(youtubeChannel, handleNewMessage, {
-          oauthToken: youtubeOauthToken || undefined,
+          oauthToken: youtubeOauthTokenRef.current || undefined,
           channelId: youtubeChannelId || undefined,
           liveChatId: youtubeLiveChatId || undefined,
-          onTokenRefresh: refreshYoutubeTokenIfNeeded,
+          onTokenRefresh: () => refreshYoutubeTokenRef.current(),
         });
       },
     );
   }, [
+    youtubeEnabled,
     youtubeChannel,
-    youtubeOauthToken,
     youtubeChannelId,
     youtubeLiveChatId,
     config.hideCommands,
