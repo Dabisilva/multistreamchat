@@ -1,4 +1,4 @@
-import { resolveYoutubeLive } from "./youtubeLive";
+import { YoutubeLiveTracker, YoutubeQuotaError } from "./youtubeLive";
 
 export type ViewerPlatform = "twitch" | "kick" | "youtube";
 
@@ -26,6 +26,12 @@ const TWITCH_CLIENT_ID =
 
 export class ViewerCountService {
   private credentials: ViewerCountCredentials;
+  private youtubeLive = new YoutubeLiveTracker();
+  private lastYoutube: PlatformViewers = {
+    platform: "youtube",
+    count: 0,
+    isLive: false,
+  };
 
   constructor(credentials: ViewerCountCredentials) {
     this.credentials = credentials;
@@ -214,22 +220,30 @@ export class ViewerCountService {
       };
     }
 
+    if (this.youtubeLive.isQuotaBlocked() || this.youtubeLive.isIdle()) {
+      return this.lastYoutube;
+    }
+
     try {
-      const live = await resolveYoutubeLive(
-        (url) => this.youtubeFetch(url),
-        this.credentials.youtubeChannelId || undefined,
+      const live = await this.youtubeLive.refresh((url) =>
+        this.youtubeFetch(url),
       );
 
-      if (!live?.isLive) {
-        return { platform: "youtube", count: 0, isLive: false };
+      this.lastYoutube = live?.isLive
+        ? {
+            platform: "youtube",
+            count: live.concurrentViewers ?? 0,
+            isLive: true,
+          }
+        : { platform: "youtube", count: 0, isLive: false };
+
+      return this.lastYoutube;
+    } catch (err) {
+      if (err instanceof YoutubeQuotaError) {
+        this.youtubeLive.markQuotaExceeded();
+        return this.lastYoutube;
       }
 
-      return {
-        platform: "youtube",
-        count: live.concurrentViewers ?? 0,
-        isLive: true,
-      };
-    } catch {
       return {
         platform: "youtube",
         count: null,

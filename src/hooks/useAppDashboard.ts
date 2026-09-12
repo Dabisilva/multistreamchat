@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import OAuthService from "../services/OAuthService";
+import OAuthService, { type UserInfo } from "../services/OAuthService";
 import type { AppFeature } from "../components/FeatureNav";
 import {
   buildChatWidgetUrl,
@@ -13,6 +13,70 @@ import {
 } from "../utils/styleDefaults";
 
 const baseUrl = window.location.origin;
+
+const OAUTH_QUERY_KEYS = [
+  "code",
+  "state",
+  "error",
+  "error_description",
+  "scope",
+] as const;
+
+const FALLBACK_YOUTUBE_USER: UserInfo = {
+  id: "youtube",
+  username: "youtube",
+  displayName: "YouTube",
+  platform: "youtube",
+};
+
+function persistYoutubeUser(userData: UserInfo) {
+  localStorage.setItem("youtubeUserInfo", JSON.stringify(userData));
+  if (userData.id && userData.id !== "youtube") {
+    localStorage.setItem("youtubeChannelId", userData.id);
+  }
+  localStorage.setItem(
+    "youtubeChannelInfo",
+    JSON.stringify({
+      username: userData.username,
+      displayName: userData.displayName,
+      id: userData.id,
+      platform: "youtube",
+    }),
+  );
+}
+
+async function resolveYoutubeProfile(accessToken: string): Promise<UserInfo> {
+  try {
+    return await OAuthService.getYoutubeUserInfo(accessToken);
+  } catch {
+    const existing = localStorage.getItem("youtubeUserInfo");
+    if (existing) {
+      try {
+        return JSON.parse(existing) as UserInfo;
+      } catch {
+        // ignore invalid cache
+      }
+    }
+    return FALLBACK_YOUTUBE_USER;
+  }
+}
+
+function stripOAuthParamsFromUrl() {
+  const url = new URL(window.location.href);
+  let changed = false;
+
+  for (const key of OAUTH_QUERY_KEYS) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+
+  if (!changed) return;
+
+  const next = `${url.pathname}${url.search}${url.hash}` || "/home";
+  window.history.replaceState({}, document.title, next);
+}
 
 export function useAppDashboard() {
   const [isLoadingTwitch, setIsLoadingTwitch] = useState(false);
@@ -128,20 +192,8 @@ export function useAppDashboard() {
         );
       }
 
-      const userData = await OAuthService.getYoutubeUserInfo(
-        tokenResponse.access_token,
-      );
-
-      localStorage.setItem("youtubeUserInfo", JSON.stringify(userData));
-      localStorage.setItem("youtubeChannelId", userData.id);
-      localStorage.setItem(
-        "youtubeChannelInfo",
-        JSON.stringify({
-          username: userData.username,
-          displayName: userData.displayName,
-          id: userData.id,
-          platform: "youtube",
-        }),
+      persistYoutubeUser(
+        await resolveYoutubeProfile(tokenResponse.access_token),
       );
 
       setYoutubeAuthenticated(true);
@@ -208,9 +260,6 @@ export function useAppDashboard() {
         return tokenResponse.access_token;
       } catch {
         handleTwitchSignOut();
-        setError(
-          "Sua sessão da Twitch expirou. Por favor, faça login novamente.",
-        );
         return null;
       }
     }
@@ -247,9 +296,6 @@ export function useAppDashboard() {
         return tokenResponse.access_token;
       } catch {
         handleYoutubeSignOut();
-        setError(
-          "Sua sessão do YouTube expirou. Por favor, faça login novamente.",
-        );
         return null;
       }
     }
@@ -267,14 +313,9 @@ export function useAppDashboard() {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
       const state = urlParams.get("state");
-      const urlError = urlParams.get("error");
       const scope = urlParams.get("scope") || "";
 
-      if (urlError) {
-        setError(
-          `Erro de autenticação: ${urlError}${urlParams.get("error_description") ? ` — ${urlParams.get("error_description")}` : ""}`,
-        );
-      }
+      stripOAuthParamsFromUrl();
 
       if (code && state) {
         const handledKey = `oauth_code_handled_${code.slice(0, 24)}`;
@@ -284,8 +325,6 @@ export function useAppDashboard() {
           const platform =
             OAuthService.detectOAuthPlatform(state) ||
             (scope.includes("youtube") ? "youtube" : null);
-
-          window.history.replaceState({}, document.title, "/home");
 
           if (platform === "twitch") {
             setIsLoadingTwitch(true);
@@ -305,10 +344,6 @@ export function useAppDashboard() {
             } finally {
               setIsLoadingYoutube(false);
             }
-          } else {
-            setError(
-              "Callback OAuth recebido, mas a sessão local expirou. Clique em Login YouTube/Twitch novamente.",
-            );
           }
         }
       }
@@ -324,30 +359,14 @@ export function useAppDashboard() {
         if (validToken) setTwitchAuthenticated(true);
       }
 
-      if (youtubeToken && youtubeUser) {
-        const validToken = await refreshYoutubeTokenIfNeeded();
-        if (validToken) setYoutubeAuthenticated(true);
-      } else if (youtubeToken && !youtubeUser) {
-        try {
-          const userData = await OAuthService.getYoutubeUserInfo(youtubeToken);
-          localStorage.setItem("youtubeUserInfo", JSON.stringify(userData));
-          localStorage.setItem("youtubeChannelId", userData.id);
-          localStorage.setItem(
-            "youtubeChannelInfo",
-            JSON.stringify({
-              username: userData.username,
-              displayName: userData.displayName,
-              id: userData.id,
-              platform: "youtube",
-            }),
-          );
+      if (youtubeToken) {
+        const validToken =
+          (await refreshYoutubeTokenIfNeeded()) || youtubeToken;
+        if (validToken) {
+          if (!youtubeUser) {
+            persistYoutubeUser(await resolveYoutubeProfile(validToken));
+          }
           setYoutubeAuthenticated(true);
-        } catch (err) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Falha ao carregar canal do YouTube. Ative a YouTube Data API v3 no Google Cloud.",
-          );
         }
       }
 

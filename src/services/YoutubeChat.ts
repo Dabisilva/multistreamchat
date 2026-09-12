@@ -1,6 +1,10 @@
 import { Badge, ChatMessage, ChatProvider } from "../types";
 import { generateColor } from "../utils/messageUtils";
-import { resolveYoutubeLive } from "./youtubeLive";
+import {
+  isYoutubeQuotaError,
+  YoutubeLiveTracker,
+  YoutubeQuotaError,
+} from "./youtubeLive";
 
 interface YoutubeAuthorDetails {
   channelId?: string;
@@ -36,6 +40,7 @@ export class YoutubeChatService implements ChatProvider {
   private nextPageToken: string | null = null;
   private skipHistory = true;
   private stopped = false;
+  private liveTracker = new YoutubeLiveTracker();
 
   constructor(
     channel: string,
@@ -68,7 +73,6 @@ export class YoutubeChatService implements ChatProvider {
       }
 
       if (!this.liveChatId) {
-        this.schedulePoll(15000);
         return;
       }
 
@@ -76,7 +80,6 @@ export class YoutubeChatService implements ChatProvider {
       await this.pollMessages();
     } catch {
       this.connected = false;
-      this.schedulePoll(15000);
     }
   }
 
@@ -190,22 +193,20 @@ export class YoutubeChatService implements ChatProvider {
       }
     }
 
+    if (response.status === 403 || response.status === 429) {
+      const errorText = await response.clone().text();
+      if (isYoutubeQuotaError(response.status, errorText)) {
+        this.liveTracker.markQuotaExceeded();
+        throw new YoutubeQuotaError();
+      }
+    }
+
     return response;
   }
 
   private async resolveLiveChatId(): Promise<string> {
-    const live = await resolveYoutubeLive(
-      (url) => this.apiFetch(url),
-      this.channelId || undefined,
-    );
-
-    if (!live) return "";
-
-    if (!this.channelId) {
-      // channelId may still be unknown; keep whatever we had
-    }
-
-    return live.liveChatId || "";
+    const live = await this.liveTracker.refresh((url) => this.apiFetch(url));
+    return live?.liveChatId || "";
   }
 
   private schedulePoll(intervalMs: number): void {
@@ -220,21 +221,7 @@ export class YoutubeChatService implements ChatProvider {
     if (this.stopped) return;
 
     if (!this.liveChatId) {
-      try {
-        this.liveChatId = await this.resolveLiveChatId();
-      } catch {
-        this.schedulePoll(15000);
-        return;
-      }
-
-      if (!this.liveChatId) {
-        this.connected = false;
-        this.schedulePoll(15000);
-        return;
-      }
-      this.connected = true;
-      this.skipHistory = true;
-      this.nextPageToken = null;
+      return;
     }
 
     try {
@@ -256,7 +243,7 @@ export class YoutubeChatService implements ChatProvider {
           this.nextPageToken = null;
           this.skipHistory = true;
           this.connected = false;
-          this.schedulePoll(15000);
+          this.liveTracker.clearLive();
           return;
         }
 
@@ -282,8 +269,9 @@ export class YoutubeChatService implements ChatProvider {
           ? data.pollingIntervalMillis
           : 5000;
 
-      this.schedulePoll(interval);
-    } catch {
+      this.schedulePoll(Math.max(interval, 8000));
+    } catch (err) {
+      if (err instanceof YoutubeQuotaError) return;
       this.schedulePoll(10000);
     }
   }

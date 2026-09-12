@@ -24,6 +24,52 @@ export interface TokenResponse {
   scope?: string;
 }
 
+function youtubeUserInfoError(status: number, errorText: string): string {
+  let reason = "";
+  let apiStatus = "";
+  let message = "";
+
+  try {
+    const parsed = JSON.parse(errorText);
+    reason = String(parsed?.error?.errors?.[0]?.reason || "");
+    apiStatus = String(parsed?.error?.status || "");
+    message = String(parsed?.error?.message || "");
+  } catch {
+    // keep raw body
+  }
+
+  const code = `${reason} ${apiStatus}`.toLowerCase();
+
+  if (
+    code.includes("quotaexceeded") ||
+    code.includes("dailylimitexceeded") ||
+    code.includes("ratelimitexceeded") ||
+    code.includes("resource_exhausted")
+  ) {
+    return "Cota da YouTube Data API esgotada. Ela zera à meia-noite (horário do Pacífico).";
+  }
+
+  if (
+    code.includes("accessnotconfigured") ||
+    message.includes("has not been used") ||
+    message.includes("is disabled")
+  ) {
+    return "YouTube Data API v3 não está ativada no Google Cloud, ou a conta não tem permissão.";
+  }
+
+  if (status === 401) {
+    return "Sessão do YouTube expirada ou inválida. Faça login novamente.";
+  }
+
+  if (status === 403) {
+    return message
+      ? `YouTube recusou o acesso (403): ${message}`
+      : "YouTube recusou o acesso (403). Verifique a API no Google Cloud e a cota do projeto.";
+  }
+
+  return `Falha ao obter canal do YouTube (${status}): ${message || errorText}`;
+}
+
 export class OAuthService {
   private static instance: OAuthService;
   
@@ -442,14 +488,7 @@ export class OAuthService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      if (response.status === 403) {
-        throw new Error(
-          'YouTube Data API v3 não está ativada no Google Cloud, ou a conta não tem permissão.'
-        );
-      }
-      throw new Error(
-        `Falha ao obter canal do YouTube (${response.status}): ${errorText}`
-      );
+      throw new Error(youtubeUserInfoError(response.status, errorText));
     }
 
     const data = await response.json();

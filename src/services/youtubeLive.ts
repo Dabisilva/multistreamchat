@@ -16,15 +16,56 @@ interface BroadcastItem {
   status?: {
     lifeCycleStatus?: string;
   };
-  statistics?: {
-    concurrentViewers?: string | number;
-  };
-  contentDetails?: {
-    boundStreamId?: string;
-  };
 }
 
 const LIVE_STATUSES = new Set(["live", "liveStarting", "testing"]);
+const QUOTA_COOLDOWN_MS = 30 * 60_000;
+
+export class YoutubeQuotaError extends Error {
+  constructor() {
+    super("YouTube API quota exceeded");
+    this.name = "YoutubeQuotaError";
+  }
+}
+
+export function isYoutubeQuotaError(status: number, errorText: string): boolean {
+  if (status !== 403 && status !== 429) return false;
+
+  try {
+    const parsed = JSON.parse(errorText);
+    const reason = String(parsed?.error?.errors?.[0]?.reason || "");
+    const apiStatus = String(parsed?.error?.status || "");
+    const message = String(parsed?.error?.message || "");
+    const code = `${reason} ${apiStatus} ${message}`.toLowerCase();
+
+    return (
+      code.includes("quotaexceeded") ||
+      code.includes("dailylimitexceeded") ||
+      code.includes("ratelimitexceeded") ||
+      code.includes("resource_exhausted")
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function readYoutubeJson(
+  apiFetch: YoutubeFetch,
+  url: string,
+): Promise<any | null> {
+  const response = await apiFetch(url);
+
+  if (response.ok) {
+    return response.json();
+  }
+
+  const errorText = await response.text();
+  if (isYoutubeQuotaError(response.status, errorText)) {
+    throw new YoutubeQuotaError();
+  }
+
+  return null;
+}
 
 function pickLiveBroadcast(items: BroadcastItem[]): BroadcastItem | null {
   if (!items?.length) return null;
@@ -35,54 +76,16 @@ function pickLiveBroadcast(items: BroadcastItem[]): BroadcastItem | null {
   return live || items[0] || null;
 }
 
-async function fetchBroadcasts(
-  apiFetch: YoutubeFetch,
-  query: string,
-): Promise<BroadcastItem[]> {
-  const url =
-    "https://www.googleapis.com/youtube/v3/liveBroadcasts" +
-    `?part=snippet,contentDetails,status,statistics&${query}`;
-
-  const response = await apiFetch(url);
-  if (!response.ok) return [];
-
-  const data = await response.json();
-  return data.items || [];
-}
-
-async function resolveFromSearch(
-  apiFetch: YoutubeFetch,
-  channelId: string,
-): Promise<YoutubeLiveInfo | null> {
-  const searchUrl =
-    "https://www.googleapis.com/youtube/v3/search" +
-    `?part=snippet&channelId=${encodeURIComponent(channelId)}` +
-    "&type=video&eventType=live&maxResults=1";
-
-  const searchRes = await apiFetch(searchUrl);
-  if (!searchRes.ok) return null;
-
-  const searchData = await searchRes.json();
-  const videoId = searchData.items?.[0]?.id?.videoId;
-  if (!videoId) return null;
-
-  return resolveFromVideoId(apiFetch, videoId);
-}
-
-async function resolveFromVideoId(
+async function fetchLiveByVideoId(
   apiFetch: YoutubeFetch,
   videoId: string,
 ): Promise<YoutubeLiveInfo | null> {
   const videosUrl =
     "https://www.googleapis.com/youtube/v3/videos" +
-    `?part=liveStreamingDetails,snippet&id=${encodeURIComponent(videoId)}`;
+    `?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`;
 
-  const response = await apiFetch(videosUrl);
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  const video = data.items?.[0];
-  const details = video?.liveStreamingDetails;
+  const data = await readYoutubeJson(apiFetch, videosUrl);
+  const details = data?.items?.[0]?.liveStreamingDetails;
   if (!details) return null;
 
   const hasEnded = !!details.actualEndTime;
@@ -92,7 +95,6 @@ async function resolveFromVideoId(
       ? parseInt(String(details.concurrentViewers), 10) || 0
       : null;
 
-  // Live if started, not ended, and preferably has chat or concurrent viewers
   const isLive =
     !hasEnded &&
     (!!details.actualStartTime || concurrent != null || !!liveChatId);
@@ -107,118 +109,98 @@ async function resolveFromVideoId(
   };
 }
 
-function broadcastToLiveInfo(item: BroadcastItem): YoutubeLiveInfo | null {
-  const videoId = item.id;
-  if (!videoId) return null;
+async function discoverActiveLive(
+  apiFetch: YoutubeFetch,
+): Promise<YoutubeLiveInfo | null> {
+  const url =
+    "https://www.googleapis.com/youtube/v3/liveBroadcasts" +
+    "?part=snippet,status&broadcastStatus=active&broadcastType=all&mine=true";
 
-  const lifeCycle = item.status?.lifeCycleStatus || "";
-  const isLive = LIVE_STATUSES.has(lifeCycle);
-  if (!isLive && lifeCycle) return null;
+  const data = await readYoutubeJson(apiFetch, url);
+  const activeLive = pickLiveBroadcast(data?.items || []);
+  if (!activeLive?.id) return null;
 
-  const concurrent =
-    item.statistics?.concurrentViewers != null
-      ? parseInt(String(item.statistics.concurrentViewers), 10) || 0
-      : null;
+  const liveChatId = activeLive.snippet?.liveChatId || "";
+  const fromVideo = await fetchLiveByVideoId(apiFetch, activeLive.id);
+
+  if (fromVideo) {
+    return {
+      ...fromVideo,
+      liveChatId: fromVideo.liveChatId || liveChatId,
+    };
+  }
 
   return {
-    videoId,
-    liveChatId: item.snippet?.liveChatId || "",
-    concurrentViewers: concurrent,
+    videoId: activeLive.id,
+    liveChatId,
+    concurrentViewers: null,
     isLive: true,
   };
 }
 
 /**
- * Resolve the authenticated user's current live stream (chat id + viewers).
- * Tries active broadcasts, then all mine broadcasts, then channel search.
+ * Caches the live video and prefers cheap videos.list polls (1 quota unit)
+ * instead of rediscovering via liveBroadcasts/search on every tick.
  */
-export async function resolveYoutubeLive(
-  apiFetch: YoutubeFetch,
-  channelId?: string,
-): Promise<YoutubeLiveInfo | null> {
-  // 1) Explicitly active broadcasts (cheapest / most accurate for owner)
-  const active = await fetchBroadcasts(
-    apiFetch,
-    "broadcastStatus=active&broadcastType=all&mine=true",
-  );
-  const activeLive = pickLiveBroadcast(active);
-  if (activeLive?.id) {
-    // Items from broadcastStatus=active are live by definition
-    const liveChatId = activeLive.snippet?.liveChatId || "";
-    const concurrent =
-      activeLive.statistics?.concurrentViewers != null
-        ? parseInt(String(activeLive.statistics.concurrentViewers), 10) || 0
-        : null;
+export class YoutubeLiveTracker {
+  private videoId: string | null = null;
+  private liveChatId: string | null = null;
+  private quotaBlockedUntil = 0;
+  private idle = false;
 
-    if (liveChatId && concurrent != null) {
-      return {
-        videoId: activeLive.id,
-        liveChatId,
-        concurrentViewers: concurrent,
-        isLive: true,
-      };
-    }
-
-    const fromVideo = await resolveFromVideoId(apiFetch, activeLive.id);
-    if (fromVideo) {
-      return {
-        ...fromVideo,
-        liveChatId: fromVideo.liveChatId || liveChatId,
-        concurrentViewers: fromVideo.concurrentViewers ?? concurrent,
-      };
-    }
-
-    if (liveChatId || concurrent != null) {
-      return {
-        videoId: activeLive.id,
-        liveChatId,
-        concurrentViewers: concurrent,
-        isLive: true,
-      };
-    }
+  isQuotaBlocked(): boolean {
+    return Date.now() < this.quotaBlockedUntil;
   }
 
-  // 2) Upcoming (useful right before going live / testing)
-  const upcoming = await fetchBroadcasts(
-    apiFetch,
-    "broadcastStatus=upcoming&broadcastType=all&mine=true",
-  );
-  const upcomingItem = upcoming.find((item) => item.snippet?.liveChatId);
-  if (upcomingItem?.id && upcomingItem.snippet?.liveChatId) {
-    return {
-      videoId: upcomingItem.id,
-      liveChatId: upcomingItem.snippet.liveChatId,
-      concurrentViewers:
-        upcomingItem.statistics?.concurrentViewers != null
-          ? parseInt(String(upcomingItem.statistics.concurrentViewers), 10) || 0
-          : null,
-      isLive: true,
-    };
+  isIdle(): boolean {
+    return this.idle;
   }
 
-  // 3) All mine broadcasts — filter by lifeCycleStatus
-  const allMine = await fetchBroadcasts(
-    apiFetch,
-    "mine=true&broadcastType=all&maxResults=25",
-  );
-  const mineLive = allMine.find((item) =>
-    LIVE_STATUSES.has(item.status?.lifeCycleStatus || ""),
-  );
-  if (mineLive) {
-    const info = broadcastToLiveInfo(mineLive);
-    if (info?.liveChatId) return info;
-    if (info?.videoId) {
-      const fromVideo = await resolveFromVideoId(apiFetch, info.videoId);
-      if (fromVideo) return fromVideo;
+  markQuotaExceeded(): void {
+    this.quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
+    this.videoId = null;
+    this.liveChatId = null;
+    this.idle = true;
+  }
+
+  clearLive(): void {
+    this.videoId = null;
+    this.liveChatId = null;
+    this.idle = true;
+  }
+
+  async refresh(apiFetch: YoutubeFetch): Promise<YoutubeLiveInfo | null> {
+    if (this.isQuotaBlocked() || this.idle) return null;
+
+    try {
+      if (this.videoId) {
+        const info = await fetchLiveByVideoId(apiFetch, this.videoId);
+        if (info) {
+          this.liveChatId = info.liveChatId || this.liveChatId;
+          return {
+            ...info,
+            liveChatId: this.liveChatId || "",
+          };
+        }
+        this.clearLive();
+        return null;
+      }
+
+      const info = await discoverActiveLive(apiFetch);
+      if (!info) {
+        this.idle = true;
+        return null;
+      }
+
+      this.videoId = info.videoId;
+      this.liveChatId = info.liveChatId || null;
       return info;
+    } catch (err) {
+      if (err instanceof YoutubeQuotaError) {
+        this.markQuotaExceeded();
+        return null;
+      }
+      throw err;
     }
   }
-
-  // 4) Fallback: search channel for a live video (higher quota cost)
-  if (channelId) {
-    const fromSearch = await resolveFromSearch(apiFetch, channelId);
-    if (fromSearch) return fromSearch;
-  }
-
-  return null;
 }
