@@ -45,6 +45,7 @@ export class YoutubeChatService implements ChatProvider {
   private pollTimeout: ReturnType<typeof setTimeout> | null = null;
   private nextPageToken: string | null = null;
   private skipHistory = true;
+  private connectedAt = 0;
   private stopped = false;
   private polling = false;
   private abortController: AbortController | null = null;
@@ -77,6 +78,8 @@ export class YoutubeChatService implements ChatProvider {
 
   async connect(): Promise<void> {
     this.stopped = false;
+    this.skipHistory = true;
+    this.connectedAt = Date.now();
     this.abortController = new AbortController();
 
     if (!this.oauthToken) {
@@ -154,6 +157,11 @@ export class YoutubeChatService implements ChatProvider {
     // Only normal chat messages — ignore Super Chat, stickers, memberships, etc.
     if (item.snippet?.type !== "textMessageEvent") return;
 
+    const publishedAt = item.snippet.publishedAt
+      ? Date.parse(item.snippet.publishedAt)
+      : Date.now();
+    if (this.connectedAt && publishedAt < this.connectedAt - 2000) return;
+
     const text =
       item.snippet.displayMessage ||
       item.snippet.textMessageDetails?.messageText ||
@@ -172,9 +180,7 @@ export class YoutubeChatService implements ChatProvider {
       badges: this.parseBadges(item.authorDetails),
       emotes: [],
       isAction: false,
-      timestamp: item.snippet.publishedAt
-        ? Date.parse(item.snippet.publishedAt)
-        : Date.now(),
+      timestamp: publishedAt,
       provider: "youtube",
       channel: this.channel,
       msgId: item.id,

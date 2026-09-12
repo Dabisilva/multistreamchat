@@ -583,19 +583,21 @@ export const useChat = () => {
   ]);
 
   useEffect(() => {
-    if (!chatContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    const isNearBottom =
-      scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD;
+    const el = chatContainerRef.current;
+    if (!el) return;
 
-    if (isNearBottom) {
-      setTimeout(() => {
-        chatContainerRef.current?.scrollTo({
-          top: chatContainerRef.current.scrollHeight,
-          behavior: "smooth",
-        });
-      }, 0);
-    }
+    const isPopup = window.name === "ChatWidget";
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const shouldStick =
+      !isPopup ||
+      distanceFromBottom < SCROLL_THRESHOLD ||
+      el.scrollHeight <= el.clientHeight;
+
+    if (!shouldStick) return;
+
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
   }, [messages]);
 
   useEffect(() => {
