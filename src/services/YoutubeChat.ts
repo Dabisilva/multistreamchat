@@ -30,7 +30,6 @@ interface YoutubeLiveChatItem {
 
 export class YoutubeChatService implements ChatProvider {
   private channel: string;
-  private channelId: string;
   private liveChatId: string;
   private oauthToken: string;
   private onMessage: (message: ChatMessage) => void;
@@ -55,7 +54,6 @@ export class YoutubeChatService implements ChatProvider {
     this.channel = channel.replace(/^@/, "");
     this.onMessage = onMessage;
     this.oauthToken = options?.oauthToken || "";
-    this.channelId = options?.channelId || "";
     this.liveChatId = options?.liveChatId || "";
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
   }
