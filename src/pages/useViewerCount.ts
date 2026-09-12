@@ -27,6 +27,17 @@ const DEFAULT_CONFIG: ViewerCountConfig = {
   viewerTextColor: DEFAULT_VIEWER_SETTINGS.viewerTextColor,
 };
 
+function sameViewers(a: PlatformViewers[], b: PlatformViewers[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (item, index) =>
+      item.platform === b[index].platform &&
+      item.count === b[index].count &&
+      item.isLive === b[index].isLive &&
+      item.error === b[index].error,
+  );
+}
+
 export const useViewerCount = () => {
   const [viewers, setViewers] = useState<PlatformViewers[]>([]);
   const [config, setConfig] = useState<ViewerCountConfig>(DEFAULT_CONFIG);
@@ -37,6 +48,7 @@ export const useViewerCount = () => {
   const [ready, setReady] = useState(false);
 
   const serviceRef = useRef<ViewerCountService | null>(null);
+  const lastViewersRef = useRef<PlatformViewers[]>([]);
   const credentialsRef = useRef({
     twitchChannel: "",
     twitchToken: "",
@@ -257,7 +269,10 @@ export const useViewerCount = () => {
         });
 
         if (!cancelled) {
-          setViewers(results);
+          if (!sameViewers(lastViewersRef.current, results)) {
+            lastViewersRef.current = results;
+            setViewers(results);
+          }
           setLoading(false);
         }
       } finally {

@@ -63,6 +63,11 @@ export class YoutubeChatService implements ChatProvider {
     this.onMessage = onMessage;
     this.oauthToken = options?.oauthToken || "";
     this.liveChatId = options?.liveChatId || "";
+    if (!this.liveChatId) {
+      this.liveChatId = this.liveTracker.getLiveChatId();
+    } else {
+      this.liveTracker.remember({ liveChatId: this.liveChatId });
+    }
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
   }
 
@@ -283,6 +288,7 @@ export class YoutubeChatService implements ChatProvider {
 
         if (status === 400) {
           this.nextPageToken = null;
+          this.skipHistory = true;
           this.schedulePoll(ERROR_RETRY_MS);
           return;
         }

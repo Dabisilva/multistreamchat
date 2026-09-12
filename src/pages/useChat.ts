@@ -568,7 +568,6 @@ export const useChat = () => {
   }, [
     youtubeEnabled,
     youtubeChannel,
-    youtubeChannelId,
     youtubeLiveChatId,
     config.hideCommands,
     config.ignoredUsers,

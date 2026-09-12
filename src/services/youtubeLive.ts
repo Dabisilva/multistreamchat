@@ -21,6 +21,60 @@ interface BroadcastItem {
 const LIVE_STATUSES = new Set(["live", "liveStarting", "testing"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 const IDLE_RETRY_MS = 2 * 60_000;
+const LIVE_SESSION_KEY = "youtubeLiveSession";
+const LIVE_SESSION_TTL_MS = 8 * 60 * 60_000;
+
+interface PersistedLiveSession {
+  videoId: string | null;
+  liveChatId: string | null;
+  savedAt: number;
+}
+
+function readPersistedLiveSession(): PersistedLiveSession | null {
+  try {
+    const raw = localStorage.getItem(LIVE_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedLiveSession;
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > LIVE_SESSION_TTL_MS) {
+      localStorage.removeItem(LIVE_SESSION_KEY);
+      return null;
+    }
+    if (!parsed.videoId && !parsed.liveChatId) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedLiveSession(
+  videoId: string | null,
+  liveChatId: string | null,
+): void {
+  try {
+    if (!videoId && !liveChatId) {
+      localStorage.removeItem(LIVE_SESSION_KEY);
+      return;
+    }
+    localStorage.setItem(
+      LIVE_SESSION_KEY,
+      JSON.stringify({
+        videoId,
+        liveChatId,
+        savedAt: Date.now(),
+      } satisfies PersistedLiveSession),
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function clearPersistedLiveSession(): void {
+  try {
+    localStorage.removeItem(LIVE_SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 export class YoutubeQuotaError extends Error {
   constructor() {
@@ -170,6 +224,23 @@ export class YoutubeLiveTracker {
   private idleUntil = 0;
   private inFlight: Promise<YoutubeLiveInfo | null> | null = null;
 
+  constructor() {
+    const cached = readPersistedLiveSession();
+    if (!cached) return;
+    this.videoId = cached.videoId;
+    this.liveChatId = cached.liveChatId;
+  }
+
+  getLiveChatId(): string {
+    return this.liveChatId || "";
+  }
+
+  remember(partial: { videoId?: string; liveChatId?: string }): void {
+    if (partial.videoId) this.videoId = partial.videoId;
+    if (partial.liveChatId) this.liveChatId = partial.liveChatId;
+    this.persist();
+  }
+
   isQuotaBlocked(): boolean {
     return Date.now() < this.quotaBlockedUntil;
   }
@@ -200,6 +271,7 @@ export class YoutubeLiveTracker {
     this.videoId = null;
     this.liveChatId = null;
     this.idleUntil = Date.now() + IDLE_RETRY_MS;
+    clearPersistedLiveSession();
   }
 
   async refresh(
@@ -223,16 +295,31 @@ export class YoutubeLiveTracker {
     return this.inFlight;
   }
 
+  private persist(): void {
+    writePersistedLiveSession(this.videoId, this.liveChatId);
+  }
+
   private async refreshOnce(
     apiFetch: YoutubeFetch,
     includeViewers: boolean,
   ): Promise<YoutubeLiveInfo | null> {
     if (this.isQuotaBlocked() || this.isIdle()) return null;
 
+    if (this.liveChatId && !includeViewers) {
+      return {
+        videoId: this.videoId || "",
+        liveChatId: this.liveChatId,
+        concurrentViewers: null,
+        isLive: true,
+      };
+    }
+
     if (this.videoId) {
       const info = await fetchLiveByVideoId(apiFetch, this.videoId);
       if (info) {
         this.liveChatId = info.liveChatId || this.liveChatId;
+        this.idleUntil = 0;
+        this.persist();
         return {
           ...info,
           liveChatId: this.liveChatId || "",
@@ -251,6 +338,7 @@ export class YoutubeLiveTracker {
     this.videoId = info.videoId;
     this.liveChatId = info.liveChatId || null;
     this.idleUntil = 0;
+    this.persist();
     return info;
   }
 }
