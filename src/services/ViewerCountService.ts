@@ -227,14 +227,14 @@ export class ViewerCountService {
       };
     }
 
-    if (this.youtubeLive.isQuotaBlocked()) {
+    if (this.youtubeLive.isQuotaBlocked() || this.youtubeLive.isIdle()) {
       return this.lastYoutube;
     }
 
     try {
-      const live = await this.youtubeLive.refresh((url) =>
-        this.youtubeFetch(url),
-      );
+      const live = await this.youtubeLive.refresh((url) => this.youtubeFetch(url), {
+        channelId: this.credentials.youtubeChannelId || undefined,
+      });
 
       if (!live && this.youtubeLive.isQuotaBlocked()) {
         return this.lastYoutube;

@@ -11,6 +11,7 @@ const Chat: React.FC = () => {
     scrollToBottom,
     handleScroll,
     customStyles,
+    removeMessage,
   } = useChat();
 
   useEffect(() => {
@@ -35,6 +36,8 @@ const Chat: React.FC = () => {
               key={message.id}
               message={message}
               customStyles={customStyles}
+              hideAfter={config.hideAfter}
+              onRemove={removeMessage}
             />
           ))}
         </div>

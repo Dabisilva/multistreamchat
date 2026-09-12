@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { MessageRowProps } from "../types";
 import {
   attachEmotes,
@@ -10,8 +10,22 @@ import { DEFAULT_MESSAGE_STYLES } from "../utils/styleDefaults";
 export const MessageRow: React.FC<MessageRowProps> = ({
   message,
   customStyles,
+  hideAfter = 0,
+  onRemove,
 }) => {
   const messageRef = useRef<HTMLDivElement>(null);
+  const onRemoveRef = useRef(onRemove);
+  onRemoveRef.current = onRemove;
+
+  useEffect(() => {
+    if (!hideAfter || hideAfter <= 0 || !onRemoveRef.current) return;
+
+    const timeoutId = setTimeout(() => {
+      onRemoveRef.current?.(message.id);
+    }, hideAfter * 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [message.id, hideAfter]);
 
   const processedText = attachEmotes(message, message.provider);
   const usernameHtml = createUsernameHtml(

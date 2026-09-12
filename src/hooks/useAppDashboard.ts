@@ -192,12 +192,30 @@ export function useAppDashboard() {
         );
       }
 
-      persistYoutubeUser(
-        await resolveYoutubeProfile(tokenResponse.access_token),
-      );
+      try {
+        persistYoutubeUser(
+          await OAuthService.getYoutubeUserInfo(tokenResponse.access_token),
+        );
+        setError("");
+      } catch (profileErr) {
+        const existing = localStorage.getItem("youtubeUserInfo");
+        if (existing) {
+          try {
+            persistYoutubeUser(JSON.parse(existing) as UserInfo);
+          } catch {
+            persistYoutubeUser(FALLBACK_YOUTUBE_USER);
+          }
+        } else {
+          persistYoutubeUser(FALLBACK_YOUTUBE_USER);
+        }
+        setError(
+          profileErr instanceof Error
+            ? profileErr.message
+            : "Login do YouTube ok, mas não foi possível ler o canal.",
+        );
+      }
 
       setYoutubeAuthenticated(true);
-      setError("");
       refreshWidgetUrl();
     } catch (err) {
       setError(
@@ -314,17 +332,28 @@ export function useAppDashboard() {
       const code = urlParams.get("code");
       const state = urlParams.get("state");
       const scope = urlParams.get("scope") || "";
+      const oauthError = urlParams.get("error");
+      const oauthErrorDescription = urlParams.get("error_description");
 
       stripOAuthParamsFromUrl();
+
+      if (oauthError) {
+        setError(
+          oauthErrorDescription
+            ? decodeURIComponent(oauthErrorDescription.replace(/\+/g, " "))
+            : `OAuth recusado (${oauthError}). Tente conectar novamente.`,
+        );
+      }
 
       if (code && state) {
         const handledKey = `oauth_code_handled_${code.slice(0, 24)}`;
         if (!sessionStorage.getItem(handledKey)) {
           sessionStorage.setItem(handledKey, "1");
 
-          const platform =
-            OAuthService.detectOAuthPlatform(state) ||
-            (scope.includes("youtube") ? "youtube" : null);
+          const detected = OAuthService.detectOAuthPlatform(state);
+          const platform = scope.includes("youtube")
+            ? "youtube"
+            : detected;
 
           if (platform === "twitch") {
             setIsLoadingTwitch(true);
@@ -344,6 +373,10 @@ export function useAppDashboard() {
             } finally {
               setIsLoadingYoutube(false);
             }
+          } else {
+            setError(
+              "Não foi possível identificar o login (Twitch/YouTube). Tente conectar novamente.",
+            );
           }
         }
       }

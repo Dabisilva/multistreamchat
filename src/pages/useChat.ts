@@ -31,7 +31,8 @@ const PRIVILEGED_BADGES = [
 ];
 
 const DEFAULT_CONFIG: ChatConfig = {
-  messagesLimit: 50,
+  hideAfter: 180,
+  messagesLimit: 20,
   nickColor: "user",
   customNickColor: "#ffffff",
   hideCommands: true,
@@ -139,7 +140,8 @@ export const useChat = () => {
     const refreshToken = localStorage.getItem("youtubeRefreshToken");
     const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
 
-    if (!youtubeToken || !refreshToken) return null;
+    if (!youtubeToken) return null;
+    if (!refreshToken) return youtubeToken;
 
     const shouldRefresh =
       !expiresAt ||
@@ -381,6 +383,10 @@ export const useChat = () => {
     });
   };
 
+  const removeMessage = (id: string) => {
+    setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== id));
+  };
+
   const handleNewMessage = (message: ChatMessage) => {
     const messageKey = getMessageKey(message);
 
@@ -568,6 +574,7 @@ export const useChat = () => {
   }, [
     youtubeEnabled,
     youtubeChannel,
+    youtubeChannelId,
     youtubeLiveChatId,
     config.hideCommands,
     config.ignoredUsers,
@@ -620,5 +627,6 @@ export const useChat = () => {
     scrollToBottom,
     handleScroll,
     customStyles,
+    removeMessage,
   };
 };

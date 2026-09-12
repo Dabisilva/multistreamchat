@@ -39,6 +39,7 @@ export interface Emote {
 }
 
 export interface ChatConfig {
+  hideAfter: number;
   messagesLimit: number;
   nickColor: 'user' | 'custom';
   customNickColor: string;
@@ -61,6 +62,8 @@ export interface MessageCustomStyles {
 export interface MessageRowProps {
   message: ChatMessage;
   customStyles?: MessageCustomStyles;
+  hideAfter?: number;
+  onRemove?: (id: string) => void;
 }
 
 export interface ChatProvider {

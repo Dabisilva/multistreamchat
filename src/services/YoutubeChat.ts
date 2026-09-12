@@ -36,6 +36,7 @@ const AUTH_RETRY_MS = 30_000;
 
 export class YoutubeChatService implements ChatProvider {
   private channel: string;
+  private channelId: string;
   private liveChatId: string;
   private oauthToken: string;
   private onMessage: (message: ChatMessage) => void;
@@ -62,10 +63,9 @@ export class YoutubeChatService implements ChatProvider {
     this.channel = channel.replace(/^@/, "");
     this.onMessage = onMessage;
     this.oauthToken = options?.oauthToken || "";
+    this.channelId = options?.channelId || "";
     this.liveChatId = options?.liveChatId || "";
-    if (!this.liveChatId) {
-      this.liveChatId = this.liveTracker.getLiveChatId();
-    } else {
+    if (this.liveChatId) {
       this.liveTracker.remember({ liveChatId: this.liveChatId });
     }
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
@@ -185,8 +185,9 @@ export class YoutubeChatService implements ChatProvider {
 
   private isAbortError(err: unknown): boolean {
     return (
-      err instanceof DOMException && err.name === "AbortError"
-    ) || (err instanceof Error && err.name === "AbortError");
+      (err instanceof DOMException && err.name === "AbortError") ||
+      (err instanceof Error && err.name === "AbortError")
+    );
   }
 
   private async apiFetch(url: string, retried = false): Promise<Response> {
@@ -223,6 +224,7 @@ export class YoutubeChatService implements ChatProvider {
   private async resolveLiveChatId(): Promise<string> {
     const live = await this.liveTracker.refresh((url) => this.apiFetch(url), {
       includeViewers: false,
+      channelId: this.channelId || undefined,
     });
     return live?.liveChatId || "";
   }
@@ -232,15 +234,18 @@ export class YoutubeChatService implements ChatProvider {
     this.nextPageToken = null;
     this.skipHistory = true;
     this.connected = false;
-    this.liveTracker.clearLive();
+    this.liveTracker.invalidateCache();
   }
 
   private schedulePoll(intervalMs: number): void {
     if (this.stopped) return;
     if (this.pollTimeout) clearTimeout(this.pollTimeout);
-    this.pollTimeout = setTimeout(() => {
-      void this.pollMessages();
-    }, Math.max(intervalMs, 1000));
+    this.pollTimeout = setTimeout(
+      () => {
+        void this.pollMessages();
+      },
+      Math.max(intervalMs, 1000),
+    );
   }
 
   private async pollMessages(): Promise<void> {
@@ -253,7 +258,6 @@ export class YoutubeChatService implements ChatProvider {
         if (this.stopped) return;
         if (!this.liveChatId) {
           this.connected = false;
-          this.schedulePoll(this.liveTracker.getRetryDelayMs());
           return;
         }
       }
@@ -276,13 +280,11 @@ export class YoutubeChatService implements ChatProvider {
 
         if (isYoutubeQuotaError(status, errorText)) {
           this.liveTracker.markQuotaExceeded();
-          this.schedulePoll(this.liveTracker.getRetryDelayMs());
           return;
         }
 
         if (isLiveChatGoneError(status, errorText)) {
           this.markChatEnded();
-          this.schedulePoll(this.liveTracker.getRetryDelayMs());
           return;
         }
 
@@ -312,7 +314,6 @@ export class YoutubeChatService implements ChatProvider {
 
       if (data.offlineAt) {
         this.markChatEnded();
-        this.schedulePoll(this.liveTracker.getRetryDelayMs());
         return;
       }
 
@@ -338,10 +339,8 @@ export class YoutubeChatService implements ChatProvider {
       this.schedulePoll(Math.max(interval, MIN_CHAT_POLL_MS));
     } catch (err) {
       if (this.stopped || this.isAbortError(err)) return;
-      if (err instanceof YoutubeQuotaError) {
-        this.schedulePoll(this.liveTracker.getRetryDelayMs());
-        return;
-      }
+      if (err instanceof YoutubeQuotaError) return;
+      if (!this.liveChatId) return;
       this.schedulePoll(ERROR_RETRY_MS);
     } finally {
       this.polling = false;
