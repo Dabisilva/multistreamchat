@@ -31,8 +31,7 @@ const PRIVILEGED_BADGES = [
 ];
 
 const DEFAULT_CONFIG: ChatConfig = {
-  hideAfter: 180,
-  messagesLimit: 20,
+  messagesLimit: 50,
   nickColor: "user",
   customNickColor: "#ffffff",
   hideCommands: true,
@@ -225,8 +224,7 @@ export const useChat = () => {
           params.get("messageFontSize") ||
           DEFAULT_MESSAGE_STYLES.messageFontSize,
         messagePadding:
-          params.get("messagePadding") ||
-          DEFAULT_MESSAGE_STYLES.messagePadding,
+          params.get("messagePadding") || DEFAULT_MESSAGE_STYLES.messagePadding,
         fullWidthMessages:
           params.get("fullWidthMessages") ||
           DEFAULT_MESSAGE_STYLES.fullWidthMessages,
@@ -432,13 +430,6 @@ export const useChat = () => {
     }
   };
 
-  // Message removal
-  const removeMessage = (messageId: string) => {
-    setMessages((prevMessages) =>
-      prevMessages.filter((msg) => msg.id !== messageId),
-    );
-  };
-
   const removeMessageByMsgId = (msgId: string) => {
     const pending = pendingTimeoutsRef.current.get(msgId);
     if (pending) {
@@ -633,7 +624,6 @@ export const useChat = () => {
     config,
     showScrollButton,
     chatContainerRef,
-    removeMessage,
     scrollToBottom,
     handleScroll,
     customStyles,

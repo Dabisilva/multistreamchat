@@ -146,8 +146,6 @@ const ProductPreview: React.FC = () => (
               >
                 <MessageRow
                   message={message}
-                  hideAfter={180}
-                  onRemove={() => {}}
                   customStyles={PREVIEW_MESSAGE_STYLES}
                 />
               </div>

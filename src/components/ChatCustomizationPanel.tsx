@@ -156,8 +156,6 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
                 channel: "example",
                 msgId: "msg1",
               }}
-              hideAfter={180}
-              onRemove={() => {}}
               customStyles={previewStyles}
             />
             <MessageRow
@@ -175,8 +173,6 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
                 channel: "example",
                 msgId: "msg2",
               }}
-              hideAfter={180}
-              onRemove={() => {}}
               customStyles={previewStyles}
             />
             <MessageRow
@@ -194,8 +190,6 @@ export const ChatCustomizationPanel: React.FC<ChatCustomizationPanelProps> = ({
                 channel: "example",
                 msgId: "msg3",
               }}
-              hideAfter={180}
-              onRemove={() => {}}
               customStyles={previewStyles}
             />
           </div>

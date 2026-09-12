@@ -58,6 +58,11 @@ body {
   color: #333;
 }
 
+html.widget-dark-bg,
+html.widget-dark-bg body {
+  background: #0f0f0f;
+}
+
 button,
 input,
 optgroup,
