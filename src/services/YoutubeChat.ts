@@ -1,11 +1,11 @@
-import { Badge, ChatMessage, ChatProvider } from "../types";
-import { generateColor } from "../utils/messageUtils";
+import { Badge, ChatMessage, ChatProvider } from "@/types";
+import { generateColor } from "@/utils/messageUtils";
 import {
   isLiveChatGoneError,
   isYoutubeQuotaError,
   YoutubeLiveTracker,
   YoutubeQuotaError,
-} from "./youtubeLive";
+} from "@/services/youtubeLive";
 
 interface YoutubeAuthorDetails {
   channelId?: string;
@@ -174,6 +174,7 @@ export class YoutubeChatService implements ChatProvider {
     const chatMessage: ChatMessage = {
       id: item.id,
       userId: item.authorDetails?.channelId || "",
+      username: displayName,
       displayName,
       displayColor: generateColor(displayName),
       text,
@@ -264,6 +265,7 @@ export class YoutubeChatService implements ChatProvider {
         if (this.stopped) return;
         if (!this.liveChatId) {
           this.connected = false;
+          this.schedulePoll(this.liveTracker.getRetryDelayMs());
           return;
         }
       }
@@ -286,11 +288,13 @@ export class YoutubeChatService implements ChatProvider {
 
         if (isYoutubeQuotaError(status, errorText)) {
           this.liveTracker.markQuotaExceeded();
+          this.schedulePoll(this.liveTracker.getRetryDelayMs());
           return;
         }
 
         if (isLiveChatGoneError(status, errorText)) {
           this.markChatEnded();
+          this.schedulePoll(this.liveTracker.getRetryDelayMs());
           return;
         }
 
@@ -320,6 +324,7 @@ export class YoutubeChatService implements ChatProvider {
 
       if (data.offlineAt) {
         this.markChatEnded();
+        this.schedulePoll(this.liveTracker.getRetryDelayMs());
         return;
       }
 
@@ -345,9 +350,14 @@ export class YoutubeChatService implements ChatProvider {
       this.schedulePoll(Math.max(interval, MIN_CHAT_POLL_MS));
     } catch (err) {
       if (this.stopped || this.isAbortError(err)) return;
-      if (err instanceof YoutubeQuotaError) return;
-      if (!this.liveChatId) return;
-      this.schedulePoll(ERROR_RETRY_MS);
+      if (err instanceof YoutubeQuotaError) {
+        this.liveTracker.markQuotaExceeded();
+        this.schedulePoll(this.liveTracker.getRetryDelayMs());
+        return;
+      }
+      this.schedulePoll(
+        this.liveChatId ? ERROR_RETRY_MS : this.liveTracker.getRetryDelayMs(),
+      );
     } finally {
       this.polling = false;
     }

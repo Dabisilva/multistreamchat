@@ -2,12 +2,12 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Lazy load components for better performance
-const Chat = lazy(() => import('../pages/Chat'));
-const ViewerCount = lazy(() => import('../pages/ViewerCount'));
-const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
-const TermsOfService = lazy(() => import('../pages/TermsOfService'));
-const Home = lazy(() => import('../pages/Home'));
-const App = lazy(() => import('../App'));
+const Chat = lazy(() => import('@/pages/Chat'));
+const ViewerCount = lazy(() => import('@/pages/ViewerCount'));
+const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
+const Home = lazy(() => import('@/pages/Home'));
+const App = lazy(() => import('@/App'));
 
 // Loading component
 const LoadingScreen: React.FC = () => (

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { LegalPageLayout } from "../components/LegalPageLayout";
+import { LegalPageLayout } from "@/components/LegalPageLayout";
 
 const TermsOfService: React.FC = () => {
   return (

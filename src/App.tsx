@@ -1,16 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { AppFooter } from "./components/AppFooter";
-import { MessageRow } from "./components/MessageRow";
-import { PlatformIcon } from "./components/PlatformIcon";
+import { AppFooter } from "@/components/AppFooter";
+import { MessageRow } from "@/components/MessageRow";
+import { PlatformIcon } from "@/components/PlatformIcon";
 
-import { DEFAULT_MESSAGE_STYLES } from "./utils/styleDefaults";
-import "./style.css";
+import { DEFAULT_MESSAGE_STYLES } from "@/utils/styleDefaults";
+import "@/style.css";
 
 const DEMO_MESSAGES = [
   {
     id: "demo-1",
     userId: "u1",
+    username: "Luna",
     displayName: "Luna",
     displayColor: "#FF6B6B",
     text: "Boa live! 🔥",
@@ -25,6 +26,7 @@ const DEMO_MESSAGES = [
   {
     id: "demo-2",
     userId: "u2",
+    username: "Rafa",
     displayName: "Rafa",
     displayColor: "#4ECDC4",
     text: "Manda salve",
@@ -39,6 +41,7 @@ const DEMO_MESSAGES = [
   {
     id: "demo-3",
     userId: "u3",
+    username: "Kai",
     displayName: "Kai",
     displayColor: "#53FC18",
     text: "Vim da Kick também kkkk",
@@ -53,6 +56,7 @@ const DEMO_MESSAGES = [
   {
     id: "demo-4",
     userId: "u4",
+    username: "Maya",
     displayName: "Maya",
     displayColor: "#F59E0B",
     text: "kkkkkkkkkkkkkk",
@@ -67,6 +71,7 @@ const DEMO_MESSAGES = [
   {
     id: "demo-5",
     userId: "u5",
+    username: "Jorge",
     displayName: "Jorge",
     displayColor: "#55079e",
     text: "Jorge",

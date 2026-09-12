@@ -1,5 +1,7 @@
 // Channel Service for fetching channel information and badges
 
+import { getTwitchClientId } from '@/utils/appEnv';
+
 export interface ChannelInfo {
   id: string;
   username: string;
@@ -54,7 +56,7 @@ export class ChannelService {
    */
   async getTwitchChannelInfo(username: string, accessToken?: string): Promise<ChannelInfo> {
     const headers: HeadersInit = {
-      'Client-Id': (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Public Twitch client ID
+      'Client-Id': getTwitchClientId(),
     };
 
     if (accessToken) {
@@ -140,7 +142,7 @@ export class ChannelService {
    */
   async getTwitchChannelBadges(broadcasterId: string, accessToken?: string): Promise<ChannelBadges> {
     const headers: HeadersInit = {
-      'Client-Id': (import.meta as any).env?.VITE_TWITCH_CLIENT_ID || 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Public Twitch client ID
+      'Client-Id': getTwitchClientId(),
     };
 
     if (accessToken) {

@@ -1,9 +1,9 @@
-import type { MessageCustomStyles } from "../types";
-import { hexToRgba } from "./colorUtils";
+import type { MessageCustomStyles } from "@/types";
+import { hexToRgba } from "@/utils/colorUtils";
 import type {
   ChatCustomizationSettings,
   ViewerCustomizationSettings,
-} from "./widgetUrl";
+} from "@/utils/widgetUrl";
 
 /**
  * Naming pattern (matches widget URL params):

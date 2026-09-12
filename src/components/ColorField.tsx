@@ -1,5 +1,5 @@
 import React from "react";
-import CustomRangeInput from "./CustomRangeInput";
+import CustomRangeInput from "@/components/CustomRangeInput";
 
 interface ColorFieldProps {
   label: string;

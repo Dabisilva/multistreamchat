@@ -1,4 +1,6 @@
-import { YoutubeLiveTracker, YoutubeQuotaError } from "./youtubeLive";
+import { YoutubeLiveTracker, YoutubeQuotaError } from "@/services/youtubeLive";
+import { isAbortError } from "@/utils/abort";
+import { getTwitchClientId } from "@/utils/appEnv";
 
 export type ViewerPlatform = "twitch" | "kick" | "youtube";
 
@@ -20,9 +22,7 @@ export interface ViewerCountCredentials {
   onYoutubeTokenRefresh?: () => Promise<string | null>;
 }
 
-const TWITCH_CLIENT_ID =
-  (import.meta as any).env?.VITE_TWITCH_CLIENT_ID ||
-  "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const TWITCH_CLIENT_ID = getTwitchClientId();
 
 export class ViewerCountService {
   private credentials: ViewerCountCredentials;
@@ -89,6 +89,7 @@ export class ViewerCountService {
             Authorization: `Bearer ${token}`,
             "Client-Id": clientId,
           },
+          signal: this.abortController.signal,
         },
       );
 
@@ -104,6 +105,7 @@ export class ViewerCountService {
                 Authorization: `Bearer ${token}`,
                 "Client-Id": clientId,
               },
+              signal: this.abortController.signal,
             },
           );
         }
@@ -130,7 +132,10 @@ export class ViewerCountService {
         count: stream.viewer_count ?? 0,
         isLive: true,
       };
-    } catch {
+    } catch (err) {
+      if (isAbortError(err)) {
+        return { platform: "twitch", count: null, isLive: false };
+      }
       return {
         platform: "twitch",
         count: null,
@@ -146,6 +151,7 @@ export class ViewerCountService {
     try {
       const response = await fetch(
         `https://kick.com/api/v1/channels/${encodeURIComponent(channel)}`,
+        { signal: this.abortController.signal },
       );
 
       if (!response.ok) {
@@ -179,7 +185,10 @@ export class ViewerCountService {
         count: typeof count === "number" ? count : Number(count) || 0,
         isLive: true,
       };
-    } catch {
+    } catch (err) {
+      if (isAbortError(err)) {
+        return { platform: "kick", count: null, isLive: false };
+      }
       return {
         platform: "kick",
         count: null,
@@ -250,10 +259,7 @@ export class ViewerCountService {
 
       return this.lastYoutube;
     } catch (err) {
-      if (
-        (err instanceof DOMException && err.name === "AbortError") ||
-        (err instanceof Error && err.name === "AbortError")
-      ) {
+      if (isAbortError(err)) {
         return this.lastYoutube;
       }
 
