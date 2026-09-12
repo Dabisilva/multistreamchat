@@ -23,7 +23,7 @@ interface BroadcastItem {
   };
 }
 
-const LIVE_STATUSES = new Set(["live", "liveStarting", "testing"]);
+const LIVE_STATUSES = new Set(["live", "liveStarting"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 const LIVE_SESSION_KEY = "youtubeLiveSession";
 const LIVE_SESSION_TTL_MS = 8 * 60 * 60_000;
@@ -183,11 +183,10 @@ async function fetchLiveByVideoId(
       ? parseInt(String(details.concurrentViewers), 10) || 0
       : null;
 
-  const isLive =
-    !hasEnded &&
-    (!!details.actualStartTime || concurrent != null || !!liveChatId);
-
-  if (!isLive) return null;
+  // Upcoming Studio broadcasts often have a chat id without having started.
+  if (hasEnded || !details.actualStartTime) {
+    return null;
+  }
 
   return {
     videoId,
@@ -253,7 +252,7 @@ async function discoverActiveLive(
   );
   const fromCombined = await toLiveInfo(
     apiFetch,
-    pickLiveBroadcast(active, true),
+    pickLiveBroadcast(active, false),
     includeViewers,
   );
   if (fromCombined) return fromCombined;
@@ -261,7 +260,7 @@ async function discoverActiveLive(
   const activeOnly = await fetchBroadcasts(apiFetch, "broadcastStatus=active");
   const fromActive = await toLiveInfo(
     apiFetch,
-    pickLiveBroadcast(activeOnly, true),
+    pickLiveBroadcast(activeOnly, false),
     includeViewers,
   );
   if (fromActive) return fromActive;
@@ -271,13 +270,23 @@ async function discoverActiveLive(
   const fromMine = await toLiveInfo(apiFetch, mineLive, includeViewers);
   if (fromMine) return fromMine;
 
-  const upcoming = await fetchBroadcasts(apiFetch, "broadcastStatus=upcoming");
-  const upcomingLive =
-    pickLiveBroadcast(upcoming, false) ||
-    upcoming.find((item) => item.snippet?.liveChatId) ||
-    null;
-  const fromUpcoming = await toLiveInfo(apiFetch, upcomingLive, includeViewers);
-  if (fromUpcoming) return fromUpcoming;
+  // Upcoming Studio events are not live. Only chat may attach if a chat id exists.
+  if (!includeViewers) {
+    const upcoming = await fetchBroadcasts(
+      apiFetch,
+      "broadcastStatus=upcoming",
+    );
+    const upcomingLive =
+      pickLiveBroadcast(upcoming, false) ||
+      upcoming.find((item) => item.snippet?.liveChatId) ||
+      null;
+    const fromUpcoming = await toLiveInfo(
+      apiFetch,
+      upcomingLive,
+      includeViewers,
+    );
+    if (fromUpcoming) return fromUpcoming;
+  }
 
   if (channelId) {
     const fromSearch = await resolveFromSearch(apiFetch, channelId);

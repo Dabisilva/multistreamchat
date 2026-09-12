@@ -47,7 +47,9 @@ const ViewerCount: React.FC = () => {
     (platform) => isPlatformEnabled(platform) && isPlatformLive(platform),
   );
 
-  const visibleViewers = viewers.filter((v) => isPlatformEnabled(v.platform));
+  const visibleViewers = viewers.filter(
+    (v) => isPlatformEnabled(v.platform) && v.isLive,
+  );
 
   const renderSummed = (count: number, platforms: ViewerPlatform[]) => (
     <div
