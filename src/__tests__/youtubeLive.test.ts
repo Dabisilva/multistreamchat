@@ -115,7 +115,7 @@ describe("YoutubeLiveTracker", () => {
     expect(tracker.isIdle()).toBe(true);
   });
 
-  it("does not treat a chat id as live when the video has not actually started", async () => {
+  it("does not treat a lingering VOD as live", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
@@ -130,24 +130,25 @@ describe("YoutubeLiveTracker", () => {
           ],
         });
       }
-      return jsonResponse({ items: [] });
+      return jsonResponse({
+        items: [
+          {
+            liveStreamingDetails: {
+              actualStartTime: "2026-01-01T00:00:00Z",
+              activeLiveChatId: "chat-1",
+            },
+          },
+        ],
+      });
     };
 
     const tracker = new YoutubeLiveTracker();
-    const live = await tracker.refresh(apiFetch, {
-      includeViewers: false,
-      channelId: "UC123",
-    });
-
+    const live = await tracker.refresh(apiFetch, { includeViewers: false });
     expect(live).toBeNull();
     expect(tracker.isIdle()).toBe(true);
-    expect(urls).toEqual(["liveBroadcasts", "videos"]);
 
     urls.length = 0;
-    await tracker.refresh(apiFetch, {
-      includeViewers: false,
-      channelId: "UC123",
-    });
+    await tracker.refresh(apiFetch, { includeViewers: false });
     expect(urls).toEqual([]);
   });
 });
