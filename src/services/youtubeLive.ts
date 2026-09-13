@@ -156,29 +156,15 @@ async function fetchLiveByVideoId(
 async function toLiveInfo(
   apiFetch: YoutubeFetch,
   item: BroadcastItem | null,
-  includeViewers: boolean,
 ): Promise<YoutubeLiveInfo | null> {
   if (!item?.id) return null;
-
-  const liveChatId = item.snippet?.liveChatId || "";
-
-  // Chat only needs snippet.liveChatId from the active broadcast.
-  // videos.list is for viewer counts, not for discovering chat.
-  if (!includeViewers && liveChatId) {
-    return {
-      videoId: item.id,
-      liveChatId,
-      concurrentViewers: null,
-      isLive: true,
-    };
-  }
 
   const fromVideo = await fetchLiveByVideoId(apiFetch, item.id);
   if (!fromVideo) return null;
 
   return {
     ...fromVideo,
-    liveChatId: fromVideo.liveChatId || liveChatId,
+    liveChatId: fromVideo.liveChatId || item.snippet?.liveChatId || "",
   };
 }
 
@@ -195,22 +181,20 @@ function broadcastsForChannel(
 async function discoverActiveLive(
   apiFetch: YoutubeFetch,
   channelId?: string,
-  includeViewers = true,
 ): Promise<YoutubeLiveInfo | null> {
   const active = await fetchBroadcasts(apiFetch, "broadcastStatus=active");
   return toLiveInfo(
     apiFetch,
     pickLiveBroadcast(broadcastsForChannel(active, channelId), false),
-    includeViewers,
   );
 }
 
 /**
  * Resolves the current live once per overlay mount via liveBroadcasts.
- * Never restores a previous video from storage: ended lives often still
- * look live on videos.list and would keep polling chat.
- * While live, cheaply polls videos.list. If offline, does not search again
- * until the page remounts.
+ * A broadcast with liveChatId is not enough: ended/stuck lives often keep
+ * that id and would start liveChatMessages polling (5 units every ~8s).
+ * Confirm with videos.list (concurrentViewers). If offline, do not search
+ * again until the page remounts.
  */
 export class YoutubeLiveTracker {
   private videoId: string | null = null;
@@ -258,10 +242,7 @@ export class YoutubeLiveTracker {
     if (options?.channelId) this.channelId = options.channelId;
     if (this.inFlight) return this.inFlight;
 
-    this.inFlight = this.refreshOnce(
-      apiFetch,
-      options?.includeViewers !== false,
-    )
+    this.inFlight = this.refreshOnce(apiFetch)
       .catch((err) => {
         if (err instanceof YoutubeQuotaError) {
           this.markQuotaExceeded();
@@ -285,18 +266,8 @@ export class YoutubeLiveTracker {
 
   private async refreshOnce(
     apiFetch: YoutubeFetch,
-    includeViewers: boolean,
   ): Promise<YoutubeLiveInfo | null> {
     if (this.isQuotaBlocked() || this.offline) return null;
-
-    if (!includeViewers && this.liveChatId) {
-      return {
-        videoId: this.videoId || "",
-        liveChatId: this.liveChatId,
-        concurrentViewers: null,
-        isLive: true,
-      };
-    }
 
     if (this.videoId) {
       const info = await fetchLiveByVideoId(apiFetch, this.videoId);
@@ -328,7 +299,6 @@ export class YoutubeLiveTracker {
     const info = await discoverActiveLive(
       apiFetch,
       this.channelId || undefined,
-      includeViewers,
     );
 
     if (!info) {

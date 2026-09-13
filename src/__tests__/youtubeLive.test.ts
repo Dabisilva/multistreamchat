@@ -115,7 +115,7 @@ describe("YoutubeLiveTracker", () => {
     expect(tracker.isIdle()).toBe(true);
   });
 
-  it("resolves chat from liveBroadcasts without videos.list", async () => {
+  it("confirms chat with videos.list before treating a broadcast as live", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
@@ -130,7 +130,7 @@ describe("YoutubeLiveTracker", () => {
           ],
         });
       }
-      return jsonResponse({ items: [] });
+      return liveVideoResponse();
     };
 
     const tracker = new YoutubeLiveTracker();
@@ -142,10 +142,47 @@ describe("YoutubeLiveTracker", () => {
     expect(live).toEqual({
       videoId: "vid-1",
       liveChatId: "chat-1",
-      concurrentViewers: null,
+      concurrentViewers: 12,
       isLive: true,
     });
-    expect(urls).toEqual(["liveBroadcasts"]);
+    expect(urls).toEqual(["liveBroadcasts", "videos"]);
+  });
+
+  it("does not start chat from a stuck broadcast that still has liveChatId", async () => {
+    const urls: string[] = [];
+    const apiFetch = async (url: string) => {
+      urls.push(endpointName(url));
+      if (url.includes("/liveBroadcasts")) {
+        return jsonResponse({
+          items: [
+            {
+              id: "vid-1",
+              snippet: { liveChatId: "chat-1", channelId: "UC123" },
+              status: { lifeCycleStatus: "live" },
+            },
+          ],
+        });
+      }
+      return jsonResponse({
+        items: [
+          {
+            liveStreamingDetails: {
+              actualStartTime: "2026-01-01T00:00:00Z",
+              activeLiveChatId: "chat-1",
+            },
+          },
+        ],
+      });
+    };
+
+    const tracker = new YoutubeLiveTracker();
+    const live = await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+
+    expect(live).toBeNull();
+    expect(tracker.isIdle()).toBe(true);
 
     urls.length = 0;
     await tracker.refresh(apiFetch, {
