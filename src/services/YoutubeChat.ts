@@ -31,7 +31,6 @@ interface YoutubeLiveChatItem {
 
 const MIN_CHAT_POLL_MS = 8000;
 const ERROR_RETRY_MS = 10_000;
-const RATE_LIMIT_RETRY_MS = 30_000;
 const AUTH_RETRY_MS = 30_000;
 
 export class YoutubeChatService implements ChatProvider {
@@ -65,10 +64,7 @@ export class YoutubeChatService implements ChatProvider {
     this.onMessage = onMessage;
     this.oauthToken = options?.oauthToken || "";
     this.channelId = options?.channelId || "";
-    this.liveChatId = options?.liveChatId || "";
-    if (this.liveChatId) {
-      this.liveTracker.remember({ liveChatId: this.liveChatId });
-    }
+    this.liveChatId = "";
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
   }
 
@@ -290,17 +286,12 @@ export class YoutubeChatService implements ChatProvider {
           return;
         }
 
-        if (isLiveChatGoneError(status, errorText)) {
+        if (isLiveChatGoneError(status, errorText) || status === 400) {
           this.markChatEnded();
           return;
         }
 
-        if (status === 400) {
-          this.nextPageToken = null;
-          this.skipHistory = true;
-          this.schedulePoll(ERROR_RETRY_MS);
-          return;
-        }
+        if (!this.connected) return;
 
         if (status === 401) {
           this.schedulePoll(AUTH_RETRY_MS);
@@ -308,7 +299,6 @@ export class YoutubeChatService implements ChatProvider {
         }
 
         if (status === 429) {
-          this.schedulePoll(RATE_LIMIT_RETRY_MS);
           return;
         }
 
@@ -350,7 +340,7 @@ export class YoutubeChatService implements ChatProvider {
         this.liveTracker.markQuotaExceeded();
         return;
       }
-      if (!this.liveChatId) return;
+      if (!this.connected) return;
       this.schedulePoll(ERROR_RETRY_MS);
     } finally {
       this.polling = false;

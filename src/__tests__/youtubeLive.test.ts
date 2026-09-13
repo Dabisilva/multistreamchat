@@ -32,7 +32,7 @@ function liveVideoResponse() {
 }
 
 describe("YoutubeLiveTracker", () => {
-  it("discovers once when offline and does not search again", async () => {
+  it("checks liveBroadcasts once when offline and does not search again", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
@@ -57,9 +57,9 @@ describe("YoutubeLiveTracker", () => {
     expect(second).toBeNull();
     expect(third).toBeNull();
     expect(tracker.isIdle()).toBe(true);
-    expect(urls.filter((name) => name === "liveBroadcasts")).toHaveLength(3);
-    expect(urls.filter((name) => name === "search")).toHaveLength(1);
-    expect(urls).toHaveLength(4);
+    expect(urls.filter((name) => name === "liveBroadcasts")).toHaveLength(1);
+    expect(urls.filter((name) => name === "search")).toHaveLength(0);
+    expect(urls).toHaveLength(1);
   });
 
   it("does not rediscover after a live ends", async () => {
@@ -89,7 +89,7 @@ describe("YoutubeLiveTracker", () => {
     expect(urls).toEqual([]);
   });
 
-  it("uses a stale cached video only as a first-render check, then searches once", async () => {
+  it("uses a stale cached video only as a first-render check, then one broadcast lookup", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
@@ -109,9 +109,45 @@ describe("YoutubeLiveTracker", () => {
     });
 
     expect(urls[0]).toBe("videos");
-    expect(urls.filter((name) => name === "liveBroadcasts")).toHaveLength(3);
-    expect(urls.filter((name) => name === "search")).toHaveLength(1);
-    expect(urls).toHaveLength(5);
+    expect(urls.filter((name) => name === "liveBroadcasts")).toHaveLength(1);
+    expect(urls.filter((name) => name === "search")).toHaveLength(0);
+    expect(urls).toHaveLength(2);
     expect(tracker.isIdle()).toBe(true);
+  });
+
+  it("does not treat a chat id as live when the video has not actually started", async () => {
+    const urls: string[] = [];
+    const apiFetch = async (url: string) => {
+      urls.push(endpointName(url));
+      if (url.includes("/liveBroadcasts")) {
+        return jsonResponse({
+          items: [
+            {
+              id: "vid-1",
+              snippet: { liveChatId: "chat-1", channelId: "UC123" },
+              status: { lifeCycleStatus: "live" },
+            },
+          ],
+        });
+      }
+      return jsonResponse({ items: [] });
+    };
+
+    const tracker = new YoutubeLiveTracker();
+    const live = await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+
+    expect(live).toBeNull();
+    expect(tracker.isIdle()).toBe(true);
+    expect(urls).toEqual(["liveBroadcasts", "videos"]);
+
+    urls.length = 0;
+    await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+    expect(urls).toEqual([]);
   });
 });

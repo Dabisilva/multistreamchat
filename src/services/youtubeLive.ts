@@ -23,7 +23,7 @@ interface BroadcastItem {
   };
 }
 
-const LIVE_STATUSES = new Set(["live", "liveStarting"]);
+const LIVE_STATUSES = new Set(["live"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 const LIVE_SESSION_KEY = "youtubeLiveSession";
 const LIVE_SESSION_TTL_MS = 8 * 60 * 60_000;
@@ -199,84 +199,37 @@ async function fetchLiveByVideoId(
 async function toLiveInfo(
   apiFetch: YoutubeFetch,
   item: BroadcastItem | null,
-  includeViewers: boolean,
 ): Promise<YoutubeLiveInfo | null> {
   if (!item?.id) return null;
 
-  const liveChatId = item.snippet?.liveChatId || "";
-
-  if (!includeViewers && liveChatId) {
-    return {
-      videoId: item.id,
-      liveChatId,
-      concurrentViewers: null,
-      isLive: true,
-    };
-  }
-
   const fromVideo = await fetchLiveByVideoId(apiFetch, item.id);
-  if (fromVideo) {
-    return {
-      ...fromVideo,
-      liveChatId: fromVideo.liveChatId || liveChatId,
-    };
-  }
+  if (!fromVideo) return null;
 
-  return null;
+  return {
+    ...fromVideo,
+    liveChatId: fromVideo.liveChatId || item.snippet?.liveChatId || "",
+  };
 }
 
-async function resolveFromSearch(
-  apiFetch: YoutubeFetch,
-  channelId: string,
-): Promise<YoutubeLiveInfo | null> {
-  const searchUrl =
-    "https://www.googleapis.com/youtube/v3/search" +
-    `?part=snippet&channelId=${encodeURIComponent(channelId)}` +
-    "&type=video&eventType=live&maxResults=1";
-
-  const searchData = await readYoutubeJson(apiFetch, searchUrl);
-  const videoId = searchData?.items?.[0]?.id?.videoId;
-  if (!videoId) return null;
-
-  return fetchLiveByVideoId(apiFetch, videoId);
+function broadcastsForChannel(
+  items: BroadcastItem[],
+  channelId?: string,
+): BroadcastItem[] {
+  if (!channelId) return items;
+  return items.filter(
+    (item) => !item.snippet?.channelId || item.snippet.channelId === channelId,
+  );
 }
 
 async function discoverActiveLive(
   apiFetch: YoutubeFetch,
-  includeViewers: boolean,
   channelId?: string,
-  allowSearch = true,
 ): Promise<YoutubeLiveInfo | null> {
-  const active = await fetchBroadcasts(
+  const active = await fetchBroadcasts(apiFetch, "broadcastStatus=active");
+  return toLiveInfo(
     apiFetch,
-    "broadcastStatus=active&mine=true",
+    pickLiveBroadcast(broadcastsForChannel(active, channelId), false),
   );
-  const fromCombined = await toLiveInfo(
-    apiFetch,
-    pickLiveBroadcast(active, false),
-    includeViewers,
-  );
-  if (fromCombined) return fromCombined;
-
-  const activeOnly = await fetchBroadcasts(apiFetch, "broadcastStatus=active");
-  const fromActive = await toLiveInfo(
-    apiFetch,
-    pickLiveBroadcast(activeOnly, false),
-    includeViewers,
-  );
-  if (fromActive) return fromActive;
-
-  const mine = await fetchBroadcasts(apiFetch, "mine=true&maxResults=50");
-  const mineLive = pickLiveBroadcast(mine, false);
-  const fromMine = await toLiveInfo(apiFetch, mineLive, includeViewers);
-  if (fromMine) return fromMine;
-
-  if (allowSearch && channelId) {
-    const fromSearch = await resolveFromSearch(apiFetch, channelId);
-    if (fromSearch) return fromSearch;
-  }
-
-  return null;
 }
 
 /**
@@ -370,7 +323,7 @@ export class YoutubeLiveTracker {
 
   private async refreshOnce(
     apiFetch: YoutubeFetch,
-    includeViewers: boolean,
+    _includeViewers: boolean,
   ): Promise<YoutubeLiveInfo | null> {
     if (this.isQuotaBlocked() || this.offline) return null;
 
@@ -403,11 +356,7 @@ export class YoutubeLiveTracker {
     }
 
     this.liveResolved = true;
-    const info = await discoverActiveLive(
-      apiFetch,
-      includeViewers,
-      this.channelId || undefined,
-    );
+    const info = await discoverActiveLive(apiFetch, this.channelId || undefined);
 
     if (!info) {
       this.markOffline();
