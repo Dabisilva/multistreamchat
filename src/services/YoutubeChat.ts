@@ -64,7 +64,7 @@ export class YoutubeChatService implements ChatProvider {
     this.onMessage = onMessage;
     this.oauthToken = options?.oauthToken || "";
     this.channelId = options?.channelId || "";
-    this.liveChatId = "";
+    this.liveChatId = options?.liveChatId || "";
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
   }
 

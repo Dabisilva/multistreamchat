@@ -115,7 +115,47 @@ describe("YoutubeLiveTracker", () => {
     expect(tracker.isIdle()).toBe(true);
   });
 
-  it("does not treat a lingering VOD as live", async () => {
+  it("resolves chat from liveBroadcasts without videos.list", async () => {
+    const urls: string[] = [];
+    const apiFetch = async (url: string) => {
+      urls.push(endpointName(url));
+      if (url.includes("/liveBroadcasts")) {
+        return jsonResponse({
+          items: [
+            {
+              id: "vid-1",
+              snippet: { liveChatId: "chat-1", channelId: "UC123" },
+              status: { lifeCycleStatus: "live" },
+            },
+          ],
+        });
+      }
+      return jsonResponse({ items: [] });
+    };
+
+    const tracker = new YoutubeLiveTracker();
+    const live = await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+
+    expect(live).toEqual({
+      videoId: "vid-1",
+      liveChatId: "chat-1",
+      concurrentViewers: null,
+      isLive: true,
+    });
+    expect(urls).toEqual(["liveBroadcasts"]);
+
+    urls.length = 0;
+    await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+    expect(urls).toEqual([]);
+  });
+
+  it("does not treat a lingering VOD as live when fetching viewers", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
@@ -143,12 +183,12 @@ describe("YoutubeLiveTracker", () => {
     };
 
     const tracker = new YoutubeLiveTracker();
-    const live = await tracker.refresh(apiFetch, { includeViewers: false });
+    const live = await tracker.refresh(apiFetch, { includeViewers: true });
     expect(live).toBeNull();
     expect(tracker.isIdle()).toBe(true);
 
     urls.length = 0;
-    await tracker.refresh(apiFetch, { includeViewers: false });
+    await tracker.refresh(apiFetch, { includeViewers: true });
     expect(urls).toEqual([]);
   });
 });
