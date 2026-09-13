@@ -59,7 +59,9 @@ export const useViewerCount = () => {
     youtubeToken: "",
   });
 
-  const refreshTwitchTokenIfNeeded = async (): Promise<string | null> => {
+  const refreshTwitchTokenIfNeeded = async (
+    force = false,
+  ): Promise<string | null> => {
     const twitchToken = localStorage.getItem("twitchToken");
     const refreshToken = localStorage.getItem("twitchRefreshToken");
     const expiresAt = localStorage.getItem("twitchTokenExpiresAt");
@@ -67,6 +69,7 @@ export const useViewerCount = () => {
     if (!twitchToken || !refreshToken) return twitchToken;
 
     const shouldRefresh =
+      force ||
       !expiresAt ||
       parseInt(expiresAt) - Date.now() < TOKEN_REFRESH_THRESHOLD_MS;
 
@@ -87,7 +90,9 @@ export const useViewerCount = () => {
     }
   };
 
-  const refreshYoutubeTokenIfNeeded = async (): Promise<string | null> => {
+  const refreshYoutubeTokenIfNeeded = async (
+    force = false,
+  ): Promise<string | null> => {
     const youtubeToken = localStorage.getItem("youtubeToken");
     const refreshToken = localStorage.getItem("youtubeRefreshToken");
     const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
@@ -95,6 +100,7 @@ export const useViewerCount = () => {
     if (!youtubeToken || !refreshToken) return youtubeToken;
 
     const shouldRefresh =
+      force ||
       !expiresAt ||
       parseInt(expiresAt) - Date.now() < TOKEN_REFRESH_THRESHOLD_MS;
 
@@ -237,23 +243,37 @@ export const useViewerCount = () => {
       scrubSensitiveSearchParams();
     }
 
-    setTwitchAuthenticated(
-      !!(
-        credentialsRef.current.twitchChannel &&
-        credentialsRef.current.twitchToken
-      ),
-    );
-    setYoutubeAuthenticated(!!credentialsRef.current.youtubeToken);
-    setKickConnected(!!credentialsRef.current.kickChannel);
+    let cancelled = false;
 
-    serviceRef.current = new ViewerCountService({
-      ...credentialsRef.current,
-      onTwitchTokenRefresh: refreshTwitchTokenIfNeeded,
-      onYoutubeTokenRefresh: refreshYoutubeTokenIfNeeded,
-    });
-    setReady(true);
+    const start = async () => {
+      const twitchToken = await refreshTwitchTokenIfNeeded(true);
+      const youtubeToken = await refreshYoutubeTokenIfNeeded(true);
+      if (cancelled) return;
+
+      if (twitchToken) credentialsRef.current.twitchToken = twitchToken;
+      if (youtubeToken) credentialsRef.current.youtubeToken = youtubeToken;
+
+      setTwitchAuthenticated(
+        !!(
+          credentialsRef.current.twitchChannel &&
+          credentialsRef.current.twitchToken
+        ),
+      );
+      setYoutubeAuthenticated(!!credentialsRef.current.youtubeToken);
+      setKickConnected(!!credentialsRef.current.kickChannel);
+
+      serviceRef.current = new ViewerCountService({
+        ...credentialsRef.current,
+        onTwitchTokenRefresh: () => refreshTwitchTokenIfNeeded(true),
+        onYoutubeTokenRefresh: () => refreshYoutubeTokenIfNeeded(true),
+      });
+      setReady(true);
+    };
+
+    void start();
 
     return () => {
+      cancelled = true;
       serviceRef.current?.abortInFlight();
       serviceRef.current = null;
     };
@@ -273,8 +293,8 @@ export const useViewerCount = () => {
 
       serviceRef.current.updateCredentials({
         ...credentialsRef.current,
-        onTwitchTokenRefresh: refreshTwitchTokenIfNeeded,
-        onYoutubeTokenRefresh: refreshYoutubeTokenIfNeeded,
+        onTwitchTokenRefresh: () => refreshTwitchTokenIfNeeded(true),
+        onYoutubeTokenRefresh: () => refreshYoutubeTokenIfNeeded(true),
       });
 
       try {
