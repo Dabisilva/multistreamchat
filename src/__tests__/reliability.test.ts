@@ -5,7 +5,6 @@ import {
   htmlEncode,
   shouldHideMessage,
 } from "@/utils/messageUtils";
-import { nextYoutubeRediscoveryDelayMs } from "@/services/youtubeLive";
 import { nextKickReconnectDelayMs } from "@/services/KickChat";
 
 describe("htmlEncode", () => {
@@ -51,16 +50,10 @@ describe("hexToRgba", () => {
   });
 });
 
-describe("reconnect/rediscovery backoff", () => {
+describe("Kick reconnect backoff", () => {
   it("bounds Kick reconnect delay", () => {
     expect(nextKickReconnectDelayMs(0)).toBe(5000);
     expect(nextKickReconnectDelayMs(1)).toBe(10000);
     expect(nextKickReconnectDelayMs(10)).toBe(30000);
-  });
-
-  it("bounds YouTube rediscovery delay", () => {
-    expect(nextYoutubeRediscoveryDelayMs(0)).toBe(30_000);
-    expect(nextYoutubeRediscoveryDelayMs(1)).toBe(60_000);
-    expect(nextYoutubeRediscoveryDelayMs(8)).toBe(5 * 60_000);
   });
 });

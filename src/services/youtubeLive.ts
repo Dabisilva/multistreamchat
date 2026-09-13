@@ -27,16 +27,6 @@ const LIVE_STATUSES = new Set(["live", "liveStarting"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 const LIVE_SESSION_KEY = "youtubeLiveSession";
 const LIVE_SESSION_TTL_MS = 8 * 60 * 60_000;
-const REDISCOVERY_MIN_MS = 30_000;
-const REDISCOVERY_MAX_MS = 5 * 60_000;
-const STREAM_RESTART_MS = 30_000;
-
-export function nextYoutubeRediscoveryDelayMs(attempt: number): number {
-  return Math.min(
-    REDISCOVERY_MIN_MS * 2 ** Math.max(0, attempt),
-    REDISCOVERY_MAX_MS,
-  );
-}
 
 interface PersistedLiveSession {
   videoId: string | null;
@@ -281,24 +271,6 @@ async function discoverActiveLive(
   const fromMine = await toLiveInfo(apiFetch, mineLive, includeViewers);
   if (fromMine) return fromMine;
 
-  // Upcoming Studio events are not live. Only chat may attach if a chat id exists.
-  if (!includeViewers) {
-    const upcoming = await fetchBroadcasts(
-      apiFetch,
-      "broadcastStatus=upcoming",
-    );
-    const upcomingLive =
-      pickLiveBroadcast(upcoming, false) ||
-      upcoming.find((item) => item.snippet?.liveChatId) ||
-      null;
-    const fromUpcoming = await toLiveInfo(
-      apiFetch,
-      upcomingLive,
-      includeViewers,
-    );
-    if (fromUpcoming) return fromUpcoming;
-  }
-
   if (allowSearch && channelId) {
     const fromSearch = await resolveFromSearch(apiFetch, channelId);
     if (fromSearch) return fromSearch;
@@ -308,17 +280,17 @@ async function discoverActiveLive(
 }
 
 /**
- * Finds the current live video, then cheaply polls videos.list while live.
- * If the stream is offline, rediscovers with bounded exponential backoff
- * instead of staying idle until remount.
+ * Resolves the current live once per overlay mount.
+ * While live, cheaply polls videos.list. If offline, does not search again
+ * until the page remounts.
  */
 export class YoutubeLiveTracker {
   private videoId: string | null = null;
   private liveChatId: string | null = null;
   private channelId: string | null = null;
   private quotaBlockedUntil = 0;
-  private nextDiscoveryAt = 0;
-  private discoveryAttempts = 0;
+  private liveResolved = false;
+  private offline = false;
   private inFlight: Promise<YoutubeLiveInfo | null> | null = null;
 
   constructor() {
@@ -343,47 +315,20 @@ export class YoutubeLiveTracker {
   }
 
   isIdle(): boolean {
-    return !this.videoId && Date.now() < this.nextDiscoveryAt;
-  }
-
-  getRetryDelayMs(): number {
-    if (this.isQuotaBlocked()) {
-      return Math.max(this.quotaBlockedUntil - Date.now(), 1000);
-    }
-    if (this.nextDiscoveryAt > Date.now()) {
-      return Math.max(this.nextDiscoveryAt - Date.now(), 1000);
-    }
-    return STREAM_RESTART_MS;
+    return this.offline || this.isQuotaBlocked();
   }
 
   markQuotaExceeded(): void {
     this.quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
-    this.videoId = null;
-    this.liveChatId = null;
-    this.nextDiscoveryAt = this.quotaBlockedUntil;
-    this.discoveryAttempts = 0;
-    clearPersistedLiveSession();
+    this.markOffline();
   }
 
   clearLive(): void {
-    this.videoId = null;
-    this.liveChatId = null;
-    this.scheduleRediscovery();
-    clearPersistedLiveSession();
+    this.markOffline();
   }
 
   invalidateCache(): void {
-    this.videoId = null;
-    this.liveChatId = null;
-    this.discoveryAttempts = 0;
-    this.nextDiscoveryAt = Date.now() + STREAM_RESTART_MS;
-    clearPersistedLiveSession();
-  }
-
-  private scheduleRediscovery(): void {
-    this.nextDiscoveryAt =
-      Date.now() + nextYoutubeRediscoveryDelayMs(this.discoveryAttempts);
-    this.discoveryAttempts += 1;
+    this.markOffline();
   }
 
   async refresh(
@@ -415,15 +360,24 @@ export class YoutubeLiveTracker {
     writePersistedLiveSession(this.videoId, this.liveChatId);
   }
 
+  private markOffline(): void {
+    this.videoId = null;
+    this.liveChatId = null;
+    this.liveResolved = true;
+    this.offline = true;
+    clearPersistedLiveSession();
+  }
+
   private async refreshOnce(
     apiFetch: YoutubeFetch,
     includeViewers: boolean,
   ): Promise<YoutubeLiveInfo | null> {
-    if (this.isQuotaBlocked()) return null;
+    if (this.isQuotaBlocked() || this.offline) return null;
 
     if (this.videoId) {
       const info = await fetchLiveByVideoId(apiFetch, this.videoId);
       if (info) {
+        this.liveResolved = true;
         this.liveChatId = info.liveChatId || this.liveChatId;
         this.persist();
         return {
@@ -431,31 +385,36 @@ export class YoutubeLiveTracker {
           liveChatId: this.liveChatId || "",
         };
       }
+
       this.videoId = null;
       this.liveChatId = null;
       clearPersistedLiveSession();
-      this.discoveryAttempts = 0;
-      this.nextDiscoveryAt = Date.now() + STREAM_RESTART_MS;
+
+      // Already confirmed a live this mount, or already searched: stop.
+      if (this.liveResolved) {
+        this.markOffline();
+        return null;
+      }
+    }
+
+    if (this.liveResolved) {
+      this.markOffline();
       return null;
     }
 
-    if (Date.now() < this.nextDiscoveryAt) return null;
-
+    this.liveResolved = true;
     const info = await discoverActiveLive(
       apiFetch,
       includeViewers,
       this.channelId || undefined,
-      this.discoveryAttempts === 0,
     );
 
     if (!info) {
-      this.clearLive();
+      this.markOffline();
       return null;
     }
 
-    this.discoveryAttempts = 0;
-    this.nextDiscoveryAt = 0;
-
+    this.offline = false;
     this.videoId = info.videoId;
     this.liveChatId = info.liveChatId || null;
     this.persist();
