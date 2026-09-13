@@ -15,10 +15,10 @@ import {
   messageMatchesUser,
 } from "@/utils/chatLogic";
 import { DelayedMessageQueue } from "@/utils/delayedMessageQueue";
+import { hydrateChatSession } from "@/utils/chatSession";
 import { scrubSensitiveSearchParams } from "@/utils/sensitiveUrl";
 
 const DEFAULT_DELAY_MS = 5000;
-const MAX_DELAY_SECONDS = 6;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
 const TOKEN_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const SERVICE_RECONNECT_DELAY_MS = 100;
@@ -93,6 +93,14 @@ export const useChat = () => {
   twitchOauthTokenRef.current = twitchOauthToken;
   const youtubeOauthTokenRef = useRef(youtubeOauthToken);
   youtubeOauthTokenRef.current = youtubeOauthToken;
+  const youtubeChannelIdRef = useRef(youtubeChannelId);
+  youtubeChannelIdRef.current = youtubeChannelId;
+  const youtubeLiveChatIdRef = useRef(youtubeLiveChatId);
+  youtubeLiveChatIdRef.current = youtubeLiveChatId;
+  const clientIdRef = useRef(clientId);
+  clientIdRef.current = clientId;
+  const broadcasterIdRef = useRef(broadcasterId);
+  broadcasterIdRef.current = broadcasterId;
 
   const addMessage = (message: ChatMessage) => {
     setMessages((prevMessages) =>
@@ -195,46 +203,6 @@ export const useChat = () => {
   const refreshYoutubeTokenRef = useRef(refreshYoutubeTokenIfNeeded);
   refreshYoutubeTokenRef.current = refreshYoutubeTokenIfNeeded;
 
-  const parseUrlParams = () => {
-    const params = new URLSearchParams(window.location.search);
-    return {
-      twitchChannel: params.get("twitchChannel"),
-      twitchToken: params.get("twitchToken"),
-      broadcasterId: params.get("broadcasterId"),
-      clientId: params.get("clientId"),
-      refreshToken: params.get("refreshToken"),
-      expiresAt: params.get("expiresAt"),
-      kickChannel: params.get("kickChannel"),
-      youtubeChannel: params.get("youtubeChannel"),
-      youtubeToken: params.get("youtubeToken"),
-      youtubeChannelId: params.get("youtubeChannelId"),
-      youtubeLiveChatId: params.get("youtubeLiveChatId"),
-      youtubeRefreshToken: params.get("youtubeRefreshToken"),
-      youtubeExpiresAt: params.get("youtubeExpiresAt"),
-      messageDelay: params.get("messageDelay"),
-      styles: {
-        usernameBg:
-          params.get("usernameBg") || DEFAULT_MESSAGE_STYLES.usernameBg,
-        messageBg: params.get("messageBg") || DEFAULT_MESSAGE_STYLES.messageBg,
-        messageColor:
-          params.get("messageColor") || DEFAULT_MESSAGE_STYLES.messageColor,
-        borderRadius:
-          params.get("borderRadius") || DEFAULT_MESSAGE_STYLES.borderRadius,
-        usernameFontSize:
-          params.get("usernameFontSize") ||
-          DEFAULT_MESSAGE_STYLES.usernameFontSize,
-        messageFontSize:
-          params.get("messageFontSize") ||
-          DEFAULT_MESSAGE_STYLES.messageFontSize,
-        messagePadding:
-          params.get("messagePadding") || DEFAULT_MESSAGE_STYLES.messagePadding,
-        fullWidthMessages:
-          params.get("fullWidthMessages") ||
-          DEFAULT_MESSAGE_STYLES.fullWidthMessages,
-      },
-    };
-  };
-
   const removeMessage = (id: string) => {
     delayQueueRef.current?.cancel(id);
     setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== id));
@@ -322,10 +290,10 @@ export const useChat = () => {
       }
     }
 
-    if (broadcasterId && userInfo) {
-      userInfo.broadcasterId = broadcasterId;
-    } else if (broadcasterId && !userInfo) {
-      userInfo = { broadcasterId };
+    if (broadcasterIdRef.current && userInfo) {
+      userInfo.broadcasterId = broadcasterIdRef.current;
+    } else if (broadcasterIdRef.current && !userInfo) {
+      userInfo = { broadcasterId: broadcasterIdRef.current };
     }
 
     return userInfo;
@@ -333,140 +301,48 @@ export const useChat = () => {
 
   useEffect(() => {
     let cancelled = false;
+    const session = hydrateChatSession(window.location.search, localStorage);
 
-    const initAuth = async () => {
-      const urlParams = parseUrlParams();
+    if (session.messageDelayMs != null) {
+      setMessageDelay(session.messageDelayMs);
+    }
+    setCustomStyles(session.styles);
 
-      if (urlParams.messageDelay) {
-        const delaySeconds = parseFloat(urlParams.messageDelay);
-        const delayMs =
-          Math.min(Math.max(delaySeconds, 0), MAX_DELAY_SECONDS) * 1000;
-        if (!cancelled) setMessageDelay(delayMs);
-      }
+    if (session.kickChannel) {
+      setKickChannel(session.kickChannel);
+    }
 
-      if (!cancelled) setCustomStyles(urlParams.styles);
+    if (session.twitch) {
+      setTwitchChannel(session.twitch.channel);
+      setTwitchOauthToken(session.twitch.token);
+      if (session.twitch.broadcasterId)
+        setBroadcasterId(session.twitch.broadcasterId);
+      if (session.twitch.clientId) setClientId(session.twitch.clientId);
+    }
 
-      const hasUrlParams =
-        (urlParams.twitchChannel && urlParams.twitchToken) ||
-        urlParams.kickChannel ||
-        (urlParams.youtubeChannel && urlParams.youtubeToken);
+    if (session.youtube) {
+      setYoutubeChannel(session.youtube.channel);
+      setYoutubeOauthToken(session.youtube.token);
+      if (session.youtube.channelId)
+        setYoutubeChannelId(session.youtube.channelId);
+      if (session.youtube.liveChatId)
+        setYoutubeLiveChatId(session.youtube.liveChatId);
+    }
 
-      if (hasUrlParams) {
-        if (urlParams.twitchChannel && urlParams.twitchToken) {
-          localStorage.setItem("twitchToken", urlParams.twitchToken);
-          localStorage.setItem(
-            "twitchChannelInfo",
-            JSON.stringify({
-              username: urlParams.twitchChannel,
-              id: urlParams.broadcasterId,
-              platform: "twitch",
-            }),
-          );
+    if (session.shouldScrubUrl) {
+      scrubSensitiveSearchParams();
+    }
 
-          if (urlParams.clientId)
-            localStorage.setItem("twitchClientId", urlParams.clientId);
-          if (urlParams.refreshToken)
-            localStorage.setItem("twitchRefreshToken", urlParams.refreshToken);
-          if (urlParams.expiresAt)
-            localStorage.setItem("twitchTokenExpiresAt", urlParams.expiresAt);
+    void (async () => {
+      const [twitchToken, youtubeToken] = await Promise.all([
+        refreshTwitchTokenIfNeeded(),
+        refreshYoutubeTokenIfNeeded(),
+      ]);
+      if (cancelled) return;
+      if (twitchToken) setTwitchOauthToken(twitchToken);
+      if (youtubeToken) setYoutubeOauthToken(youtubeToken);
+    })();
 
-          const validToken =
-            (await refreshTwitchTokenIfNeeded(true)) || urlParams.twitchToken;
-
-          if (!cancelled) {
-            setTwitchChannel(urlParams.twitchChannel);
-            setTwitchOauthToken(validToken);
-            if (urlParams.broadcasterId)
-              setBroadcasterId(urlParams.broadcasterId);
-            if (urlParams.clientId) setClientId(urlParams.clientId);
-          }
-        }
-
-        if (urlParams.kickChannel && !cancelled) {
-          setKickChannel(urlParams.kickChannel);
-        }
-
-        if (urlParams.youtubeChannel && urlParams.youtubeToken) {
-          localStorage.setItem("youtubeToken", urlParams.youtubeToken);
-          localStorage.setItem(
-            "youtubeChannelInfo",
-            JSON.stringify({
-              username: urlParams.youtubeChannel,
-              id: urlParams.youtubeChannelId,
-              platform: "youtube",
-            }),
-          );
-          if (urlParams.youtubeChannelId)
-            localStorage.setItem("youtubeChannelId", urlParams.youtubeChannelId);
-          if (urlParams.youtubeRefreshToken)
-            localStorage.setItem(
-              "youtubeRefreshToken",
-              urlParams.youtubeRefreshToken,
-            );
-          if (urlParams.youtubeExpiresAt)
-            localStorage.setItem(
-              "youtubeTokenExpiresAt",
-              urlParams.youtubeExpiresAt,
-            );
-
-          const validToken =
-            (await refreshYoutubeTokenIfNeeded(true)) || urlParams.youtubeToken;
-
-          if (!cancelled) {
-            setYoutubeChannel(urlParams.youtubeChannel);
-            setYoutubeOauthToken(validToken);
-            if (urlParams.youtubeChannelId)
-              setYoutubeChannelId(urlParams.youtubeChannelId);
-            if (urlParams.youtubeLiveChatId)
-              setYoutubeLiveChatId(urlParams.youtubeLiveChatId);
-          }
-        }
-
-        scrubSensitiveSearchParams();
-        return;
-      }
-
-      const twitchToken = localStorage.getItem("twitchToken");
-      const twitchChannelInfo = localStorage.getItem("twitchChannelInfo");
-      const savedKickChannel = localStorage.getItem("kickChannel");
-      const youtubeToken = localStorage.getItem("youtubeToken");
-      const youtubeChannelInfo = localStorage.getItem("youtubeChannelInfo");
-
-      if (twitchToken && twitchChannelInfo) {
-        try {
-          const validToken = await refreshTwitchTokenIfNeeded(true);
-          if (!cancelled && validToken) {
-            const channelInfo = JSON.parse(twitchChannelInfo);
-            setTwitchOauthToken(validToken);
-            setTwitchChannel(channelInfo.username);
-          }
-        } catch {
-          // Error parsing channel info
-        }
-      }
-
-      if (savedKickChannel && !cancelled) {
-        setKickChannel(savedKickChannel);
-      }
-
-      if (youtubeToken && youtubeChannelInfo) {
-        try {
-          const validToken = await refreshYoutubeTokenIfNeeded(true);
-          if (!cancelled && validToken) {
-            const channelInfo = JSON.parse(youtubeChannelInfo);
-            setYoutubeOauthToken(validToken);
-            setYoutubeChannel(channelInfo.username);
-            setYoutubeChannelId(
-              channelInfo.id || localStorage.getItem("youtubeChannelId") || "",
-            );
-          }
-        } catch {
-          // Error parsing channel info
-        }
-      }
-    };
-
-    void initAuth();
     return () => {
       cancelled = true;
     };
@@ -504,7 +380,9 @@ export const useChat = () => {
     clearPlatformState("twitch");
     return manageService(twitchServiceRef, twitchChannel, () => {
       const twitchClientId =
-        clientId || localStorage.getItem("twitchClientId") || undefined;
+        clientIdRef.current ||
+        localStorage.getItem("twitchClientId") ||
+        undefined;
       const userInfo = getTwitchUserInfo();
 
       return new TwitchChatService(
@@ -520,7 +398,7 @@ export const useChat = () => {
         },
       );
     });
-  }, [twitchChannel, clientId, broadcasterId]);
+  }, [twitchChannel]);
 
   useEffect(() => {
     clearPlatformState("kick");
@@ -549,14 +427,14 @@ export const useChat = () => {
           (message) => handleNewMessageRef.current(message),
           {
             oauthToken: youtubeOauthTokenRef.current || undefined,
-            channelId: youtubeChannelId || undefined,
-            liveChatId: youtubeLiveChatId || undefined,
+            channelId: youtubeChannelIdRef.current || undefined,
+            liveChatId: youtubeLiveChatIdRef.current || undefined,
             onTokenRefresh: () => refreshYoutubeTokenRef.current(true),
           },
         );
       },
     );
-  }, [youtubeEnabled, youtubeChannel, youtubeChannelId, youtubeLiveChatId]);
+  }, [youtubeEnabled, youtubeChannel]);
 
   useEffect(() => {
     const el = chatContainerRef.current;

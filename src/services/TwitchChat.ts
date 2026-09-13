@@ -78,27 +78,6 @@ export class TwitchChatService implements ChatProvider {
     this.abortController = new AbortController();
     this.teardownClient();
 
-    try {
-      if (this.oauthToken) {
-        await this.validateToken();
-        if (this.isStale(generation)) return;
-      }
-
-      if (!this.broadcasterId) {
-        await this.fetchBroadcasterId();
-        if (this.isStale(generation)) return;
-      }
-
-      await this.fetchGlobalBadges();
-      if (this.isStale(generation)) return;
-      await this.fetchChannelBadges();
-      if (this.isStale(generation)) return;
-      await this.fetchChannelIdAndBttv();
-      if (this.isStale(generation)) return;
-    } catch (error) {
-      if (this.isStale(generation) || isAbortError(error)) return;
-    }
-
     if (this.isStale(generation)) return;
 
     const client = new tmi.Client({
@@ -175,6 +154,25 @@ export class TwitchChatService implements ChatProvider {
     client.connect().catch(() => {
       // Connection error
     });
+
+    void this.prefetchChatAssets(generation);
+  }
+
+  private async prefetchChatAssets(generation: number): Promise<void> {
+    try {
+      if (!this.broadcasterId) {
+        await this.fetchBroadcasterId();
+        if (this.isStale(generation)) return;
+      }
+
+      await Promise.all([
+        this.fetchGlobalBadges(),
+        this.fetchChannelBadges(),
+        this.fetchChannelIdAndBttv(),
+      ]);
+    } catch (error) {
+      if (this.isStale(generation) || isAbortError(error)) return;
+    }
   }
 
   disconnect(): void {
@@ -338,32 +336,6 @@ export class TwitchChatService implements ChatProvider {
     }
 
     return emoteList;
-  }
-
-  private async validateToken(): Promise<{ valid: boolean; expiresIn?: number }> {
-    try {
-      const cleanToken = this.oauthToken.replace(/^Bearer\s+/i, '').trim();
-      
-      const response = await fetch('https://id.twitch.tv/oauth2/validate', {
-        headers: {
-          'Authorization': `Bearer ${cleanToken}`
-        },
-        signal: this.abortController?.signal,
-      });
-
-      if (!response.ok) {
-        return { valid: false };
-      }
-
-      const data = await response.json();
-      return {
-        valid: true,
-        expiresIn: data.expires_in // Time in seconds until token expires
-      };
-    } catch (error) {
-      if (isAbortError(error)) throw error;
-      return { valid: false };
-    }
   }
 
   private getTwitchHeaders(): HeadersInit {
