@@ -92,16 +92,13 @@ async function readYoutubeJson(
 
 function pickLiveBroadcast(
   items: BroadcastItem[],
-  allowFirstIfUnmatched = false,
 ): BroadcastItem | null {
   if (!items?.length) return null;
 
   const live = items.find((item) =>
     LIVE_STATUSES.has(item.status?.lifeCycleStatus || ""),
   );
-  if (live) return live;
-  if (allowFirstIfUnmatched) return items[0] || null;
-  return null;
+  return live || null;
 }
 
 async function fetchBroadcasts(
@@ -122,28 +119,23 @@ async function fetchLiveByVideoId(
 ): Promise<YoutubeLiveInfo | null> {
   const videosUrl =
     "https://www.googleapis.com/youtube/v3/videos" +
-    `?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`;
+    `?part=snippet,liveStreamingDetails&id=${encodeURIComponent(videoId)}`;
 
   const data = await readYoutubeJson(apiFetch, videosUrl);
-  const details = data?.items?.[0]?.liveStreamingDetails;
-  if (!details) return null;
+  const item = data?.items?.[0];
+  const details = item?.liveStreamingDetails;
+  if (!details || details.actualEndTime) return null;
 
-  const hasEnded = !!details.actualEndTime;
+  const broadcastContent = item?.snippet?.liveBroadcastContent;
+  if (broadcastContent === "none") return null;
+
   const liveChatId = details.activeLiveChatId || "";
   const concurrent =
     details.concurrentViewers != null
       ? parseInt(String(details.concurrentViewers), 10) || 0
       : null;
 
-  // Ended VODs often keep actualStartTime + chat id for hours. concurrentViewers
-  // is only present on a real in-progress live.
-  if (
-    hasEnded ||
-    !details.actualStartTime ||
-    details.concurrentViewers == null
-  ) {
-    return null;
-  }
+  if (broadcastContent !== "live") return null;
 
   return {
     videoId,
@@ -172,7 +164,7 @@ function broadcastsForChannel(
   items: BroadcastItem[],
   channelId?: string,
 ): BroadcastItem[] {
-  if (!channelId) return items;
+  if (!channelId || !channelId.startsWith("UC")) return items;
   return items.filter(
     (item) => !item.snippet?.channelId || item.snippet.channelId === channelId,
   );
@@ -183,18 +175,14 @@ async function discoverActiveLive(
   channelId?: string,
 ): Promise<YoutubeLiveInfo | null> {
   const active = await fetchBroadcasts(apiFetch, "broadcastStatus=active");
-  return toLiveInfo(
-    apiFetch,
-    pickLiveBroadcast(broadcastsForChannel(active, channelId), false),
-  );
+  return toLiveInfo(apiFetch, pickLiveBroadcast(broadcastsForChannel(active, channelId)));
 }
 
 /**
  * Resolves the current live once per overlay mount via liveBroadcasts.
  * A broadcast with liveChatId is not enough: ended/stuck lives often keep
  * that id and would start liveChatMessages polling (5 units every ~8s).
- * Confirm with videos.list (concurrentViewers). If offline, do not search
- * again until the page remounts.
+ * Confirm with videos.list using liveBroadcastContent (not viewer count).
  */
 export class YoutubeLiveTracker {
   private videoId: string | null = null;

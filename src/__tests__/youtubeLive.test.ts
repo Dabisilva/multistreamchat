@@ -17,15 +17,46 @@ function endpointName(url: string): string {
   return url;
 }
 
-function liveVideoResponse() {
+function liveVideoResponse(options?: { viewers?: boolean }) {
+  const details: Record<string, string> = {
+    actualStartTime: "2026-01-01T00:00:00Z",
+    activeLiveChatId: "chat-1",
+  };
+  if (options?.viewers !== false) {
+    details.concurrentViewers = "12";
+  }
+
   return jsonResponse({
     items: [
       {
+        snippet: { liveBroadcastContent: "live" },
+        liveStreamingDetails: details,
+      },
+    ],
+  });
+}
+
+function endedVideoResponse() {
+  return jsonResponse({
+    items: [
+      {
+        snippet: { liveBroadcastContent: "none" },
         liveStreamingDetails: {
           actualStartTime: "2026-01-01T00:00:00Z",
           activeLiveChatId: "chat-1",
-          concurrentViewers: "12",
         },
+      },
+    ],
+  });
+}
+
+function activeBroadcast(status = "live") {
+  return jsonResponse({
+    items: [
+      {
+        id: "vid-1",
+        snippet: { liveChatId: "chat-1", channelId: "UC123" },
+        status: { lifeCycleStatus: status },
       },
     ],
   });
@@ -119,17 +150,7 @@ describe("YoutubeLiveTracker", () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
-      if (url.includes("/liveBroadcasts")) {
-        return jsonResponse({
-          items: [
-            {
-              id: "vid-1",
-              snippet: { liveChatId: "chat-1", channelId: "UC123" },
-              status: { lifeCycleStatus: "live" },
-            },
-          ],
-        });
-      }
+      if (url.includes("/liveBroadcasts")) return activeBroadcast();
       return liveVideoResponse();
     };
 
@@ -148,31 +169,50 @@ describe("YoutubeLiveTracker", () => {
     expect(urls).toEqual(["liveBroadcasts", "videos"]);
   });
 
+  it("ignores testing and liveStarting broadcasts", async () => {
+    const urls: string[] = [];
+    const apiFetch = async (url: string) => {
+      urls.push(endpointName(url));
+      if (url.includes("/liveBroadcasts")) return activeBroadcast("testing");
+      return liveVideoResponse();
+    };
+
+    const tracker = new YoutubeLiveTracker();
+    const live = await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+
+    expect(live).toBeNull();
+    expect(urls.filter((name) => name === "videos")).toHaveLength(0);
+  });
+
+  it("treats a live with no concurrentViewers as live", async () => {
+    const apiFetch = async (url: string) => {
+      if (url.includes("/liveBroadcasts")) return activeBroadcast("live");
+      return liveVideoResponse({ viewers: false });
+    };
+
+    const tracker = new YoutubeLiveTracker();
+    const live = await tracker.refresh(apiFetch, {
+      includeViewers: false,
+      channelId: "UC123",
+    });
+
+    expect(live).toEqual({
+      videoId: "vid-1",
+      liveChatId: "chat-1",
+      concurrentViewers: null,
+      isLive: true,
+    });
+  });
+
   it("does not start chat from a stuck broadcast that still has liveChatId", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
-      if (url.includes("/liveBroadcasts")) {
-        return jsonResponse({
-          items: [
-            {
-              id: "vid-1",
-              snippet: { liveChatId: "chat-1", channelId: "UC123" },
-              status: { lifeCycleStatus: "live" },
-            },
-          ],
-        });
-      }
-      return jsonResponse({
-        items: [
-          {
-            liveStreamingDetails: {
-              actualStartTime: "2026-01-01T00:00:00Z",
-              activeLiveChatId: "chat-1",
-            },
-          },
-        ],
-      });
+      if (url.includes("/liveBroadcasts")) return activeBroadcast();
+      return endedVideoResponse();
     };
 
     const tracker = new YoutubeLiveTracker();
@@ -196,27 +236,8 @@ describe("YoutubeLiveTracker", () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
       urls.push(endpointName(url));
-      if (url.includes("/liveBroadcasts")) {
-        return jsonResponse({
-          items: [
-            {
-              id: "vid-1",
-              snippet: { liveChatId: "chat-1", channelId: "UC123" },
-              status: { lifeCycleStatus: "live" },
-            },
-          ],
-        });
-      }
-      return jsonResponse({
-        items: [
-          {
-            liveStreamingDetails: {
-              actualStartTime: "2026-01-01T00:00:00Z",
-              activeLiveChatId: "chat-1",
-            },
-          },
-        ],
-      });
+      if (url.includes("/liveBroadcasts")) return activeBroadcast();
+      return endedVideoResponse();
     };
 
     const tracker = new YoutubeLiveTracker();
