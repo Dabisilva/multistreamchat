@@ -26,6 +26,52 @@ interface BroadcastItem {
 const LIVE_STATUSES = new Set(["live"]);
 const QUOTA_COOLDOWN_MS = 30 * 60_000;
 
+export type YoutubeLiveStatus = "unknown" | "live" | "offline" | "quota";
+
+type YoutubeLiveGate = {
+  status: YoutubeLiveStatus;
+  videoId: string | null;
+  liveChatId: string | null;
+};
+
+let youtubeLiveGate: YoutubeLiveGate = {
+  status: "unknown",
+  videoId: null,
+  liveChatId: null,
+};
+let youtubeLiveInFlight: Promise<YoutubeLiveInfo | null> | null = null;
+
+export function getYoutubeLiveStatus(): YoutubeLiveStatus {
+  return youtubeLiveGate.status;
+}
+
+export function isYoutubeLiveIdle(): boolean {
+  return (
+    youtubeLiveGate.status === "offline" || youtubeLiveGate.status === "quota"
+  );
+}
+
+export function resetYoutubeLiveGate(): void {
+  youtubeLiveGate = { status: "unknown", videoId: null, liveChatId: null };
+  youtubeLiveInFlight = null;
+}
+
+function setGateOffline(): void {
+  youtubeLiveGate = { status: "offline", videoId: null, liveChatId: null };
+}
+
+function setGateQuota(): void {
+  youtubeLiveGate = { status: "quota", videoId: null, liveChatId: null };
+}
+
+function setGateLive(info: YoutubeLiveInfo): void {
+  youtubeLiveGate = {
+    status: "live",
+    videoId: info.videoId || null,
+    liveChatId: info.liveChatId || null,
+  };
+}
+
 try {
   localStorage.removeItem("youtubeLiveSession");
 } catch {
@@ -207,12 +253,13 @@ export class YoutubeLiveTracker {
   }
 
   isIdle(): boolean {
-    return this.offline || this.isQuotaBlocked();
+    return isYoutubeLiveIdle() || this.offline || this.isQuotaBlocked();
   }
 
   markQuotaExceeded(): void {
     this.quotaBlockedUntil = Date.now() + QUOTA_COOLDOWN_MS;
     this.markOffline();
+    setGateQuota();
   }
 
   clearLive(): void {
@@ -228,7 +275,9 @@ export class YoutubeLiveTracker {
     options?: YoutubeLiveRefreshOptions,
   ): Promise<YoutubeLiveInfo | null> {
     if (options?.channelId) this.channelId = options.channelId;
+    if (isYoutubeLiveIdle()) return null;
     if (this.inFlight) return this.inFlight;
+    if (youtubeLiveInFlight) return youtubeLiveInFlight;
 
     this.inFlight = this.refreshOnce(apiFetch)
       .catch((err) => {
@@ -240,7 +289,9 @@ export class YoutubeLiveTracker {
       })
       .finally(() => {
         this.inFlight = null;
+        youtubeLiveInFlight = null;
       });
+    youtubeLiveInFlight = this.inFlight;
 
     return this.inFlight;
   }
@@ -250,18 +301,53 @@ export class YoutubeLiveTracker {
     this.liveChatId = null;
     this.liveResolved = true;
     this.offline = true;
+    if (youtubeLiveGate.status !== "quota") {
+      setGateOffline();
+    }
   }
 
   private async refreshOnce(
     apiFetch: YoutubeFetch,
   ): Promise<YoutubeLiveInfo | null> {
-    if (this.isQuotaBlocked() || this.offline) return null;
+    if (isYoutubeLiveIdle() || this.isQuotaBlocked() || this.offline) {
+      return null;
+    }
+
+    if (youtubeLiveGate.status === "live" && youtubeLiveGate.liveChatId) {
+      this.videoId = youtubeLiveGate.videoId;
+      this.liveChatId = youtubeLiveGate.liveChatId;
+      this.liveResolved = true;
+      if (this.videoId) {
+        const info = await fetchLiveByVideoId(apiFetch, this.videoId);
+        if (info) {
+          setGateLive(info);
+          this.liveChatId = info.liveChatId || this.liveChatId;
+          return {
+            ...info,
+            liveChatId: this.liveChatId || "",
+          };
+        }
+        this.markOffline();
+        return null;
+      }
+      return {
+        videoId: this.videoId || "",
+        liveChatId: this.liveChatId,
+        concurrentViewers: null,
+        isLive: true,
+      };
+    }
 
     if (this.videoId) {
       const info = await fetchLiveByVideoId(apiFetch, this.videoId);
       if (info) {
         this.liveResolved = true;
+        this.offline = false;
         this.liveChatId = info.liveChatId || this.liveChatId;
+        setGateLive({
+          ...info,
+          liveChatId: this.liveChatId || "",
+        });
         return {
           ...info,
           liveChatId: this.liveChatId || "",
@@ -297,6 +383,7 @@ export class YoutubeLiveTracker {
     this.offline = false;
     this.videoId = info.videoId;
     this.liveChatId = info.liveChatId || null;
+    setGateLive(info);
     return info;
   }
 }

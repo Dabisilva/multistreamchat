@@ -1,4 +1,4 @@
-import { YoutubeLiveTracker, YoutubeQuotaError } from "@/services/youtubeLive";
+import { isYoutubeLiveIdle, YoutubeLiveTracker, YoutubeQuotaError } from "@/services/youtubeLive";
 import { isAbortError } from "@/utils/abort";
 import { getTwitchClientId } from "@/utils/appEnv";
 
@@ -236,7 +236,7 @@ export class ViewerCountService {
       };
     }
 
-    if (this.youtubeLive.isQuotaBlocked() || this.youtubeLive.isIdle()) {
+    if (this.youtubeLive.isQuotaBlocked() || this.youtubeLive.isIdle() || isYoutubeLiveIdle()) {
       return this.lastYoutube;
     }
 

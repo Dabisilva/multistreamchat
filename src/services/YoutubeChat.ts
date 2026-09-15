@@ -2,6 +2,7 @@ import { Badge, ChatMessage, ChatProvider } from "@/types";
 import { generateColor } from "@/utils/messageUtils";
 import {
   isLiveChatGoneError,
+  isYoutubeLiveIdle,
   isYoutubeQuotaError,
   YoutubeLiveTracker,
   YoutubeQuotaError,
@@ -78,7 +79,7 @@ export class YoutubeChatService implements ChatProvider {
     this.connectedAt = Date.now();
     this.abortController = new AbortController();
 
-    if (!this.oauthToken) {
+    if (!this.oauthToken || isYoutubeLiveIdle()) {
       return;
     }
 
@@ -253,6 +254,10 @@ export class YoutubeChatService implements ChatProvider {
 
   private async pollMessages(): Promise<void> {
     if (this.stopped || this.polling) return;
+    if (isYoutubeLiveIdle()) {
+      this.connected = false;
+      return;
+    }
     this.polling = true;
 
     try {

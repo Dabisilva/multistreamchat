@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { YoutubeLiveTracker } from "@/services/youtubeLive";
+import { describe, expect, it, beforeEach } from "vitest";
+import {
+  YoutubeLiveTracker,
+  resetYoutubeLiveGate,
+} from "@/services/youtubeLive";
 
 function jsonResponse(data: unknown): Response {
   return {
@@ -63,6 +66,9 @@ function activeBroadcast(status = "live") {
 }
 
 describe("YoutubeLiveTracker", () => {
+  beforeEach(() => {
+    resetYoutubeLiveGate();
+  });
   it("checks liveBroadcasts once when offline and does not search again", async () => {
     const urls: string[] = [];
     const apiFetch = async (url: string) => {
@@ -91,6 +97,23 @@ describe("YoutubeLiveTracker", () => {
     expect(urls.filter((name) => name === "liveBroadcasts")).toHaveLength(1);
     expect(urls.filter((name) => name === "search")).toHaveLength(0);
     expect(urls).toHaveLength(1);
+  });
+
+  it("shares the offline gate across tracker instances", async () => {
+    const urls: string[] = [];
+    const apiFetch = async (url: string) => {
+      urls.push(endpointName(url));
+      return jsonResponse({ items: [] });
+    };
+
+    await new YoutubeLiveTracker().refresh(apiFetch, { includeViewers: false });
+    urls.length = 0;
+    const second = await new YoutubeLiveTracker().refresh(apiFetch, {
+      includeViewers: false,
+    });
+
+    expect(second).toBeNull();
+    expect(urls).toEqual([]);
   });
 
   it("does not rediscover after a live ends", async () => {
