@@ -24,7 +24,7 @@ const PreviewCount: React.FC<{
 }> = ({ platform, count, viewerFontSize, viewerTextColor }) => {
   const iconSize = Math.max(
     Math.round(parseInt(viewerFontSize, 10) * 0.7) || 22,
-    16,
+    20,
   );
 
   return (
@@ -66,7 +66,7 @@ export const ViewerCustomizationPanel: React.FC<
 
   const iconSize = Math.max(
     Math.round(parseInt(settings.viewerFontSize, 10) * 0.9) || 22,
-    16,
+    20,
   );
 
   const connected: Record<PlatformKey, boolean> = {

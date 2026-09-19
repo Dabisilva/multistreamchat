@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { getYoutubeAccessToken } from '@/utils/youtubeStorage';
 
 // Lazy load components for better performance
 const Chat = lazy(() => import('@/pages/Chat'));
@@ -27,7 +28,7 @@ const LoadingScreen: React.FC = () => (
 const hasPlatformSession = () => {
   return !!(
     localStorage.getItem('twitchToken') ||
-    localStorage.getItem('youtubeToken') ||
+    getYoutubeAccessToken() ||
     localStorage.getItem('kickChannel')
   );
 };

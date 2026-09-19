@@ -103,7 +103,7 @@ const ViewerPreview: React.FC = () => (
       ] as const
     ).map(({ platform, count }) => (
       <div key={platform} className="flex items-center gap-1.5 shrink-0">
-        <PlatformIcon platform={platform} size={14} branded />
+        <PlatformIcon platform={platform} size={20} branded />
         <span
           className="font-bold text-white text-[13px] leading-none tracking-wide"
           style={{ textShadow: "0 2px 8px rgba(0,0,0,0.45)" }}

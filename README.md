@@ -31,6 +31,26 @@ Connect the platforms you stream on, customize the look, then paste a widget URL
 
 You can connect any combination of platforms. The overlays only show the ones you have connected.
 
+## Environment variables
+
+Create a gitignored `.env.local` (never commit secrets):
+
+```
+VITE_TWITCH_CLIENT_ID=
+VITE_TWITCH_CLIENT_SECRET=
+VITE_TWITCH_REDIRECT_URI=
+
+VITE_YOUTUBE_CLIENT_ID=
+VITE_YOUTUBE_REDIRECT_URI=
+
+# Server-only. Do not prefix with VITE_ — that would expose it in the browser bundle.
+YOUTUBE_CLIENT_SECRET=
+```
+
+On Vercel, set the same variables in project settings. `YOUTUBE_CLIENT_SECRET` is used only by `/api/youtube-token` (authorization-code exchange and refresh with PKCE). `VITE_YOUTUBE_CLIENT_ID` is public and used for the Google authorize redirect.
+
+The production OAuth client and Google Cloud project must stay the same client already configured for this app. Do not add a second Google Cloud project or a second YouTube OAuth client.
+
 ### Example URL
 
 ```

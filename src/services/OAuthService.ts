@@ -5,7 +5,6 @@ import {
   getTwitchClientSecret,
   getTwitchRedirectUri,
   getYoutubeClientId,
-  getYoutubeClientSecret,
   getYoutubeRedirectUri,
 } from '@/utils/appEnv';
 
@@ -284,27 +283,23 @@ export class OAuthService {
   ): Promise<TokenResponse> {
     const config = this.getYoutubeConfig();
 
-    if (!config.clientId || !config.clientSecret) {
+    if (!config.clientId) {
       throw new Error(
-        'YouTube OAuth incompleto. Defina VITE_YOUTUBE_CLIENT_ID e VITE_YOUTUBE_CLIENT_SECRET.'
+        'YouTube OAuth incompleto. Defina VITE_YOUTUBE_CLIENT_ID.'
       );
     }
 
-    const body = new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-      redirect_uri: config.redirectUri,
-      code: code,
-      code_verifier: codeVerifier,
-    });
-
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    const response = await fetch('/api/youtube-token', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: body.toString(),
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code,
+        code_verifier: codeVerifier,
+        redirect_uri: config.redirectUri,
+      }),
     });
 
     if (!response.ok) {
@@ -456,21 +451,15 @@ export class OAuthService {
    * Refresh an expired YouTube access token
    */
   async refreshYoutubeToken(refreshToken: string): Promise<TokenResponse> {
-    const config = this.getYoutubeConfig();
-
-    const body = new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-      client_id: config.clientId,
-      client_secret: config.clientSecret,
-    });
-
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    const response = await fetch('/api/youtube-token', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: body.toString(),
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+      }),
     });
 
     if (!response.ok) {
@@ -541,7 +530,7 @@ export class OAuthService {
 
     return {
       clientId: getYoutubeClientId(),
-      clientSecret: getYoutubeClientSecret(),
+      clientSecret: "",
       // Prefer explicit env; default to origin without forcing a trailing slash
       redirectUri: envRedirect || window.location.origin,
     };

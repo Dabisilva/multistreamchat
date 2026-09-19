@@ -9,6 +9,7 @@ export interface PlatformViewers {
   count: number | null;
   isLive: boolean;
   error?: string;
+  fetchedAt?: number;
 }
 
 export interface ViewerCountCredentials {
@@ -22,24 +23,57 @@ export interface ViewerCountCredentials {
   onYoutubeTokenRefresh?: () => Promise<string | null>;
 }
 
+/** Live viewer statistics become unavailable if not refreshed within this window. */
+export const YOUTUBE_VIEWER_STALE_MS = 120_000;
+
+export function youtubeUnavailable(
+  error?: string,
+): PlatformViewers {
+  return {
+    platform: "youtube",
+    count: 0,
+    isLive: false,
+    error,
+  };
+}
+
+export function isYoutubeViewerFresh(
+  stat: PlatformViewers,
+  now = Date.now(),
+): boolean {
+  if (stat.platform !== "youtube") return true;
+  if (!stat.isLive) return true;
+  if (stat.fetchedAt == null) return false;
+  return now - stat.fetchedAt < YOUTUBE_VIEWER_STALE_MS;
+}
+
 const TWITCH_CLIENT_ID = getTwitchClientId();
 
 export class ViewerCountService {
   private credentials: ViewerCountCredentials;
   private youtubeLive = new YoutubeLiveTracker();
-  private lastYoutube: PlatformViewers = {
-    platform: "youtube",
-    count: 0,
-    isLive: false,
-  };
+  private lastYoutube: PlatformViewers = youtubeUnavailable();
   private abortController = new AbortController();
+  private now: () => number;
 
-  constructor(credentials: ViewerCountCredentials) {
+  constructor(
+    credentials: ViewerCountCredentials,
+    options?: { now?: () => number },
+  ) {
     this.credentials = credentials;
+    this.now = options?.now ?? Date.now;
   }
 
   updateCredentials(credentials: Partial<ViewerCountCredentials>) {
-    this.credentials = { ...this.credentials, ...credentials };
+    const next = { ...this.credentials, ...credentials };
+    if (next.youtubeChannelId !== this.credentials.youtubeChannelId) {
+      this.resetYoutube();
+    }
+    this.credentials = next;
+  }
+
+  resetYoutube(): void {
+    this.lastYoutube = youtubeUnavailable();
   }
 
   abortInFlight(): void {
@@ -226,18 +260,39 @@ export class ViewerCountService {
     return response;
   }
 
+  private resolvedYoutube(): PlatformViewers {
+    if (!isYoutubeViewerFresh(this.lastYoutube, this.now())) {
+      this.lastYoutube = youtubeUnavailable();
+    }
+    return this.lastYoutube;
+  }
+
+  private rememberLiveYoutube(count: number): PlatformViewers {
+    this.lastYoutube = {
+      platform: "youtube",
+      count,
+      isLive: true,
+      fetchedAt: this.now(),
+    };
+    return this.lastYoutube;
+  }
+
   private async fetchYoutube(): Promise<PlatformViewers> {
     if (!this.credentials.youtubeToken) {
-      return {
-        platform: "youtube",
-        count: null,
-        isLive: false,
-        error: "Sem token",
-      };
+      this.resetYoutube();
+      return youtubeUnavailable("Sem token");
     }
 
-    if (this.youtubeLive.isQuotaBlocked() || this.youtubeLive.isIdle() || isYoutubeLiveIdle()) {
-      return this.lastYoutube;
+    if (
+      this.youtubeLive.isQuotaBlocked() ||
+      this.youtubeLive.isIdle() ||
+      isYoutubeLiveIdle()
+    ) {
+      if (isYoutubeLiveIdle() && !this.youtubeLive.isQuotaBlocked()) {
+        this.resetYoutube();
+        return youtubeUnavailable();
+      }
+      return this.resolvedYoutube();
     }
 
     try {
@@ -246,34 +301,27 @@ export class ViewerCountService {
       });
 
       if (!live && this.youtubeLive.isQuotaBlocked()) {
-        return this.lastYoutube;
+        return this.resolvedYoutube();
       }
 
-      this.lastYoutube = live?.isLive
-        ? {
-            platform: "youtube",
-            count: live.concurrentViewers ?? 0,
-            isLive: true,
-          }
-        : { platform: "youtube", count: 0, isLive: false };
+      if (live?.isLive) {
+        return this.rememberLiveYoutube(live.concurrentViewers ?? 0);
+      }
 
-      return this.lastYoutube;
+      this.resetYoutube();
+      return youtubeUnavailable();
     } catch (err) {
       if (isAbortError(err)) {
-        return this.lastYoutube;
+        return this.resolvedYoutube();
       }
 
       if (err instanceof YoutubeQuotaError) {
         this.youtubeLive.markQuotaExceeded();
-        return this.lastYoutube;
+        return this.resolvedYoutube();
       }
 
-      return {
-        platform: "youtube",
-        count: null,
-        isLive: false,
-        error: "Falha ao buscar",
-      };
+      this.resetYoutube();
+      return youtubeUnavailable("Falha ao buscar");
     }
   }
 }

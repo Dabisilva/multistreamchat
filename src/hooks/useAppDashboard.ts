@@ -12,6 +12,17 @@ import {
   DEFAULT_VIEWER_SETTINGS,
 } from "@/utils/styleDefaults";
 import { getTwitchClientId } from "@/utils/appEnv";
+import {
+  clearYoutubeSession,
+  getYoutubeAccessToken,
+  getYoutubeRefreshToken,
+  getYoutubeTokenExpiresAt,
+  getYoutubeUserInfo,
+  setYoutubeAccessToken,
+  setYoutubeRefreshToken,
+  setYoutubeTokenExpiresAt,
+  setYoutubeUserInfo,
+} from "@/utils/youtubeStorage";
 
 const baseUrl = window.location.origin;
 
@@ -31,33 +42,15 @@ const FALLBACK_YOUTUBE_USER: UserInfo = {
 };
 
 function persistYoutubeUser(userData: UserInfo) {
-  localStorage.setItem("youtubeUserInfo", JSON.stringify(userData));
-  if (userData.id && userData.id !== "youtube") {
-    localStorage.setItem("youtubeChannelId", userData.id);
-  }
-  localStorage.setItem(
-    "youtubeChannelInfo",
-    JSON.stringify({
-      username: userData.username,
-      displayName: userData.displayName,
-      id: userData.id,
-      platform: "youtube",
-    }),
-  );
+  setYoutubeUserInfo(userData);
 }
 
 async function resolveYoutubeProfile(accessToken: string): Promise<UserInfo> {
   try {
     return await OAuthService.getYoutubeUserInfo(accessToken);
   } catch {
-    const existing = localStorage.getItem("youtubeUserInfo");
-    if (existing) {
-      try {
-        return JSON.parse(existing) as UserInfo;
-      } catch {
-        // ignore invalid cache
-      }
-    }
+    const existing = getYoutubeUserInfo();
+    if (existing) return existing;
     return FALLBACK_YOUTUBE_USER;
   }
 }
@@ -182,13 +175,10 @@ export function useAppDashboard() {
 
       const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
-      localStorage.setItem("youtubeToken", tokenResponse.access_token);
-      localStorage.setItem("youtubeTokenExpiresAt", expiresAt.toString());
+      setYoutubeAccessToken(tokenResponse.access_token);
+      setYoutubeTokenExpiresAt(expiresAt);
       if (tokenResponse.refresh_token) {
-        localStorage.setItem(
-          "youtubeRefreshToken",
-          tokenResponse.refresh_token,
-        );
+        setYoutubeRefreshToken(tokenResponse.refresh_token);
       }
 
       try {
@@ -197,13 +187,9 @@ export function useAppDashboard() {
         );
         setError("");
       } catch (profileErr) {
-        const existing = localStorage.getItem("youtubeUserInfo");
+        const existing = getYoutubeUserInfo();
         if (existing) {
-          try {
-            persistYoutubeUser(JSON.parse(existing) as UserInfo);
-          } catch {
-            persistYoutubeUser(FALLBACK_YOUTUBE_USER);
-          }
+          persistYoutubeUser(existing);
         } else {
           persistYoutubeUser(FALLBACK_YOUTUBE_USER);
         }
@@ -238,12 +224,7 @@ export function useAppDashboard() {
   };
 
   const handleYoutubeSignOut = () => {
-    localStorage.removeItem("youtubeToken");
-    localStorage.removeItem("youtubeUserInfo");
-    localStorage.removeItem("youtubeChannelInfo");
-    localStorage.removeItem("youtubeChannelId");
-    localStorage.removeItem("youtubeRefreshToken");
-    localStorage.removeItem("youtubeTokenExpiresAt");
+    clearYoutubeSession();
     setYoutubeAuthenticated(false);
     refreshWidgetUrl();
   };
@@ -285,9 +266,9 @@ export function useAppDashboard() {
   };
 
   const refreshYoutubeTokenIfNeeded = async (): Promise<string | null> => {
-    const youtubeToken = localStorage.getItem("youtubeToken");
-    const refreshToken = localStorage.getItem("youtubeRefreshToken");
-    const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+    const youtubeToken = getYoutubeAccessToken();
+    const refreshToken = getYoutubeRefreshToken();
+    const expiresAt = getYoutubeTokenExpiresAt();
 
     if (!youtubeToken || !refreshToken) return null;
 
@@ -300,13 +281,10 @@ export function useAppDashboard() {
           await OAuthService.refreshYoutubeToken(refreshToken);
         const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
-        localStorage.setItem("youtubeToken", tokenResponse.access_token);
-        localStorage.setItem("youtubeTokenExpiresAt", newExpiresAt.toString());
+        setYoutubeAccessToken(tokenResponse.access_token);
+        setYoutubeTokenExpiresAt(newExpiresAt);
         if (tokenResponse.refresh_token) {
-          localStorage.setItem(
-            "youtubeRefreshToken",
-            tokenResponse.refresh_token,
-          );
+          setYoutubeRefreshToken(tokenResponse.refresh_token);
         }
 
         refreshWidgetUrl();
@@ -382,8 +360,8 @@ export function useAppDashboard() {
 
       const twitchToken = localStorage.getItem("twitchToken");
       const twitchUser = localStorage.getItem("twitchUserInfo");
-      const youtubeToken = localStorage.getItem("youtubeToken");
-      const youtubeUser = localStorage.getItem("youtubeUserInfo");
+      const youtubeToken = getYoutubeAccessToken();
+      const youtubeUser = getYoutubeUserInfo();
       const savedKickChannel = localStorage.getItem("kickChannel");
 
       if (twitchToken && twitchUser) {

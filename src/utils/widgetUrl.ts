@@ -1,5 +1,12 @@
 import { getTwitchClientId } from "@/utils/appEnv";
 import { hexToRgba } from "@/utils/colorUtils";
+import {
+  getYoutubeAccessToken,
+  getYoutubeChannelId,
+  getYoutubeRefreshToken,
+  getYoutubeTokenExpiresAt,
+  getYoutubeUserInfo,
+} from "@/utils/youtubeStorage";
 
 export interface ChatCustomizationSettings {
   usernameBgColor: string;
@@ -59,24 +66,26 @@ export function buildAuthParams(): string[] {
     params.push(`kickChannel=${encodeURIComponent(savedKickChannel)}`);
   }
 
-  const youtubeToken = localStorage.getItem("youtubeToken");
-  const youtubeUser = localStorage.getItem("youtubeUserInfo");
+  const youtubeToken = getYoutubeAccessToken();
+  const youtubeUser = getYoutubeUserInfo();
   if (youtubeToken && youtubeUser) {
     try {
-      const userData = JSON.parse(youtubeUser);
       const channelId =
-        userData.broadcasterId ||
-        userData.id ||
-        localStorage.getItem("youtubeChannelId") ||
+        youtubeUser.broadcasterId ||
+        youtubeUser.id ||
+        getYoutubeChannelId() ||
         "";
-      const storedRefreshToken = localStorage.getItem("youtubeRefreshToken");
-      const storedExpiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+      const storedRefreshToken = getYoutubeRefreshToken();
+      const storedExpiresAt = getYoutubeTokenExpiresAt();
 
-      params.push(`youtubeChannel=${encodeURIComponent(userData.username)}`);
+      params.push(`youtubeChannel=${encodeURIComponent(youtubeUser.username)}`);
       params.push(`youtubeToken=${encodeURIComponent(youtubeToken)}`);
       if (channelId) {
         params.push(`youtubeChannelId=${encodeURIComponent(channelId)}`);
       }
+      // OBS Browser Source has a separate storage origin, so the access
+      // token and expiry still travel in the widget URL. The refresh token
+      // is required for overlays that outlive the ~1h access token.
       if (storedRefreshToken) {
         params.push(
           `youtubeRefreshToken=${encodeURIComponent(storedRefreshToken)}`,

@@ -6,6 +6,17 @@ import {
 } from "@/services/ViewerCountService";
 import { DEFAULT_VIEWER_SETTINGS } from "@/utils/styleDefaults";
 import { scrubSensitiveSearchParams } from "@/utils/sensitiveUrl";
+import {
+  clearYoutubeSession,
+  getYoutubeAccessToken,
+  getYoutubeChannelId,
+  getYoutubeRefreshToken,
+  getYoutubeTokenExpiresAt,
+  setYoutubeAccessToken,
+  setYoutubeChannelId,
+  setYoutubeRefreshToken,
+  setYoutubeTokenExpiresAt,
+} from "@/utils/youtubeStorage";
 
 const POLL_INTERVAL_MS = 45_000;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
@@ -93,9 +104,9 @@ export const useViewerCount = () => {
   const refreshYoutubeTokenIfNeeded = async (
     force = false,
   ): Promise<string | null> => {
-    const youtubeToken = localStorage.getItem("youtubeToken");
-    const refreshToken = localStorage.getItem("youtubeRefreshToken");
-    const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+    const youtubeToken = getYoutubeAccessToken();
+    const refreshToken = getYoutubeRefreshToken();
+    const expiresAt = getYoutubeTokenExpiresAt();
 
     if (!youtubeToken || !refreshToken) return youtubeToken;
 
@@ -110,17 +121,19 @@ export const useViewerCount = () => {
       const tokenResponse =
         await OAuthService.refreshYoutubeToken(refreshToken);
       const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
-      localStorage.setItem("youtubeToken", tokenResponse.access_token);
-      localStorage.setItem("youtubeTokenExpiresAt", newExpiresAt.toString());
+      setYoutubeAccessToken(tokenResponse.access_token);
+      setYoutubeTokenExpiresAt(newExpiresAt);
       if (tokenResponse.refresh_token) {
-        localStorage.setItem(
-          "youtubeRefreshToken",
-          tokenResponse.refresh_token,
-        );
+        setYoutubeRefreshToken(tokenResponse.refresh_token);
       }
       credentialsRef.current.youtubeToken = tokenResponse.access_token;
       return tokenResponse.access_token;
     } catch {
+      clearYoutubeSession();
+      credentialsRef.current.youtubeToken = "";
+      credentialsRef.current.youtubeChannelId = "";
+      serviceRef.current?.resetYoutube();
+      setYoutubeAuthenticated(false);
       return null;
     }
   };
@@ -214,24 +227,17 @@ export const useViewerCount = () => {
       credentialsRef.current.youtubeToken = urlParams.youtubeToken;
       credentialsRef.current.youtubeChannelId =
         urlParams.youtubeChannelId || "";
-      localStorage.setItem("youtubeToken", urlParams.youtubeToken);
+      setYoutubeAccessToken(urlParams.youtubeToken);
       if (urlParams.youtubeRefreshToken)
-        localStorage.setItem(
-          "youtubeRefreshToken",
-          urlParams.youtubeRefreshToken,
-        );
+        setYoutubeRefreshToken(urlParams.youtubeRefreshToken);
       if (urlParams.youtubeExpiresAt)
-        localStorage.setItem(
-          "youtubeTokenExpiresAt",
-          urlParams.youtubeExpiresAt,
-        );
+        setYoutubeTokenExpiresAt(urlParams.youtubeExpiresAt);
       if (urlParams.youtubeChannelId)
-        localStorage.setItem("youtubeChannelId", urlParams.youtubeChannelId);
+        setYoutubeChannelId(urlParams.youtubeChannelId);
     } else {
-      const youtubeToken = localStorage.getItem("youtubeToken");
+      const youtubeToken = getYoutubeAccessToken();
       credentialsRef.current.youtubeToken = youtubeToken || "";
-      credentialsRef.current.youtubeChannelId =
-        localStorage.getItem("youtubeChannelId") || "";
+      credentialsRef.current.youtubeChannelId = getYoutubeChannelId() || "";
     }
 
     if (

@@ -19,6 +19,17 @@ export const AppFooter: React.FC = () => {
       >
         Termos de Serviço
       </Link>
+      <span className="text-dark-text-muted" aria-hidden="true">
+        ·
+      </span>
+      <a
+        href="https://github.com/Dabisilva/multistreamchat/issues"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-dark-text-secondary hover:text-dark-text-primary transition-colors no-underline"
+      >
+        Contato
+      </a>
     </footer>
   );
 };

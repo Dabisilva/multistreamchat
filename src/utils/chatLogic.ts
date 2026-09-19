@@ -1,5 +1,10 @@
 import type { ChatMessage, Platform } from "@/types";
 
+export const CHAT_DISPLAY_LIMITS = {
+  hideAfterSeconds: 180,
+  messagesLimit: 20,
+} as const;
+
 export const PRIVILEGED_BADGES = [
   "lead_moderator",
   "moderator",

@@ -87,7 +87,7 @@ export const PlatformAuthPanel: React.FC<PlatformAuthPanelProps> = ({
             onClick={onYoutubeLogin}
             disabled={isLoadingYoutube || youtubeAuthenticated}
           >
-            <PlatformIcon platform="youtube" size={20} className="w-5 h-5" />
+            <PlatformIcon platform="youtube" size={20} youtubeVariant="white" />
             {youtubeLabel}
           </button>
 

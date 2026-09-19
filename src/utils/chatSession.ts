@@ -1,9 +1,18 @@
 import type { MessageCustomStyles } from "@/types";
 import { DEFAULT_MESSAGE_STYLES } from "@/utils/styleDefaults";
+import {
+  getYoutubeAccessToken,
+  getYoutubeChannelId,
+  getYoutubeChannelInfo,
+  setYoutubeAccessToken,
+  setYoutubeChannelInfo,
+  setYoutubeRefreshToken,
+  setYoutubeTokenExpiresAt,
+} from "@/utils/youtubeStorage";
 
 export const MAX_DELAY_SECONDS = 6;
 
-export type WidgetStorage = Pick<Storage, "getItem" | "setItem">;
+export type WidgetStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export type WidgetUrlParams = {
   twitchChannel: string | null;
@@ -135,21 +144,21 @@ function persistYoutubeFromUrl(
 ): void {
   if (!urlParams.youtubeChannel || !urlParams.youtubeToken) return;
 
-  storage.setItem("youtubeToken", urlParams.youtubeToken);
-  storage.setItem(
-    "youtubeChannelInfo",
-    JSON.stringify({
+  setYoutubeAccessToken(urlParams.youtubeToken, storage);
+  setYoutubeChannelInfo(
+    {
       username: urlParams.youtubeChannel,
-      id: urlParams.youtubeChannelId,
+      id: urlParams.youtubeChannelId || undefined,
       platform: "youtube",
-    }),
+    },
+    storage,
   );
-  if (urlParams.youtubeChannelId)
-    storage.setItem("youtubeChannelId", urlParams.youtubeChannelId);
-  if (urlParams.youtubeRefreshToken)
-    storage.setItem("youtubeRefreshToken", urlParams.youtubeRefreshToken);
-  if (urlParams.youtubeExpiresAt)
-    storage.setItem("youtubeTokenExpiresAt", urlParams.youtubeExpiresAt);
+  if (urlParams.youtubeRefreshToken) {
+    setYoutubeRefreshToken(urlParams.youtubeRefreshToken, storage);
+  }
+  if (urlParams.youtubeExpiresAt) {
+    setYoutubeTokenExpiresAt(urlParams.youtubeExpiresAt, storage);
+  }
 }
 
 function resolveTwitchSession(
@@ -178,9 +187,9 @@ function resolveYoutubeSession(
 ): YoutubeSession | null {
   persistYoutubeFromUrl(urlParams, storage);
 
-  const storedInfo = parseStoredChannel(storage.getItem("youtubeChannelInfo"));
+  const storedInfo = getYoutubeChannelInfo(storage);
   const channel = urlParams.youtubeChannel || storedInfo?.username || "";
-  const token = urlParams.youtubeToken || storage.getItem("youtubeToken") || "";
+  const token = urlParams.youtubeToken || getYoutubeAccessToken(storage);
   if (!channel || !token) return null;
 
   return {
@@ -189,7 +198,7 @@ function resolveYoutubeSession(
     channelId:
       urlParams.youtubeChannelId ||
       storedInfo?.id ||
-      storage.getItem("youtubeChannelId") ||
+      getYoutubeChannelId(storage) ||
       "",
     liveChatId: urlParams.youtubeLiveChatId || "",
   };

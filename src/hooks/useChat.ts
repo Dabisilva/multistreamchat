@@ -13,10 +13,20 @@ import {
   hasPrivilegedBadge,
   MessageIdSet,
   messageMatchesUser,
+  CHAT_DISPLAY_LIMITS,
 } from "@/utils/chatLogic";
 import { DelayedMessageQueue } from "@/utils/delayedMessageQueue";
 import { hydrateChatSession } from "@/utils/chatSession";
 import { scrubSensitiveSearchParams } from "@/utils/sensitiveUrl";
+import {
+  clearYoutubeSession,
+  getYoutubeAccessToken,
+  getYoutubeRefreshToken,
+  getYoutubeTokenExpiresAt,
+  setYoutubeAccessToken,
+  setYoutubeRefreshToken,
+  setYoutubeTokenExpiresAt,
+} from "@/utils/youtubeStorage";
 
 const DEFAULT_DELAY_MS = 5000;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
@@ -28,8 +38,8 @@ const MAX_PENDING_DELAYED = 250;
 type ChatService = TwitchChatService | KickChatService | YoutubeChatService;
 
 const DEFAULT_CONFIG: ChatConfig = {
-  hideAfter: 180,
-  messagesLimit: 20,
+  hideAfter: CHAT_DISPLAY_LIMITS.hideAfterSeconds,
+  messagesLimit: CHAT_DISPLAY_LIMITS.messagesLimit,
   nickColor: "user",
   customNickColor: "#ffffff",
   hideCommands: true,
@@ -161,9 +171,9 @@ export const useChat = () => {
   const refreshYoutubeTokenIfNeeded = async (
     force = false,
   ): Promise<string | null> => {
-    const youtubeToken = localStorage.getItem("youtubeToken");
-    const refreshToken = localStorage.getItem("youtubeRefreshToken");
-    const expiresAt = localStorage.getItem("youtubeTokenExpiresAt");
+    const youtubeToken = getYoutubeAccessToken();
+    const refreshToken = getYoutubeRefreshToken();
+    const expiresAt = getYoutubeTokenExpiresAt();
 
     if (!youtubeToken) return null;
     if (!refreshToken) return youtubeToken;
@@ -179,18 +189,20 @@ export const useChat = () => {
           await OAuthService.refreshYoutubeToken(refreshToken);
         const newExpiresAt = Date.now() + tokenResponse.expires_in * 1000;
 
-        localStorage.setItem("youtubeToken", tokenResponse.access_token);
-        localStorage.setItem("youtubeTokenExpiresAt", newExpiresAt.toString());
+        setYoutubeAccessToken(tokenResponse.access_token);
+        setYoutubeTokenExpiresAt(newExpiresAt);
         if (tokenResponse.refresh_token) {
-          localStorage.setItem(
-            "youtubeRefreshToken",
-            tokenResponse.refresh_token,
-          );
+          setYoutubeRefreshToken(tokenResponse.refresh_token);
         }
 
         setYoutubeOauthToken(tokenResponse.access_token);
         return tokenResponse.access_token;
       } catch {
+        clearYoutubeSession();
+        setYoutubeOauthToken("");
+        setYoutubeChannel("");
+        setYoutubeChannelId("");
+        setYoutubeLiveChatId("");
         return null;
       }
     }

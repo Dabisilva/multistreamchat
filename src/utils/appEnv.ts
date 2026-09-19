@@ -16,10 +16,6 @@ export function getYoutubeClientId(): string {
   return import.meta.env.VITE_YOUTUBE_CLIENT_ID || "";
 }
 
-export function getYoutubeClientSecret(): string {
-  return import.meta.env.VITE_YOUTUBE_CLIENT_SECRET || "";
-}
-
 export function getYoutubeRedirectUri(fallback: string): string {
   return import.meta.env.VITE_YOUTUBE_REDIRECT_URI || fallback;
 }

@@ -6,7 +6,7 @@ const TermsOfService: React.FC = () => {
   return (
     <LegalPageLayout
       title="Termos de Serviço"
-      lastUpdated="7 de agosto de 2026"
+      lastUpdated="18 de setembro de 2026"
     >
       <section>
         <h2>1. Aceitação dos termos</h2>
@@ -52,6 +52,25 @@ const TermsOfService: React.FC = () => {
         <p>
           Para a Kick, basta informar o nome do canal; não há autenticação
           OAuth nessa plataforma neste Aplicativo.
+        </p>
+      </section>
+
+      <section>
+        <h2>3.1. Termos de Serviço do YouTube</h2>
+        <p>
+          Ao utilizar funcionalidades do MultiStreamChat que acessam os YouTube
+          API Services (incluindo login com Google/YouTube, overlay de chat ao
+          vivo e contagem de espectadores), você concorda em ficar vinculado aos{" "}
+          <a
+            href="https://www.youtube.com/t/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Termos de Serviço do YouTube
+          </a>
+          . O MultiStreamChat não é um produto do YouTube, não é operado pelo
+          YouTube e não é afiliado, patrocinado nem endossado pelo YouTube ou
+          pela Google, salvo indicação expressa em contrário.
         </p>
       </section>
 
@@ -171,8 +190,15 @@ const TermsOfService: React.FC = () => {
       <section>
         <h2>13. Contato</h2>
         <p>
-          Dúvidas sobre estes Termos podem ser enviadas pelos canais de contato
-          disponibilizados pelo mantenedor do projeto.
+          Dúvidas sobre estes Termos podem ser enviadas abrindo uma issue em{" "}
+          <a
+            href="https://github.com/Dabisilva/multistreamchat/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            github.com/Dabisilva/multistreamchat/issues
+          </a>
+          .
         </p>
       </section>
     </LegalPageLayout>

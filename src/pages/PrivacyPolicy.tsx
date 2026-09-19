@@ -5,7 +5,7 @@ const PrivacyPolicy: React.FC = () => {
   return (
     <LegalPageLayout
       title="Política de Privacidade"
-      lastUpdated="10 de setembro de 2026"
+      lastUpdated="18 de setembro de 2026"
     >
       <section>
         <h2>1. Sobre o MultiStreamChat</h2>
@@ -181,30 +181,63 @@ const PrivacyPolicy: React.FC = () => {
         <h2>7. Retenção e exclusão de Google user data</h2>
         <p>
           Como o Aplicativo não mantém um backend com banco de dados de usuários,
-          a retenção de Google user data ocorre apenas no armazenamento local do
-          seu navegador:
+          a retenção de Google user data ocorre no armazenamento local do seu
+          navegador e, de forma temporária, na memória da página do overlay:
         </p>
         <ul>
           <li>
-            <strong className="text-dark-text-primary">Retenção:</strong>{" "}
-            retemos tokens OAuth, identificadores de canal e metadados de sessão
-            do YouTube no{" "}
-            <code className="text-indigo-300 text-sm">localStorage</code> pelo
-            tempo necessário para cumprir as finalidades desta Política —
-            tipicamente enquanto a conta estiver conectada, para manter a sessão
-            e renovar o access token. Mensagens de chat e contagens de
-            espectadores são processadas em memória/tempo real para exibição no
-            overlay e não são arquivadas por nós em servidores. Quando o período
-            de retenção termina (por exemplo, ao desconectar), os dados locais
-            são excluídos.
+            <strong className="text-dark-text-primary">
+              Dados de API do YouTube em cache:
+            </strong>{" "}
+            identificadores e metadados de canal obtidos via{" "}
+            <code className="text-indigo-300 text-sm">channels.list</code>{" "}
+            (por exemplo, ID, nome e URL de miniatura) são guardados no{" "}
+            <code className="text-indigo-300 text-sm">localStorage</code> com
+            data de obtenção. Esse cache é reutilizado enquanto estiver fresco.
+            Se estiver ausente, corrompido, sem data ou com 25 dias ou mais, o
+            Aplicativo descarta o cache e busca novamente na API do YouTube, ou
+            remove os dados se a sessão não puder ser renovada. O Aplicativo não
+            mantém esses dados de API indefinidamente.
+          </li>
+          <li>
+            <strong className="text-dark-text-primary">
+              Estatísticas ao vivo:
+            </strong>{" "}
+            a contagem de espectadores concorrentes é lida periodicamente da API
+            (cerca de cada 45 segundos) e permanece apenas na memória da página.
+            Não é gravada em{" "}
+            <code className="text-indigo-300 text-sm">localStorage</code>,
+            IndexedDB ou servidor. Se a live terminar, se a API estiver
+            indisponível (incluindo cota) ou se a estatística ficar sem
+            atualização bem-sucedida por mais de dois minutos, o valor deixa de
+            ser exibido como corrente (o overlay trata como indisponível / 0).
+          </li>
+          <li>
+            <strong className="text-dark-text-primary">Chat ao vivo:</strong>{" "}
+            mensagens do live chat são mantidas só na memória da página, no
+            máximo as 20 mais recentes, e cada mensagem é removida da tela após
+            cerca de 180 segundos. Elas não sobrevivem a recarregar a página e
+            não são enviadas a um backend nosso.
+          </li>
+          <li>
+            <strong className="text-dark-text-primary">
+              Credenciais OAuth:
+            </strong>{" "}
+            access token e, quando fornecido, refresh token ficam no{" "}
+            <code className="text-indigo-300 text-sm">localStorage</code> para
+            manter a sessão e renovar o access token enquanto a conta permanecer
+            conectada. Tokens não são tratados como estatísticas da API e não
+            são apagados automaticamente aos 30 dias; deixam de funcionar se o
+            Google os revogar ou se você desconectar o YouTube.
           </li>
           <li>
             <strong className="text-dark-text-primary">Exclusão no app:</strong>{" "}
             você pode solicitar a exclusão a qualquer momento usando a opção de
             sair / desconectar o YouTube no painel do Aplicativo. Nesse caso,
             removemos imediatamente do navegador os dados locais relacionados
-            (incluindo access token, refresh token, informações de usuário/canal
-            e datas de expiração).
+            (incluindo access token, refresh token, cache de canal e datas de
+            expiração). Se a renovação do token falhar ou for recusada, a sessão
+            YouTube também é encerrada e esses dados locais são apagados.
           </li>
           <li>
             <strong className="text-dark-text-primary">
@@ -257,6 +290,13 @@ const PrivacyPolicy: React.FC = () => {
             do navegador do usuário, sem banco de dados nosso de tokens;
           </li>
           <li>
+            troca e renovação de tokens do YouTube feitas por um endpoint no
+            próprio Aplicativo (
+            <code className="text-indigo-300 text-sm">/api/youtube-token</code>
+            ), para que o client secret do OAuth não seja incluído no JavaScript
+            enviado ao navegador;
+          </li>
+          <li>
             escopo mínimo (
             <code className="text-indigo-300 text-sm">youtube.readonly</code>)
             e uso limitado às funcionalidades descritas nesta Política.
@@ -276,6 +316,17 @@ const PrivacyPolicy: React.FC = () => {
           políticas dessas plataformas. O Aplicativo consome APIs e conexões em
           tempo real dessas empresas (e, quando aplicável, serviços de emotes
           como BTTV/FFZ) apenas para fornecer as funcionalidades descritas.
+        </p>
+        <p>
+          O uso das APIs do Google/YouTube também está sujeito à{" "}
+          <a
+            href="https://www.google.com/policies/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Política de Privacidade do Google
+          </a>
+          .
         </p>
       </section>
 
@@ -330,8 +381,15 @@ const PrivacyPolicy: React.FC = () => {
         <h2>14. Contato</h2>
         <p>
           Em caso de dúvidas sobre privacidade relacionadas ao MultiStreamChat,
-          utilize os canais de contato disponibilizados pelo mantenedor do
-          projeto.
+          abra uma issue no repositório do projeto:{" "}
+          <a
+            href="https://github.com/Dabisilva/multistreamchat/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            github.com/Dabisilva/multistreamchat/issues
+          </a>
+          .
         </p>
       </section>
     </LegalPageLayout>

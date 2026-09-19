@@ -8,6 +8,9 @@ function memoryStorage(initial: Record<string, string> = {}) {
     setItem: (key: string, value: string) => {
       map.set(key, value);
     },
+    removeItem: (key: string) => {
+      map.delete(key);
+    },
   };
 }
 
