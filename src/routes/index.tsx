@@ -1,58 +1,59 @@
-import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { getYoutubeAccessToken } from '@/utils/youtubeStorage';
+import React, { lazy, Suspense } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { getYoutubeAccessToken } from "@/utils/youtubeStorage";
 
 // Lazy load components for better performance
-const Chat = lazy(() => import('@/pages/Chat'));
-const ViewerCount = lazy(() => import('@/pages/ViewerCount'));
-const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
-const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
-const Home = lazy(() => import('@/pages/Home'));
-const App = lazy(() => import('@/App'));
+const Chat = lazy(() => import("@/pages/Chat"));
+const ViewerCount = lazy(() => import("@/pages/ViewerCount"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("@/pages/TermsOfService"));
+const Home = lazy(() => import("@/pages/Home"));
+const App = lazy(() => import("@/App"));
 
 // Loading component
 const LoadingScreen: React.FC = () => (
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    fontSize: '1.5rem',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white'
-  }}>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100vh",
+      fontSize: "1.5rem",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      color: "white",
+    }}
+  >
     Carregando...
   </div>
 );
 
 const hasPlatformSession = () => {
   return !!(
-    localStorage.getItem('twitchToken') ||
+    localStorage.getItem("twitchToken") ||
     getYoutubeAccessToken() ||
-    localStorage.getItem('kickChannel')
+    localStorage.getItem("kickChannel")
   );
 };
 
 const isWidgetAuthenticated = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const hasTwitchAuth = urlParams.has('twitchChannel') && urlParams.has('twitchToken');
-  const hasKickChannel = urlParams.has('kickChannel');
+  const hasTwitchAuth =
+    urlParams.has("twitchChannel") && urlParams.has("twitchToken");
+  const hasKickChannel = urlParams.has("kickChannel");
   const hasYoutubeAuth =
-    urlParams.has('youtubeChannel') && urlParams.has('youtubeToken');
+    urlParams.has("youtubeChannel") && urlParams.has("youtubeToken");
 
-  return hasPlatformSession() || hasTwitchAuth || hasKickChannel || hasYoutubeAuth;
+  return (
+    hasPlatformSession() || hasTwitchAuth || hasKickChannel || hasYoutubeAuth
+  );
 };
 
 const LandingRoute: React.FC = () => {
   const params = new URLSearchParams(window.location.search);
-  const isOAuthCallback = params.has('code') || params.has('error');
+  const isOAuthCallback = params.has("code") || params.has("error");
 
   if (isOAuthCallback) {
     return <Navigate to={`/home${window.location.search}`} replace />;
-  }
-
-  if (hasPlatformSession()) {
-    return <Navigate to="/home" replace />;
   }
 
   return <App />;
