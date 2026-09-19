@@ -1,6 +1,10 @@
 import { Badge, ChatMessage, ChatProvider } from "@/types";
 import { generateColor } from "@/utils/messageUtils";
 import {
+  getInitialOverlayVisibility,
+  subscribeOverlayVisibility,
+} from "@/utils/overlayVisibility";
+import {
   isLiveChatGoneError,
   isYoutubeLiveIdle,
   isYoutubeQuotaError,
@@ -30,9 +34,23 @@ interface YoutubeLiveChatItem {
   authorDetails?: YoutubeAuthorDetails;
 }
 
-const MIN_CHAT_POLL_MS = 8000;
+const MIN_CHAT_POLL_MS = 15_000;
+const MAX_IDLE_CHAT_POLL_MS = 20_000;
 const ERROR_RETRY_MS = 10_000;
 const AUTH_RETRY_MS = 30_000;
+
+export function nextYoutubeChatPollMs(
+  apiIntervalMs: number,
+  consecutiveIdlePolls: number,
+): number {
+  const apiWait =
+    typeof apiIntervalMs === "number" && apiIntervalMs > 0
+      ? apiIntervalMs
+      : 5000;
+  const idleWait =
+    consecutiveIdlePolls > 0 ? MAX_IDLE_CHAT_POLL_MS : MIN_CHAT_POLL_MS;
+  return Math.max(apiWait, idleWait);
+}
 
 export class YoutubeChatService implements ChatProvider {
   private channel: string;
@@ -48,6 +66,9 @@ export class YoutubeChatService implements ChatProvider {
   private connectedAt = 0;
   private stopped = false;
   private polling = false;
+  private consecutiveIdlePolls = 0;
+  private overlayVisible = true;
+  private unbindOverlayVisibility: (() => void) | null = null;
   private abortController: AbortController | null = null;
   private liveTracker = new YoutubeLiveTracker();
 
@@ -76,13 +97,16 @@ export class YoutubeChatService implements ChatProvider {
   async connect(): Promise<void> {
     this.stopped = false;
     this.skipHistory = true;
+    this.consecutiveIdlePolls = 0;
     this.connectedAt = Date.now();
     this.abortController = new AbortController();
+    this.bindOverlayVisibility();
 
     if (!this.oauthToken || isYoutubeLiveIdle()) {
       return;
     }
 
+    if (!this.overlayVisible) return;
     await this.pollMessages();
   }
 
@@ -90,6 +114,8 @@ export class YoutubeChatService implements ChatProvider {
     this.stopped = true;
     this.connected = false;
     this.polling = false;
+    this.unbindOverlayVisibility?.();
+    this.unbindOverlayVisibility = null;
     this.abortController?.abort();
     this.abortController = null;
     if (this.pollTimeout) {
@@ -237,12 +263,30 @@ export class YoutubeChatService implements ChatProvider {
     this.liveChatId = "";
     this.nextPageToken = null;
     this.skipHistory = true;
+    this.consecutiveIdlePolls = 0;
     this.connected = false;
     this.liveTracker.invalidateCache();
   }
 
+  private bindOverlayVisibility(): void {
+    this.unbindOverlayVisibility?.();
+    this.overlayVisible = getInitialOverlayVisibility();
+    this.unbindOverlayVisibility = subscribeOverlayVisibility((visible) => {
+      this.overlayVisible = visible;
+      if (this.stopped) return;
+      if (!visible) {
+        if (this.pollTimeout) {
+          clearTimeout(this.pollTimeout);
+          this.pollTimeout = null;
+        }
+        return;
+      }
+      void this.pollMessages();
+    });
+  }
+
   private schedulePoll(intervalMs: number): void {
-    if (this.stopped) return;
+    if (this.stopped || !this.overlayVisible) return;
     if (this.pollTimeout) clearTimeout(this.pollTimeout);
     this.pollTimeout = setTimeout(
       () => {
@@ -253,7 +297,7 @@ export class YoutubeChatService implements ChatProvider {
   }
 
   private async pollMessages(): Promise<void> {
-    if (this.stopped || this.polling) return;
+    if (this.stopped || this.polling || !this.overlayVisible) return;
     if (isYoutubeLiveIdle()) {
       this.connected = false;
       return;
@@ -326,11 +370,14 @@ export class YoutubeChatService implements ChatProvider {
 
       if (this.skipHistory) {
         this.skipHistory = false;
+        this.consecutiveIdlePolls = 0;
       } else {
         for (const item of items) {
           if (this.stopped) return;
           this.processItem(item);
         }
+        this.consecutiveIdlePolls =
+          items.length > 0 ? 0 : this.consecutiveIdlePolls + 1;
       }
 
       const interval =
@@ -338,7 +385,9 @@ export class YoutubeChatService implements ChatProvider {
           ? data.pollingIntervalMillis
           : 5000;
 
-      this.schedulePoll(Math.max(interval, MIN_CHAT_POLL_MS));
+      this.schedulePoll(
+        nextYoutubeChatPollMs(interval, this.consecutiveIdlePolls),
+      );
     } catch (err) {
       if (this.stopped || this.isAbortError(err)) return;
       if (err instanceof YoutubeQuotaError) {

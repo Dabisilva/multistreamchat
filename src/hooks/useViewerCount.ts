@@ -7,6 +7,10 @@ import {
 import { DEFAULT_VIEWER_SETTINGS } from "@/utils/styleDefaults";
 import { scrubSensitiveSearchParams } from "@/utils/sensitiveUrl";
 import {
+  getInitialOverlayVisibility,
+  subscribeOverlayVisibility,
+} from "@/utils/overlayVisibility";
+import {
   clearYoutubeSession,
   getYoutubeAccessToken,
   getYoutubeChannelId,
@@ -18,7 +22,7 @@ import {
   setYoutubeTokenExpiresAt,
 } from "@/utils/youtubeStorage";
 
-const POLL_INTERVAL_MS = 45_000;
+const POLL_INTERVAL_MS = 60_000;
 const TOKEN_REFRESH_THRESHOLD_MS = 600000;
 
 export interface ViewerCountConfig {
@@ -291,10 +295,11 @@ export const useViewerCount = () => {
     let cancelled = false;
     let inFlight = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
+    let overlayVisible = getInitialOverlayVisibility();
 
     const poll = async () => {
       if (cancelled || inFlight || !serviceRef.current) return;
-      if (typeof document !== "undefined" && document.hidden) return;
+      if (!overlayVisible) return;
       inFlight = true;
 
       serviceRef.current.updateCredentials({
@@ -329,8 +334,9 @@ export const useViewerCount = () => {
       }, POLL_INTERVAL_MS);
     };
 
-    const handleVisibility = () => {
-      if (document.hidden) {
+    const handleVisibility = (visible: boolean) => {
+      overlayVisible = visible;
+      if (!visible) {
         if (intervalId) {
           clearInterval(intervalId);
           intervalId = null;
@@ -342,16 +348,16 @@ export const useViewerCount = () => {
     };
 
     void poll();
-    if (typeof document === "undefined" || !document.hidden) {
+    if (overlayVisible) {
       startInterval();
     }
 
-    document.addEventListener("visibilitychange", handleVisibility);
+    const unsubscribeOverlay = subscribeOverlayVisibility(handleVisibility);
 
     return () => {
       cancelled = true;
+      unsubscribeOverlay();
       if (intervalId) clearInterval(intervalId);
-      document.removeEventListener("visibilitychange", handleVisibility);
       serviceRef.current?.abortInFlight();
     };
   }, [ready, config.showTwitch, config.showKick, config.showYoutube]);

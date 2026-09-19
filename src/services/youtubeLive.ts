@@ -227,7 +227,7 @@ async function discoverActiveLive(
 /**
  * Resolves the current live once per overlay mount via liveBroadcasts.
  * A broadcast with liveChatId is not enough: ended/stuck lives often keep
- * that id and would start liveChatMessages polling (5 units every ~8s).
+ * that id and would start liveChatMessages polling (5 units every ~15s).
  * Confirm with videos.list using liveBroadcastContent (not viewer count).
  */
 export class YoutubeLiveTracker {
