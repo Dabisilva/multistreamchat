@@ -23,6 +23,11 @@ interface YoutubeAuthorDetails {
   isChatModerator?: boolean;
 }
 
+interface YoutubeBannedUserDetails {
+  channelId?: string;
+  displayName?: string;
+}
+
 interface YoutubeLiveChatItem {
   id: string;
   snippet?: {
@@ -30,8 +35,39 @@ interface YoutubeLiveChatItem {
     publishedAt?: string;
     displayMessage?: string;
     textMessageDetails?: { messageText?: string };
+    messageDeletedDetails?: { deletedMessageId?: string };
+    userBannedDetails?: {
+      bannedUserDetails?: YoutubeBannedUserDetails;
+      banType?: string;
+    };
   };
   authorDetails?: YoutubeAuthorDetails;
+}
+
+export type YoutubeModerationAction =
+  | { type: "delete"; messageId: string }
+  | { type: "ban"; username: string; userId: string };
+
+export function youtubeModerationFromItem(
+  item: YoutubeLiveChatItem,
+): YoutubeModerationAction | null {
+  const type = item.snippet?.type;
+
+  if (type === "messageDeletedEvent") {
+    const messageId = item.snippet?.messageDeletedDetails?.deletedMessageId?.trim();
+    if (!messageId) return null;
+    return { type: "delete", messageId };
+  }
+
+  if (type === "userBannedEvent") {
+    const banned = item.snippet?.userBannedDetails?.bannedUserDetails;
+    const userId = banned?.channelId?.trim() || "";
+    const username = (banned?.displayName || "").replace(/^@/, "").trim();
+    if (!userId && !username) return null;
+    return { type: "ban", username, userId };
+  }
+
+  return null;
 }
 
 const MIN_CHAT_POLL_MS = 15_000;
@@ -58,6 +94,8 @@ export class YoutubeChatService implements ChatProvider {
   private liveChatId: string;
   private oauthToken: string;
   private onMessage: (message: ChatMessage) => void;
+  private onMessageDelete?: (msgId: string) => void;
+  private onUserBanned?: (username: string, userId?: string) => void;
   private onTokenRefresh?: () => Promise<string | null>;
   private connected = false;
   private pollTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -79,6 +117,8 @@ export class YoutubeChatService implements ChatProvider {
       oauthToken?: string;
       channelId?: string;
       liveChatId?: string;
+      onMessageDelete?: (msgId: string) => void;
+      onUserBanned?: (username: string, userId?: string) => void;
       onTokenRefresh?: () => Promise<string | null>;
     },
   ) {
@@ -87,6 +127,8 @@ export class YoutubeChatService implements ChatProvider {
     this.oauthToken = options?.oauthToken || "";
     this.channelId = options?.channelId || "";
     this.liveChatId = "";
+    if (options?.onMessageDelete) this.onMessageDelete = options.onMessageDelete;
+    if (options?.onUserBanned) this.onUserBanned = options.onUserBanned;
     if (options?.onTokenRefresh) this.onTokenRefresh = options.onTokenRefresh;
   }
 
@@ -177,6 +219,16 @@ export class YoutubeChatService implements ChatProvider {
   }
 
   private processItem(item: YoutubeLiveChatItem): void {
+    const moderation = youtubeModerationFromItem(item);
+    if (moderation?.type === "delete") {
+      this.onMessageDelete?.(moderation.messageId);
+      return;
+    }
+    if (moderation?.type === "ban") {
+      this.onUserBanned?.(moderation.username, moderation.userId || undefined);
+      return;
+    }
+
     // Only normal chat messages — ignore Super Chat, stickers, memberships, etc.
     if (item.snippet?.type !== "textMessageEvent") return;
 

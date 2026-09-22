@@ -78,10 +78,10 @@ export class DelayedMessageQueue {
     return undefined;
   }
 
-  cancelByUser(username: string): void {
+  cancelByUser(username: string, userId?: string): void {
     let removed = false;
     for (const [id, item] of this.pending) {
-      if (messageMatchesUser(item.message, username)) {
+      if (messageMatchesUser(item.message, username, userId)) {
         this.pending.delete(id);
         removed = true;
       }

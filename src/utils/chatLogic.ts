@@ -40,10 +40,13 @@ export function hasPrivilegedBadge(badges: ChatMessage["badges"]): boolean {
 }
 
 export function messageMatchesUser(
-  message: Pick<ChatMessage, "username" | "displayName">,
+  message: Pick<ChatMessage, "username" | "displayName" | "userId">,
   username: string,
+  userId?: string,
 ): boolean {
-  const target = username.toLowerCase();
+  if (userId && message.userId && message.userId === userId) return true;
+  const target = username.trim().toLowerCase();
+  if (!target) return false;
   return (
     message.username.toLowerCase() === target ||
     message.displayName.toLowerCase() === target

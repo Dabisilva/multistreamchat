@@ -74,6 +74,30 @@ describe("DelayedMessageQueue", () => {
     queue.dispose();
   });
 
+  it("drops a hidden user matched by channel id", () => {
+    vi.useFakeTimers();
+    const released: string[] = [];
+    const queue = new DelayedMessageQueue({
+      delayMs: 2000,
+      onRelease: (msg) => released.push(msg.id),
+    });
+
+    queue.enqueue(
+      message({
+        id: "hidden",
+        userId: "UChidden",
+        username: "Viewer",
+        displayName: "Viewer",
+        provider: "youtube",
+      }),
+    );
+    queue.cancelByUser("Outro Nome", "UChidden");
+    vi.advanceTimersByTime(2000);
+
+    expect(released).toEqual([]);
+    queue.dispose();
+  });
+
   it("drops delayed messages from an old channel/provider", () => {
     vi.useFakeTimers();
     const released: string[] = [];

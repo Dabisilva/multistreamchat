@@ -253,10 +253,10 @@ export const useChat = () => {
     );
   };
 
-  const removeMessagesByUser = (username: string) => {
-    delayQueueRef.current?.cancelByUser(username);
+  const removeMessagesByUser = (username: string, userId?: string) => {
+    delayQueueRef.current?.cancelByUser(username, userId);
     setMessages((prevMessages) =>
-      prevMessages.filter((msg) => !messageMatchesUser(msg, username)),
+      prevMessages.filter((msg) => !messageMatchesUser(msg, username, userId)),
     );
   };
 
@@ -441,6 +441,9 @@ export const useChat = () => {
             oauthToken: youtubeOauthTokenRef.current || undefined,
             channelId: youtubeChannelIdRef.current || undefined,
             liveChatId: youtubeLiveChatIdRef.current || undefined,
+            onMessageDelete: (id) => removeMessageByMsgIdRef.current(id),
+            onUserBanned: (username, userId) =>
+              removeMessagesByUserRef.current(username, userId),
             onTokenRefresh: () => refreshYoutubeTokenRef.current(true),
           },
         );

@@ -62,6 +62,19 @@ describe("chatLogic", () => {
     expect(messageMatchesUser(msg, "other")).toBe(false);
   });
 
+  it("matches a hidden user by channel id when the display name differs", () => {
+    const msg = message({
+      id: "yt1",
+      userId: "UChidden",
+      username: "Viewer",
+      displayName: "Viewer",
+      provider: "youtube",
+    });
+    expect(messageMatchesUser(msg, "Outro Nome", "UChidden")).toBe(true);
+    expect(messageMatchesUser(msg, "", "UChidden")).toBe(true);
+    expect(messageMatchesUser(msg, "", "UCother")).toBe(false);
+  });
+
   it("drops only the switched platform on channel change", () => {
     const messages = [
       message({ id: "t1", provider: "twitch" }),
